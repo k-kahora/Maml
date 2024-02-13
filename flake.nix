@@ -32,6 +32,7 @@
             ocamlPackages.odoc
             ocamlPackages.ocamlc-loc
             ocamlPackages.ocaml-lsp
+            ocamlPackages.alcotest
             ocamlPackages.ocamlformat-rpc-lib
             ocamlPackages.utop
             # ocamlPackages.angstrom

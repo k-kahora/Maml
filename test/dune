@@ -1,2 +1,5 @@
-(test
- (name test_Interpreter))
+(tests
+ (names token_test)
+ (libraries alcotest token)
+)
+
