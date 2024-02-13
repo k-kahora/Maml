@@ -1,5 +1,5 @@
 (tests
- (names token_test)
- (libraries alcotest token)
+ (names lexer_test)
+ (libraries alcotest token lexer)
 )
 

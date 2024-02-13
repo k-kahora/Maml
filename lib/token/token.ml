@@ -1,4 +1,4 @@
-(* type token_type = string *)
+(* ttype':ype token_type = string *)
 
 type token_name =
   | ILLEGAL
@@ -20,4 +20,39 @@ type token_name =
   | FUNCTION
   | LET
 
-type token = {type': token_name; literal: char}
+let token_to_string (t : token_name) : string =
+  match t with
+  | ILLEGAL ->
+      "ILLEGAL"
+  | EOF ->
+      "EOF"
+  (* Identifies and literals *)
+  | IDENT ->
+      "IDENT"
+  | INT ->
+      "INT"
+  (* Operators *)
+  | ASSIGN ->
+      "="
+  | PLUS ->
+      "+"
+  (* Delimeters *)
+  | COMMA ->
+      ","
+  | SEMICOLON ->
+      ";"
+  | LPAREN ->
+      "("
+  | RPAREN ->
+      ")"
+  | LBRACE ->
+      "{"
+  | RBRACE ->
+      "}"
+  (* Keywords *)
+  | FUNCTION ->
+      "FUNCTION"
+  | LET ->
+      "LET"
+
+type token = {type': token_name; literal: string}
