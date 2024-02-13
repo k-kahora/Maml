@@ -5,8 +5,8 @@ let test_token (l : Lexer.lexer) {expectedType; expectedLiteral} : Lexer.lexer =
   Alcotest.check
     (Alcotest.pair Alcotest.string Alcotest.string)
     "Token type matches"
-    (Token.token_to_string expectedType, tok.literal)
-    (Token.token_to_string tok.type', expectedLiteral) ;
+    (Token.token_to_string expectedType, expectedLiteral)
+    (Token.token_to_string tok.type', tok.literal) ;
   new_l
 
 let test_next_token () =
@@ -16,7 +16,7 @@ let test_next_token () =
     ; {expectedType= Token.PLUS; expectedLiteral= "+"}
     ; {expectedType= Token.LPAREN; expectedLiteral= "("}
     ; {expectedType= Token.RPAREN; expectedLiteral= ")"}
-    ; {expectedType= Token.LBRACE; expectedLiteral= "{"}
+    ; {expectedType= Token.LBRACE; expectedLiteral= "."}
     ; {expectedType= Token.RBRACE; expectedLiteral= "}"}
     ; {expectedType= Token.COMMA; expectedLiteral= ","}
     ; {expectedType= Token.SEMICOLON; expectedLiteral= ";"}
