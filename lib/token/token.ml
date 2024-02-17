@@ -56,3 +56,6 @@ let token_to_string (t : token_name) : string =
       "LET"
 
 type token = {type': token_name; literal: string}
+
+let look_up_ident (s : string) : token_name =
+  match s with "fn" -> FUNCTION | "let" -> LET | _ -> IDENT

@@ -17,28 +17,47 @@ let new' (input : string) : lexer =
 let newToken (token_type : Token.token_name) (ch : char) : Token.token =
   {literal= String.make 1 ch; type'= token_type}
 
+let is_letter (ch : char) : bool =
+  match ch with 'a' .. 'z' | 'A' .. 'Z' | '_' -> true | _ -> false
+
+let read_identifier (l : lexer) : string * lexer =
+  (* loop over the string until we come across a non-letter *)
+  let start = l.position in
+  let rec looper i lex =
+    if not (is_letter l.input.[i]) then (i, lex)
+    else looper (i + 1) @@ read_char lex
+  in
+  let finish, lex = looper 0 l in
+  (String.sub l.input start finish, lex)
+
 (* given a lexer returen the correct token and advance the lexer *)
-let next_token (l : lexer) : lexer * Token.token =
-  let token =
+let next_token (l : lexer) : Token.token * lexer =
+  let token l =
     match l.ch with
     | '=' ->
-        newToken Token.ASSIGN l.ch
+        (newToken Token.ASSIGN l.ch, read_char l)
     | ';' ->
-        newToken Token.SEMICOLON l.ch
+        (newToken Token.SEMICOLON l.ch, read_char l)
     | '(' ->
-        newToken Token.LPAREN l.ch
+        (newToken Token.LPAREN l.ch, read_char l)
     | ')' ->
-        newToken Token.RPAREN l.ch
+        (newToken Token.RPAREN l.ch, read_char l)
     | ',' ->
-        newToken Token.COMMA l.ch
+        (newToken Token.COMMA l.ch, read_char l)
     | '+' ->
-        newToken Token.PLUS l.ch
+        (newToken Token.PLUS l.ch, read_char l)
     | '{' ->
-        newToken Token.LBRACE l.ch
+        (newToken Token.LBRACE l.ch, read_char l)
     | '}' ->
-        newToken Token.RBRACE l.ch
+        (newToken Token.RBRACE l.ch, read_char l)
+    | '\x00' ->
+        (newToken Token.EOF l.ch, read_char l)
+    | _ when is_letter l.ch ->
+        let literal, l = read_identifier l in
+        print_endline literal ;
+        ({type'= Token.look_up_ident literal; literal}, l)
+        (* This will capture a identifier in full *)
     | _ ->
-        newToken Token.EOF l.ch
+        (newToken Token.ILLEGAL l.ch, l)
   in
-  let l = read_char l in
-  (l, token)
+  token l

@@ -1,7 +1,7 @@
-type test_variant = {expectedType: Token.token_name; expectedLiteral: string}
-
-let test_token (l : Lexer.lexer) {expectedType; expectedLiteral} : Lexer.lexer =
-  let new_l, tok = Lexer.next_token l in
+let test_token (l : Lexer.lexer)
+    ((expectedType, expectedLiteral) : Token.token_name * string) : Lexer.lexer
+    =
+  let tok, new_l = Lexer.next_token l in
   Alcotest.check
     (Alcotest.pair Alcotest.string Alcotest.string)
     "Token type matches"
@@ -10,18 +10,55 @@ let test_token (l : Lexer.lexer) {expectedType; expectedLiteral} : Lexer.lexer =
   new_l
 
 let test_next_token () =
-  let input = "=+(){},;+" in
+  let input =
+    {|let five = 5;
+let ten = 10;
+
+let add = fn(x, y) {
+  x + y;
+};
+
+let result = add(five, ten);
+|}
+  in
   let tests =
-    [ {expectedType= Token.ASSIGN; expectedLiteral= "="}
-    ; {expectedType= Token.PLUS; expectedLiteral= "+"}
-    ; {expectedType= Token.LPAREN; expectedLiteral= "("}
-    ; {expectedType= Token.RPAREN; expectedLiteral= ")"}
-    ; {expectedType= Token.LBRACE; expectedLiteral= "."}
-    ; {expectedType= Token.RBRACE; expectedLiteral= "}"}
-    ; {expectedType= Token.COMMA; expectedLiteral= ","}
-    ; {expectedType= Token.SEMICOLON; expectedLiteral= ";"}
-    ; {expectedType= Token.PLUS; expectedLiteral= "+"}
-    ; {expectedType= Token.EOF; expectedLiteral= "\x00"} ]
+    [ (Token.LET, "let")
+    ; (Token.IDENT, "five")
+    ; (Token.ASSIGN, "=")
+    ; (Token.INT, "5")
+    ; (Token.SEMICOLON, ";")
+    ; (Token.LET, "let")
+    ; (Token.IDENT, "ten")
+    ; (Token.ASSIGN, "=")
+    ; (Token.INT, "10")
+    ; (Token.SEMICOLON, ";")
+    ; (Token.LET, "let")
+    ; (Token.IDENT, "add")
+    ; (Token.ASSIGN, "=")
+    ; (Token.FUNCTION, "fn")
+    ; (Token.LPAREN, "(")
+    ; (Token.IDENT, "x")
+    ; (Token.COMMA, ",")
+    ; (Token.IDENT, "y")
+    ; (Token.RPAREN, ")")
+    ; (Token.LBRACE, "{")
+    ; (Token.IDENT, "x")
+    ; (Token.PLUS, "+")
+    ; (Token.IDENT, "y")
+    ; (Token.SEMICOLON, ";")
+    ; (Token.RBRACE, "}")
+    ; (Token.SEMICOLON, ";")
+    ; (Token.LET, "let")
+    ; (Token.IDENT, "result")
+    ; (Token.ASSIGN, "=")
+    ; (Token.IDENT, "add")
+    ; (Token.LPAREN, "(")
+    ; (Token.IDENT, "five")
+    ; (Token.COMMA, ",")
+    ; (Token.IDENT, "ten")
+    ; (Token.RPAREN, ")")
+    ; (Token.SEMICOLON, ";")
+    ; (Token.EOF, "") ]
   in
   let l = Lexer.new' input in
   ignore (List.fold_left test_token l tests)
