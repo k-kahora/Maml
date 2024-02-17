@@ -20,6 +20,20 @@ let newToken (token_type : Token.token_name) (ch : char) : Token.token =
 let is_letter (ch : char) : bool =
   match ch with 'a' .. 'z' | 'A' .. 'Z' | '_' -> true | _ -> false
 
+let eat_whitespace (l : lexer) : lexer =
+  let rec looper lex =
+    match lex.ch with
+    | ' ' | '\t' | '\n' | '\r' ->
+        looper (read_char lex)
+    | _ ->
+        lex
+  in
+  looper l
+
+(* start at the lexers position *)
+(* loop through until non-char *)
+(* substring from the start to the length of the substring *)
+(* length is equal to the finisting index - starting index *)
 let read_identifier (l : lexer) : string * lexer =
   (* loop over the string until we come across a non-letter *)
   let start = l.position in
@@ -27,8 +41,9 @@ let read_identifier (l : lexer) : string * lexer =
     if not (is_letter l.input.[i]) then (i, lex)
     else looper (i + 1) @@ read_char lex
   in
-  let finish, lex = looper 0 l in
-  (String.sub l.input start finish, lex)
+  let finish, lex = looper start l in
+  Printf.printf "%d, %d" start finish ;
+  (String.sub l.input start (finish - start), lex)
 
 (* given a lexer returen the correct token and advance the lexer *)
 let next_token (l : lexer) : Token.token * lexer =
@@ -60,4 +75,4 @@ let next_token (l : lexer) : Token.token * lexer =
     | _ ->
         (newToken Token.ILLEGAL l.ch, l)
   in
-  token l
+  token @@ eat_whitespace l
