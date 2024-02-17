@@ -17,6 +17,16 @@ let new' (input : string) : lexer =
 let newToken (token_type : Token.token_name) (ch : char) : Token.token =
   {literal= String.make 1 ch; type'= token_type}
 
+let is_digit = function '0' .. '9' -> true | _ -> false
+
+let read_number (l : lexer) : string * lexer =
+  let rec looper i lex =
+    if not (is_digit l.input.[i]) then (i, lex)
+    else looper (i + 1) @@ read_char lex
+  in
+  let finish, lex = looper l.position l in
+  (String.sub l.input l.position (finish - l.position), lex)
+
 let is_letter (ch : char) : bool =
   match ch with 'a' .. 'z' | 'A' .. 'Z' | '_' -> true | _ -> false
 
@@ -67,11 +77,12 @@ let next_token (l : lexer) : Token.token * lexer =
         (newToken Token.RBRACE l.ch, read_char l)
     | '\x00' ->
         (newToken Token.EOF l.ch, read_char l)
+    | _ when is_digit l.ch ->
+        let number, l = read_number l in
+        ({type'= Token.INT; literal= number}, l)
     | _ when is_letter l.ch ->
         let literal, l = read_identifier l in
-        print_endline literal ;
         ({type'= Token.look_up_ident literal; literal}, l)
-        (* This will capture a identifier in full *)
     | _ ->
         (newToken Token.ILLEGAL l.ch, l)
   in

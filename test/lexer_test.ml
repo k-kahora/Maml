@@ -58,7 +58,7 @@ let result = add(five, ten);
     ; (Token.IDENT, "ten")
     ; (Token.RPAREN, ")")
     ; (Token.SEMICOLON, ";")
-    ; (Token.EOF, "") ]
+    ; (Token.EOF, "\000") ]
   in
   let l = Lexer.new' input in
   ignore (List.fold_left test_token l tests)
