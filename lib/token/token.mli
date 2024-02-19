@@ -23,6 +23,11 @@ type token_name =
   (* Keywords *)
   | FUNCTION
   | LET
+  | TRUE
+  | FALSE
+  | IF
+  | ELSE
+  | RETURN
 
 val token_to_string : token_name -> string
 
