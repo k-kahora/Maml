@@ -61,6 +61,20 @@ let next_token (l : lexer) : Token.token * lexer =
     match l.ch with
     | '=' ->
         (newToken Token.ASSIGN l.ch, read_char l)
+    | '+' ->
+        (newToken Token.PLUS l.ch, read_char l)
+    | '-' ->
+        (newToken Token.MINUS l.ch, read_char l)
+    | '!' ->
+        (newToken Token.BANG l.ch, read_char l)
+    | '/' ->
+        (newToken Token.SLASH l.ch, read_char l)
+    | '*' ->
+        (newToken Token.ASTERISK l.ch, read_char l)
+    | '<' ->
+        (newToken Token.LT l.ch, read_char l)
+    | '>' ->
+        (newToken Token.GT l.ch, read_char l)
     | ';' ->
         (newToken Token.SEMICOLON l.ch, read_char l)
     | '(' ->
@@ -69,8 +83,6 @@ let next_token (l : lexer) : Token.token * lexer =
         (newToken Token.RPAREN l.ch, read_char l)
     | ',' ->
         (newToken Token.COMMA l.ch, read_char l)
-    | '+' ->
-        (newToken Token.PLUS l.ch, read_char l)
     | '{' ->
         (newToken Token.LBRACE l.ch, read_char l)
     | '}' ->

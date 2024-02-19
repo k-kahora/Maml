@@ -1,16 +1,26 @@
 type token_name =
   | ILLEGAL
   | EOF
+  (* Identifies and literals *)
   | IDENT
   | INT
+  (* Operators *)
   | ASSIGN
   | PLUS
+  | MINUS
+  | BANG
+  | ASTERISK
+  | SLASH
+  | LT
+  | GT
+  (* Delimeters *)
   | COMMA
   | SEMICOLON
   | LPAREN
   | RPAREN
   | LBRACE
   | RBRACE
+  (* Keywords *)
   | FUNCTION
   | LET
 

@@ -9,6 +9,12 @@ type token_name =
   (* Operators *)
   | ASSIGN
   | PLUS
+  | MINUS
+  | BANG
+  | ASTERISK
+  | SLASH
+  | LT
+  | GT
   (* Delimeters *)
   | COMMA
   | SEMICOLON
@@ -54,6 +60,18 @@ let token_to_string (t : token_name) : string =
       "FUNCTION"
   | LET ->
       "LET"
+  | MINUS ->
+      "-"
+  | BANG ->
+      "!"
+  | ASTERISK ->
+      "*"
+  | SLASH ->
+      "/"
+  | LT ->
+      "<"
+  | GT ->
+      ">"
 
 type token = {type': token_name; literal: string}
 

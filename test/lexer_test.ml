@@ -19,6 +19,8 @@ let add = fn(x, y) {
 };
 
 let result = add(five, ten);
+!-/*5
+5 < 10 > 5
 |}
   in
   let tests =
@@ -58,6 +60,16 @@ let result = add(five, ten);
     ; (Token.IDENT, "ten")
     ; (Token.RPAREN, ")")
     ; (Token.SEMICOLON, ";")
+    ; (Token.BANG, "!")
+    ; (Token.MINUS, "-")
+    ; (Token.SLASH, "/")
+    ; (Token.ASTERISK, "*")
+    ; (Token.INT, "5")
+    ; (Token.INT, "5")
+    ; (Token.LT, "<")
+    ; (Token.INT, "10")
+    ; (Token.GT, ">")
+    ; (Token.INT, "5")
     ; (Token.EOF, "\000") ]
   in
   let l = Lexer.new' input in
