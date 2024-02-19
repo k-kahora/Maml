@@ -1,5 +1,12 @@
 type lexer = {input: string; position: int; readPosition: int; ch: char}
 
+let peek_char (l : lexer) : char =
+  match l.ch with
+  | _ when l.readPosition >= String.length l.input ->
+      ' '
+  | _ ->
+      l.input.[l.readPosition]
+
 let read_char (l : lexer) : lexer =
   { l with
     ch=
@@ -59,14 +66,26 @@ let read_identifier (l : lexer) : string * lexer =
 let next_token (l : lexer) : Token.token * lexer =
   let token l =
     match l.ch with
-    | '=' ->
-        (newToken Token.ASSIGN l.ch, read_char l)
+    | '=' -> (
+      match peek_char l with
+      | '=' ->
+          ( { Token.literal= String.make 1 l.ch ^ String.make 1 (peek_char l)
+            ; Token.type'= Token.EQ }
+          , read_char @@ read_char l )
+      | _ ->
+          (newToken Token.ASSIGN l.ch, read_char l) )
     | '+' ->
         (newToken Token.PLUS l.ch, read_char l)
     | '-' ->
         (newToken Token.MINUS l.ch, read_char l)
-    | '!' ->
-        (newToken Token.BANG l.ch, read_char l)
+    | '!' -> (
+      match peek_char l with
+      | '=' ->
+          ( { Token.type'= Token.NOT_EQ
+            ; Token.literal= String.make 1 l.ch ^ String.make 1 (peek_char l) }
+          , read_char @@ read_char l )
+      | _ ->
+          (newToken Token.BANG l.ch, read_char l) )
     | '/' ->
         (newToken Token.SLASH l.ch, read_char l)
     | '*' ->

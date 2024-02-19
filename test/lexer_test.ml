@@ -27,6 +27,8 @@ if (5 < 10) {
 } else {
      return false;
 }
+10 == 10;
+10 != 9;
 |}
   in
   let tests =
@@ -93,6 +95,14 @@ if (5 < 10) {
     ; (Token.FALSE, "false")
     ; (Token.SEMICOLON, ";")
     ; (Token.RBRACE, "}")
+    ; (Token.INT, "10")
+    ; (Token.EQ, "==")
+    ; (Token.INT, "10")
+    ; (Token.SEMICOLON, ";")
+    ; (Token.INT, "10")
+    ; (Token.NOT_EQ, "!=")
+    ; (Token.INT, "9")
+    ; (Token.SEMICOLON, ";")
     ; (Token.EOF, "\000") ]
   in
   let l = Lexer.new' input in
