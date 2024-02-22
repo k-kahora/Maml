@@ -16,7 +16,7 @@ let rec evaluate (l : lexer) : unit =
 
 (* Define the REPL function *)
 let rec repl () =
-  print_string "> " ;
+  print_string "==> " ;
   (* Print prompt *)
   flush stdout ;
   (* Ensure the prompt is displayed *)

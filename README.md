@@ -1,5 +1,6 @@
 ### Writing an interpreter in ~~go~~ ocaml 
 ## TODO
-- [ ] #1
+- [ ] # Refractor the main.ml to repl
+- [ ] Clean up the token code seems pretty redeundent to me, (maybe I do not have to convert to a string)
 ## Interesting
 Noticed a case where if the last of the input is a {keyword|number} my loops do a index out of bounds error, however this was never recognized within the tests
