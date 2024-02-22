@@ -33,6 +33,8 @@ type token_name =
 
 val token_to_string : token_name -> string
 
+val token_to_string_debug : token_name -> string
+
 type token = {type': token_name; literal: string}
 
 val look_up_ident : string -> token_name

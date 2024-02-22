@@ -32,6 +32,67 @@ type token_name =
   | ELSE
   | RETURN
 
+let token_to_string_debug (t : token_name) : string =
+  match t with
+  | ILLEGAL ->
+      "ILLEGAL"
+  | EOF ->
+      "EOF"
+  (* Identifies and literals *)
+  | IDENT ->
+      "IDENT"
+  | INT ->
+      "INT"
+  (* Operators *)
+  | ASSIGN ->
+      "ASSIGN"
+  | PLUS ->
+      "PLUS"
+  | MINUS ->
+      "MINUS"
+  | BANG ->
+      "BANG"
+  | ASTERISK ->
+      "ASTERISK"
+  | SLASH ->
+      "SLASH"
+  | LT ->
+      "LT"
+  | GT ->
+      "GT"
+  | EQ ->
+      "EQ"
+  | NOT_EQ ->
+      "NOT_EQ"
+  (* Delimeters *)
+  | COMMA ->
+      "COMMA"
+  | SEMICOLON ->
+      "SEMICOLON"
+  | LPAREN ->
+      "LPAREN"
+  | RPAREN ->
+      "RPAREN"
+  | LBRACE ->
+      "LBRACE"
+  | RBRACE ->
+      "RBRACE"
+  (* Keywords *)
+  | FUNCTION ->
+      "FUNCTION"
+  | LET ->
+      "LET"
+  | TRUE ->
+      "TRUE"
+  | FALSE ->
+      "FALSE"
+  | IF ->
+      "IF"
+  | ELSE ->
+      "ELSE"
+  | RETURN ->
+      "RETURN"
+
 let token_to_string (t : token_name) : string =
   match t with
   | ILLEGAL ->

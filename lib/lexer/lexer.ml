@@ -28,7 +28,7 @@ let is_digit = function '0' .. '9' -> true | _ -> false
 
 let read_number (l : lexer) : string * lexer =
   let rec looper i lex =
-    if not (is_digit l.input.[i]) then (i, lex)
+    if i >= String.length l.input || not (is_digit l.input.[i]) then (i, lex)
     else looper (i + 1) @@ read_char lex
   in
   let finish, lex = looper l.position l in
@@ -55,11 +55,10 @@ let read_identifier (l : lexer) : string * lexer =
   (* loop over the string until we come across a non-letter *)
   let start = l.position in
   let rec looper i lex =
-    if not (is_letter l.input.[i]) then (i, lex)
+    if i >= String.length l.input || not (is_letter l.input.[i]) then (i, lex)
     else looper (i + 1) @@ read_char lex
   in
   let finish, lex = looper start l in
-  Printf.printf "%d, %d" start finish ;
   (String.sub l.input start (finish - start), lex)
 
 (* given a lexer returen the correct token and advance the lexer *)
@@ -115,6 +114,6 @@ let next_token (l : lexer) : Token.token * lexer =
         let literal, l = read_identifier l in
         ({type'= Token.look_up_ident literal; literal}, l)
     | _ ->
-        (newToken Token.ILLEGAL l.ch, l)
+        (newToken Token.ILLEGAL l.ch, read_char l)
   in
   token @@ eat_whitespace l
