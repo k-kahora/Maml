@@ -109,6 +109,6 @@ if (5 < 10) {
   ignore (List.fold_left test_token l tests)
 
 let () =
-  Alcotest.run "My tests"
+  Alcotest.run "Token tests"
     [ ( "Next Token"
       , [Alcotest.test_case "Test Next token" `Quick test_next_token] ) ]

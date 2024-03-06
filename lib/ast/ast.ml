@@ -19,4 +19,6 @@ let token_literal_of_program p =
   | [] ->
       ""
   | h :: _ -> (
-    match h with Letstatement {value= _; name; token= _} -> name )
+    match h with
+    | Letstatement {value= _; name; token= _} ->
+        Token.token_to_string name.token.type' )
