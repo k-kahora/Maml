@@ -1,8 +1,16 @@
 type parser = {l: Lexer.lexer; curToken: Token.token; peekToken: Token.token}
 
+let print_parser (p : parser) : unit =
+  Format.printf "Current Token: %s \n"
+    (Token.token_to_string_debug p.curToken.type') ;
+  Format.printf "Peek token: %s \n"
+    (Token.token_to_string_debug p.peekToken.type')
+
 let next_token (p : parser) : parser =
-  let peekToken, l = Lexer.next_token p.l in
-  {curToken= peekToken; peekToken; l}
+  let nextToken, l = Lexer.next_token p.l in
+  (* Format.printf "Next Token: %s \n" *)
+  (* Token.token_to_string_debug nextToken.type' ; *)
+  {curToken= p.peekToken; peekToken= nextToken; l}
 
 let new_parser (l : Lexer.lexer) : parser =
   let curToken, cur = Lexer.next_token l in
@@ -36,19 +44,27 @@ let expect_peek (p : parser) (t : Token.token_name) : parser option =
   let p = if b then Some (next_token p) else None in
   p
 
+(* all the bindings will fail if the incorrect token is found *)
 let parse_let_statement (p : parser) : Ast.statement * parser =
   let stmt =
     Ast.Letstatement
       {token= p.curToken; name= {token= p.curToken; value= "null"}}
   in
   let ( >>= ) option f = match option with Some x -> f x | None -> None in
-  (* let b,p = expect_peek p Token.IDENT in   *)
-  let first_token = Some (next_token p) in
-  let last_token =
-    first_token
-    >>= fun ft ->
-    expect_peek ft Token.LET >>= fun nt -> expect_peek nt Token.ASSIGN
+  (* First check for the ident token *)
+  let last_token = Some p >>= fun ft -> expect_peek ft Token.IDENT in
+  (* Set statement name = to the current token *)
+  let stmt =
+    match stmt with
+    | Ast.Letstatement st ->
+        Ast.Letstatement
+          { st with
+            name=
+              { token= (Option.get last_token).curToken
+              ; value= (Option.get last_token).curToken.literal } }
   in
+  (* check for the ASSIGN token *)
+  let last_token = last_token >>= fun nt -> expect_peek nt Token.ASSIGN in
   let rec looper nxt =
     match nxt with
     | pst when cur_token_is pst Token.SEMICOLON ->
@@ -79,4 +95,6 @@ let parse_program (p : parser) : Ast.program =
       | Some (stmt, p) ->
           looper (stmt :: acc) (next_token p) )
   in
-  {Ast.statements= looper [] p}
+  let d_stms = looper [] p in
+  let _ = List.iter Ast.print_statement d_stms in
+  {Ast.statements= List.rev d_stms}

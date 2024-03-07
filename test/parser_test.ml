@@ -9,16 +9,15 @@ let test_statement () =
    |} in
   let tests = ["x"; "y"; "foobar"] in
   let l = Lexer.new' input in
-  let _ = Parser.new_parser l in
-  let program = Parser.parse_program () in
+  let p = Parser.new_parser l in
+  let program = Parser.parse_program p in
+  print_endline "here" ;
+  Format.printf "Length: %s" (List.nth tests 1) ;
   if List.length program.statements <> 3 then failwith "not enought statements" ;
   let test_inputs stat actual =
-    (* Alcotest.(check string) "Same string" stat actual *)
     match stat with
     | Ast.Letstatement {name} ->
         Alcotest.(check string) "Check name" name.value actual
-    (* | _ -> *)
-    (*     failwith "error not a let statement" *)
   in
   ignore (List.map2 test_inputs program.statements tests)
 

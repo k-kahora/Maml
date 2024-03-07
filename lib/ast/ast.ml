@@ -1,12 +1,18 @@
 (* Abstracting the Node behavior through a function type *)
 
-type identifier_expression = {token: Token.token; value: string}
+type identifier_expression =
+  {token: Token.token (* The ident token *); value: string}
 
 type expression = Identifier of identifier_expression
 
 type let_statement = {token: Token.token; name: identifier_expression}
 
 type statement = Letstatement of let_statement
+
+let print_statement (s : statement) : unit =
+  match s with
+  | Letstatement {token} ->
+      Format.printf "Token: %s\n" (Token.token_to_string_debug token.type')
 
 let new_let_statement () =
   Letstatement
