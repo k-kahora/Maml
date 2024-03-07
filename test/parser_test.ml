@@ -1,12 +1,25 @@
 (* Build with `ocamlbuild -pkg alcotest simple.byte` *)
 (* A module with functions to test *)
 
+(* let check_parse_errors (p : parser) : unit = *)
+(*   let open Parser in *)
+(*   let errors = p.errors in *)
+(*   match List.length errors with *)
+(*   | 0 -> *)
+(*       () *)
+(*   | _ -> *)
+(*       List.iter (Format.printf "Parser error %s\n") errors ; *)
+(*       failwith "Parser errors" *)
+
 let test_statement () =
-  let input = {|
+  let input =
+    {|
    let x = 5;
    let y = 10;
    let foobar = 838383;
-   |} in
+   let + - = 10;
+   |}
+  in
   let tests = ["x"; "y"; "foobar"] in
   let l = Lexer.new' input in
   let p = Parser.new_parser l in

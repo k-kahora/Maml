@@ -9,6 +9,12 @@ type let_statement = {token: Token.token; name: identifier_expression}
 
 type statement = Letstatement of let_statement
 
+let new_let_statement ?(token = {Token.type'= Token.EOF; Token.literal= "\x00"})
+    ?(name =
+      {token= {Token.type'= Token.EOF; Token.literal= "\x00"}; value= "\x00"})
+    () =
+  Letstatement {name; token}
+
 let print_statement (s : statement) : unit =
   match s with
   | Letstatement {token} ->

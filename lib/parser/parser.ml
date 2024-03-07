@@ -1,4 +1,21 @@
-type parser = {l: Lexer.lexer; curToken: Token.token; peekToken: Token.token}
+type parser =
+  { l: Lexer.lexer
+  ; curToken: Token.token
+  ; peekToken: Token.token
+  ; errors: string list }
+
+let errors (p : parser) : string list = p.errors
+
+let check_error a = match a with Ok _ -> a | Error e -> failwith e
+
+let peek_error (p : parser) (t : Token.token_name) : string =
+  let msg =
+    Format.sprintf "expected next token to be %s got %s instead"
+      (Token.token_to_string_debug t)
+      (Token.token_to_string_debug p.peekToken.type')
+  in
+  msg
+(* HACK Anti pattern copies the whole list each time*)
 
 let print_parser (p : parser) : unit =
   Format.printf "Current Token: %s \n"
@@ -10,12 +27,12 @@ let next_token (p : parser) : parser =
   let nextToken, l = Lexer.next_token p.l in
   (* Format.printf "Next Token: %s \n" *)
   (* Token.token_to_string_debug nextToken.type' ; *)
-  {curToken= p.peekToken; peekToken= nextToken; l}
+  {p with curToken= p.peekToken; peekToken= nextToken; l}
 
 let new_parser (l : Lexer.lexer) : parser =
   let curToken, cur = Lexer.next_token l in
   let peekToken, l = Lexer.next_token cur in
-  {l; curToken; peekToken}
+  {l; curToken; peekToken; errors= []}
 
 module type Monad = sig
   type 'a t
@@ -39,20 +56,22 @@ let cur_token_is (p : parser) (t : Token.token_name) : bool =
 let peek_token_is (p : parser) (t : Token.token_name) : bool =
   p.peekToken.type' = t
 
-let expect_peek (p : parser) (t : Token.token_name) : parser option =
+let expect_peek (p : parser) (t : Token.token_name) : (parser, string) result =
   let b = peek_token_is p t in
-  let p = if b then Some (next_token p) else None in
-  p
+  if b then Ok (next_token p) else Error (peek_error p t)
 
 (* all the bindings will fail if the incorrect token is found *)
 let parse_let_statement (p : parser) : Ast.statement * parser =
+  let open Result in
+  let ( >>= ) = bind in
   let stmt =
     Ast.Letstatement
       {token= p.curToken; name= {token= p.curToken; value= "null"}}
   in
-  let ( >>= ) option f = match option with Some x -> f x | None -> None in
   (* First check for the ident token *)
-  let last_token = Some p >>= fun ft -> expect_peek ft Token.IDENT in
+  let last_token =
+    Ok p >>= fun ft -> expect_peek ft Token.IDENT |> check_error
+  in
   (* Set statement name = to the current token *)
   let stmt =
     match stmt with
@@ -60,11 +79,13 @@ let parse_let_statement (p : parser) : Ast.statement * parser =
         Ast.Letstatement
           { st with
             name=
-              { token= (Option.get last_token).curToken
-              ; value= (Option.get last_token).curToken.literal } }
+              { token= (get_ok last_token).curToken
+              ; value= (get_ok last_token).curToken.literal } }
   in
   (* check for the ASSIGN token *)
-  let last_token = last_token >>= fun nt -> expect_peek nt Token.ASSIGN in
+  let last_token =
+    last_token >>= fun nt -> expect_peek nt Token.ASSIGN |> check_error
+  in
   let rec looper nxt =
     match nxt with
     | pst when cur_token_is pst Token.SEMICOLON ->
@@ -72,7 +93,7 @@ let parse_let_statement (p : parser) : Ast.statement * parser =
     | _ ->
         looper (next_token nxt)
   in
-  (stmt, looper @@ Option.get last_token)
+  (stmt, looper @@ get_ok last_token)
 (* Ast.new_let_satement () *)
 
 let parse_statement (p : parser) : (Ast.statement * parser) option =
@@ -98,3 +119,4 @@ let parse_program (p : parser) : Ast.program =
   let d_stms = looper [] p in
   let _ = List.iter Ast.print_statement d_stms in
   {Ast.statements= List.rev d_stms}
+(* List must be reversed due to the way is is handled by appending to the front *)
