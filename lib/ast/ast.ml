@@ -5,9 +5,13 @@ type identifier_expression =
 
 type expression = Identifier of identifier_expression
 
+type return_statement = {token: Token.token; return_value: expression}
+
 type let_statement = {token: Token.token; name: identifier_expression}
 
-type statement = Letstatement of let_statement
+type statement =
+  | Letstatement of let_statement
+  | Returnstatement of return_statement
 
 let new_let_statement ?(token = {Token.type'= Token.EOF; Token.literal= "\x00"})
     ?(name =
@@ -18,6 +22,8 @@ let new_let_statement ?(token = {Token.type'= Token.EOF; Token.literal= "\x00"})
 let print_statement (s : statement) : unit =
   match s with
   | Letstatement {token} ->
+      Format.printf "Token: %s\n" (Token.token_to_string_debug token.type')
+  | Returnstatement {token} ->
       Format.printf "Token: %s\n" (Token.token_to_string_debug token.type')
 
 let new_let_statement () =
@@ -38,4 +44,6 @@ let token_literal_of_program p =
   | h :: _ -> (
     match h with
     | Letstatement {name; token= _} ->
-        Token.token_to_string name.token.type' )
+        Token.token_to_string name.token.type'
+    | Returnstatement {token} ->
+        Token.token_to_string token.type' )

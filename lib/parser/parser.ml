@@ -81,6 +81,8 @@ let parse_let_statement (p : parser) : Ast.statement * parser =
             name=
               { token= (get_ok last_token).curToken
               ; value= (get_ok last_token).curToken.literal } }
+    | _ ->
+        failwith "should be a let statement here"
   in
   (* check for the ASSIGN token *)
   let last_token =
