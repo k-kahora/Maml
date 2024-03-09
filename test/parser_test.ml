@@ -20,10 +20,12 @@ return 993322;
   let l = Lexer.new' input in
   let p = Parser.new_parser l in
   let program = Parser.parse_program p in
-  if List.length program.statements <> 3 then failwith "not enough statements" ;
+  if List.length program.statements <> 3 then failwith "should be 3 statements" ;
   let test_inputs stat =
     match stat with
     | Ast.Returnstatement {token} ->
+        Format.printf "True-Token: %s\n"
+          (Token.token_to_string_debug token.type') ;
         Alcotest.(check string)
           "Check return statement"
           (Token.token_to_string_debug token.type')
@@ -46,7 +48,6 @@ let test_let_statement () =
   let l = Lexer.new' input in
   let p = Parser.new_parser l in
   let program = Parser.parse_program p in
-  print_endline "here" ;
   Format.printf "Length: %s" (List.nth tests 1) ;
   if List.length program.statements <> 4 then failwith "not enought statements" ;
   let test_inputs stat actual =
