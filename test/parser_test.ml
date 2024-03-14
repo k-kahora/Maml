@@ -1,3 +1,15 @@
+let test_ident_expression () =
+  let input = "foobar;" in
+  let l = Lexer.new' input in
+  let p = Parser.new_parser l in
+  let program = Parser.parse_program p in
+  if List.length program.statements <> 1 then
+    failwith "should be one expression" ;
+  let stmt = match program.statements with h :: _ -> h in
+  (* This is a type check *)
+  let _ = (stmt : Ast.expression_statement) in
+  10
+
 let test_return_statements () =
   let input = {|
 return 5; 

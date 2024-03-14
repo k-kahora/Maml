@@ -28,6 +28,10 @@ type parser =
   ; infinxParseFns: (Token.token_name, infixParseFn) Token_AssocList.t
   ; errors: string list }
 
+let register_infix (p : parser) (t : Token.token_name) (fn : prefixParseFn) :
+    parser =
+  {p with infixParseFns= Token_AssocList.add t fn p.infinxParseFns}
+
 let register_prefix (p : parser) (t : Token.token_name) (fn : prefixParseFn) :
     parser =
   {p with prefixParseFns= Token_AssocList.add t fn p.prefixParseFns}
