@@ -1,8 +1,36 @@
+module type AssocList = sig
+  type ('a, 'b) t
+
+  val empty : ('a, 'b) t
+
+  val add : 'a -> 'b -> ('a, 'b) t -> ('a, 'b) t
+end
+
+type prefixParseFn = unit -> Ast.expression
+
+type infixParseFn = Ast.expression -> Ast.expression
+
+module Token_AssocList : AssocList = struct
+  type ('a, 'b) t = ('a * 'b) list
+
+  let empty = []
+
+  let add key value list = (key, value) :: list
+
+  (* let mem key list = List.exists (fun (a, _) -> a = key) list *)
+end
+
 type parser =
   { l: Lexer.lexer
   ; curToken: Token.token
   ; peekToken: Token.token
+  ; prefixParseFns: (Token.token_name, prefixParseFn) Token_AssocList.t
+  ; infinxParseFns: (Token.token_name, infixParseFn) Token_AssocList.t
   ; errors: string list }
+
+let register_prefix (p : parser) (t : Token.token_name) (fn : prefixParseFn) :
+    parser =
+  {p with prefixParseFns= Token_AssocList.add t fn p.prefixParseFns}
 
 let errors (p : parser) : string list = p.errors
 
@@ -32,7 +60,12 @@ let next_token (p : parser) : parser =
 let new_parser (l : Lexer.lexer) : parser =
   let curToken, cur = Lexer.next_token l in
   let peekToken, l = Lexer.next_token cur in
-  {l; curToken; peekToken; errors= []}
+  { l
+  ; curToken
+  ; peekToken
+  ; errors= []
+  ; prefixParseFns= Token_AssocList.empty
+  ; infinxParseFns= Token_AssocList.empty }
 
 module type Monad = sig
   type 'a t

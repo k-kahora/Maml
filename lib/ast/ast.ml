@@ -13,6 +13,8 @@ type let_statement =
 let expression_str (e : expression) : string =
   match e with Identifier {token= _; value} -> value
 
+let identifier_str {value} = value
+
 let let_statement_str {token; name; value} =
   Token.token_to_string_debug token.type'
   ^ " " ^ name.value ^ " = " ^ expression_str value ^ ";"

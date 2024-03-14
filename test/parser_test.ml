@@ -1,16 +1,3 @@
-(* Build with `ocamlbuild -pkg alcotest simple.byte` *)
-(* A module with functions to test *)
-
-(* let check_parse_errors (p : parser) : unit = *)
-(*   let open Parser in *)
-(*   let errors = p.errors in *)
-(*   match List.length errors with *)
-(*   | 0 -> *)
-(*       () *)
-(*   | _ -> *)
-(*       List.iter (Format.printf "Parser error %s\n") errors ; *)
-(*       failwith "Parser errors" *)
-
 let test_return_statements () =
   let input = {|
 return 5; 
@@ -47,8 +34,7 @@ let test_let_statement () =
   let tests = ["x"; "y"; "foobar"; "special_ident"] in
   let l = Lexer.new' input in
   let p = Parser.new_parser l in
-  let program = Parser.parse_program p in
-  Format.printf "Length: %s" (List.nth tests 1) ;
+  let _ = print_endline (Ast.program_str program) in
   if List.length program.statements <> 4 then failwith "not enought statements" ;
   let test_inputs stat actual =
     match stat with
