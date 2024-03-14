@@ -93,6 +93,23 @@ let expect_peek (p : parser) (t : Token.token_name) : (parser, string) result =
   let b = peek_token_is p t in
   if b then Ok (next_token p) else Error (peek_error p t)
 
+let rec skip_expression nxt =
+  match nxt with
+  | pst when cur_token_is pst Token.SEMICOLON ->
+      nxt
+  | _ ->
+      skip_expression (next_token nxt)
+
+(* all the bindings will fail if the incorrect token is found *)
+let parse_return_statement (p : parser) : Ast.statement * parser =
+  let stmt =
+    Ast.Returnstatement
+      { token= p.curToken
+      ; return_value= Identifier {token= p.curToken; value= "null"} }
+  in
+  let p = skip_expression p in
+  (stmt, p)
+
 (* all the bindings will fail if the incorrect token is found *)
 let parse_let_statement (p : parser) : Ast.statement * parser =
   let open Result in
@@ -123,20 +140,15 @@ let parse_let_statement (p : parser) : Ast.statement * parser =
   let last_token =
     last_token >>= fun nt -> expect_peek nt Token.ASSIGN |> check_error
   in
-  let rec looper nxt =
-    match nxt with
-    | pst when cur_token_is pst Token.SEMICOLON ->
-        nxt
-    | _ ->
-        looper (next_token nxt)
-  in
-  (stmt, looper @@ get_ok last_token)
+  (stmt, skip_expression @@ get_ok last_token)
 (* Ast.new_let_satement () *)
 
 let parse_statement (p : parser) : (Ast.statement * parser) option =
   match p.curToken.type' with
   | Token.LET ->
       Some (parse_let_statement p)
+  | Token.RETURN ->
+      Some (parse_return_statement p)
   | _ ->
       None
 

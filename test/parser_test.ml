@@ -34,6 +34,7 @@ let test_let_statement () =
   let tests = ["x"; "y"; "foobar"; "special_ident"] in
   let l = Lexer.new' input in
   let p = Parser.new_parser l in
+  let program = Parser.parse_program p in
   let _ = print_endline (Ast.program_str program) in
   if List.length program.statements <> 4 then failwith "not enought statements" ;
   let test_inputs stat actual =
