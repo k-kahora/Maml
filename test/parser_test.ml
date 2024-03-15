@@ -5,10 +5,19 @@ let test_ident_expression () =
   let program = Parser.parse_program p in
   if List.length program.statements <> 1 then
     failwith "should be one expression" ;
-  let stmt = match program.statements with h :: _ -> h in
   (* This is a type check *)
-  let _ = (stmt : Ast.expression_statement) in
-  10
+  let stmt =
+    match program.statements with h :: _ -> h | _ -> failwith "impossible"
+  in
+  (* let _ = (stmt : Ast.expression_statement) in *)
+  let stmt =
+    match stmt with
+    | Ast.Expressionstatement stm ->
+        stm
+    | _ ->
+        failwith "impossilbe"
+  in
+  if stmt.token.literal <> "foobar" then failwith "value not correct"
 
 let test_return_statements () =
   let input = {|
@@ -69,4 +78,7 @@ let () =
       , [test_case "Test the let statements" `Quick test_let_statement] )
     ; ( "Return statements"
       , [test_case "Test the return statements" `Quick test_return_statements]
-      ) ]
+      )
+    ; ( "identifiers"
+      , [ test_case "test the identifier expression statement" `Quick
+            test_ident_expression ] ) ]

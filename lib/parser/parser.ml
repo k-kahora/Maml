@@ -4,11 +4,9 @@ module type AssocList = sig
   val empty : ('a, 'b) t
 
   val add : 'a -> 'b -> ('a, 'b) t -> ('a, 'b) t
+
+  val find : 'a -> ('a, 'b) t -> 'b option
 end
-
-type prefixParseFn = unit -> Ast.expression
-
-type infixParseFn = Ast.expression -> Ast.expression
 
 module Token_AssocList : AssocList = struct
   type ('a, 'b) t = ('a * 'b) list
@@ -16,6 +14,15 @@ module Token_AssocList : AssocList = struct
   let empty = []
 
   let add key value list = (key, value) :: list
+
+  let rec find key list =
+    match list with
+    | (tok, fn) :: _ when tok = key ->
+        Some fn
+    | _ :: t ->
+        find key t
+    | [] ->
+        None
 
   (* let mem key list = List.exists (fun (a, _) -> a = key) list *)
 end
@@ -28,11 +35,41 @@ type parser =
   ; infinxParseFns: (Token.token_name, infixParseFn) Token_AssocList.t
   ; errors: string list }
 
-let register_infix (p : parser) (t : Token.token_name) (fn : prefixParseFn) :
-    parser =
-  {p with infixParseFns= Token_AssocList.add t fn p.infinxParseFns}
+and prefixParseFn = parser -> Ast.expression
 
-let register_prefix (p : parser) (t : Token.token_name) (fn : prefixParseFn) :
+and infixParseFn = parser -> Ast.expression
+
+type precedence =
+  | LOWEST
+  | EQUALS (* == *)
+  | LESSGREATER (* < or > *)
+  | SUM (* + *)
+  | PRODUCT (* * *)
+  | PREFIX (* -X or !X *)
+  | CALL (* func(X) *)
+
+let precedence_level (p : precedence) =
+  match p with
+  | LOWEST ->
+      0
+  | EQUALS ->
+      1
+  | LESSGREATER ->
+      2
+  | SUM ->
+      3
+  | PRODUCT ->
+      4
+  | PREFIX ->
+      5
+  | CALL ->
+      6
+
+let register_infix (p : parser) ~(t : Token.token_name) ~(fn : infixParseFn) :
+    parser =
+  {p with infinxParseFns= Token_AssocList.add t fn p.infinxParseFns}
+
+let register_prefix (p : parser) ~(t : Token.token_name) ~(fn : prefixParseFn) :
     parser =
   {p with prefixParseFns= Token_AssocList.add t fn p.prefixParseFns}
 
@@ -61,6 +98,9 @@ let next_token (p : parser) : parser =
   (* Token.token_to_string_debug nextToken.type' ; *)
   {p with curToken= p.peekToken; peekToken= nextToken; l}
 
+let parser_identifier (p : parser) : Ast.expression =
+  Ast.Identifier {token= p.curToken; value= p.curToken.literal}
+
 let new_parser (l : Lexer.lexer) : parser =
   let curToken, cur = Lexer.next_token l in
   let peekToken, l = Lexer.next_token cur in
@@ -70,6 +110,7 @@ let new_parser (l : Lexer.lexer) : parser =
   ; errors= []
   ; prefixParseFns= Token_AssocList.empty
   ; infinxParseFns= Token_AssocList.empty }
+  |> register_prefix ~t:Token.IDENT ~fn:parser_identifier
 
 module type Monad = sig
   type 'a t
@@ -114,6 +155,27 @@ let parse_return_statement (p : parser) : Ast.statement * parser =
   let p = skip_expression p in
   (stmt, p)
 
+let parse_expression (p : parser) (_precedence' : precedence) : parser =
+  let _prefix =
+    match Token_AssocList.find p.curToken.type' p.prefixParseFns with
+    | Some pre ->
+        pre
+    | None ->
+        failwith "not ready for this need to test only identifier"
+  in
+  let _left_exp = _prefix p in
+  p
+
+let parse_expression_statement p =
+  let stmt =
+    let tok = {Token.type'= Token.ILLEGAL; literal= "null"} in
+    Ast.Expressionstatement
+      {token= tok; expression= Identifier {token= tok; value= "null"}}
+  in
+  let p = parse_expression p LOWEST in
+  (* check for a semicolon *)
+  (stmt, p)
+
 (* all the bindings will fail if the incorrect token is found *)
 let parse_let_statement (p : parser) : Ast.statement * parser =
   let open Result in
@@ -154,7 +216,7 @@ let parse_statement (p : parser) : (Ast.statement * parser) option =
   | Token.RETURN ->
       Some (parse_return_statement p)
   | _ ->
-      None
+      Some (parse_expression_statement p)
 
 let parse_program (p : parser) : Ast.program =
   (* Parse each token until there is a EOF token *)
