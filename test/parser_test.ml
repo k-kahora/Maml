@@ -1,3 +1,5 @@
+let blank () = ()
+
 let test_ident_expression () =
   let input = "foobar;" in
   let l = Lexer.new' input in
@@ -10,14 +12,20 @@ let test_ident_expression () =
     match program.statements with h :: _ -> h | _ -> failwith "impossible"
   in
   (* let _ = (stmt : Ast.expression_statement) in *)
-  let stmt =
+  let token =
     match stmt with
-    | Ast.Expressionstatement stm ->
-        stm
+    | Ast.Expressionstatement stm -> (
+      match stm.expression with
+      (* Must be i identified expression *)
+      | Identifier ident_expr ->
+          ident_expr.token )
     | _ ->
         failwith "impossilbe"
+    (* | _ -> *)
+    (*     failwith "impossilbe" ) *)
   in
-  if stmt.token.literal <> "foobar" then failwith "value not correct"
+  if token.literal <> "foobar" then
+    failwith ("value not correct it is " ^ token.literal)
 
 let test_return_statements () =
   let input = {|
@@ -81,4 +89,4 @@ let () =
       )
     ; ( "identifiers"
       , [ test_case "test the identifier expression statement" `Quick
-            test_ident_expression ] ) ]
+            test_ident_expression (* test_ident_expression *) ] ) ]

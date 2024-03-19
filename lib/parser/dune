@@ -1,3 +1,3 @@
 (library
  (name parser)
- (libraries ast lexer token))
+ (libraries ast lexer token utils))
