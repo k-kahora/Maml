@@ -1,5 +1,34 @@
 let blank () = ()
 
+let test_int_literal () =
+  let input = "5;" in
+  let l = Lexer.new' input in
+  let p = Parser.new_parser l in
+  let program = Parser.parse_program p in
+  if List.length program.statements <> 1 then
+    failwith "should be one int literal" ;
+  (* This is a type check *)
+  let stmt =
+    (* FIXME Redundent *)
+    match program.statements with h :: _ -> h | _ -> failwith "impossible"
+  in
+  (* let _ = (stmt : Ast.expression_statement) in *)
+  let value =
+    match stmt with
+    | Ast.Expressionstatement stm -> (
+      match stm.expression with
+      (* Must be i identified expression *)
+      | IntegerLiteral int_expr ->
+          int_expr.value
+      | _ ->
+          failwith "must be an integer expression" )
+    | _ ->
+        failwith "impossilbe"
+    (* | _ -> *)
+    (*     failwith "impossilbe" ) *)
+  in
+  if value <> 5 then failwith ("value not correct it is " ^ string_of_int value)
+
 let test_ident_expression () =
   let input = "foobar;" in
   let l = Lexer.new' input in
@@ -18,7 +47,9 @@ let test_ident_expression () =
       match stm.expression with
       (* Must be i identified expression *)
       | Identifier ident_expr ->
-          ident_expr.token )
+          ident_expr.token
+      | _ ->
+          failwith "Must be an identfier expression" )
     | _ ->
         failwith "impossilbe"
     (* | _ -> *)
@@ -89,4 +120,6 @@ let () =
       )
     ; ( "identifiers"
       , [ test_case "test the identifier expression statement" `Quick
-            test_ident_expression (* test_ident_expression *) ] ) ]
+            test_ident_expression (* test_ident_expression *) ] )
+    ; ( "integers"
+      , [test_case "test the integer expressions" `Quick test_int_literal] ) ]

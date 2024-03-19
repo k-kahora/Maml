@@ -69,6 +69,11 @@ let next_token (p : parser) : parser =
   (* Token.token_to_string_debug nextToken.type' ; *)
   {p with curToken= p.peekToken; peekToken= nextToken; l}
 
+let parse_integer_literal (p : parser) : Ast.expression =
+  Ast.IntegerLiteral {token= p.curToken; value= int_of_string p.curToken.literal}
+
+(* let lit = int_of_string p.curToken.literal in *)
+
 let parse_identifier (p : parser) : Ast.expression =
   Ast.Identifier {token= p.curToken; value= p.curToken.literal}
 
@@ -82,6 +87,7 @@ let new_parser (l : Lexer.lexer) : parser =
   ; prefixParseFns= Utils.Token_AssocList.empty
   ; infinxParseFns= Utils.Token_AssocList.empty }
   |> register_prefix ~t:Token.IDENT ~fn:parse_identifier
+  |> register_prefix ~t:Token.INT ~fn:parse_integer_literal
 
 module type Monad = sig
   type 'a t
@@ -140,9 +146,11 @@ let parse_expression (p : parser) (_precedence' : precedence) : Ast.expression =
 let parse_expression_statement p =
   let stmt =
     let tok = {Token.type'= Token.ILLEGAL; literal= "null"} in
-    Ast.Expressionstatement {token= tok; expression= parse_expression p LOWEST}
+    Ast.Expressionstatement
+      {token= tok; expression= (*NOTE ==> *) parse_expression p LOWEST}
   in
   let p = if peek_token_is p Token.SEMICOLON then next_token p else p in
+  (* Skip semeicolons*)
   (stmt, p)
 
 (* all the bindings will fail if the incorrect token is found *)

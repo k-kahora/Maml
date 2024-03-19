@@ -1,9 +1,13 @@
 (* Abstracting the Node behavior through a function type *)
 
+type integer_literal = {token: Token.token (* The ident token *); value: int}
+
 type identifier_expression =
   {token: Token.token (* The ident token *); value: string}
 
-type expression = Identifier of identifier_expression
+type expression =
+  | Identifier of identifier_expression
+  | IntegerLiteral of integer_literal
 
 type return_statement = {token: Token.token; return_value: expression}
 
@@ -11,7 +15,11 @@ type let_statement =
   {token: Token.token; name: identifier_expression; value: expression}
 
 let expression_str (e : expression) : string =
-  match e with Identifier {token= _; value} -> value
+  match e with
+  | Identifier {token= _; value} ->
+      value
+  | IntegerLiteral {token= _; value} ->
+      string_of_int value
 
 let identifier_str {value} = value
 
