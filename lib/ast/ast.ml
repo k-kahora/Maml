@@ -8,18 +8,23 @@ type identifier_expression =
 type expression =
   | Identifier of identifier_expression
   | IntegerLiteral of integer_literal
+  | PrefixExpression of prefix
+
+and prefix = {token: Token.token; operator: string; right: expression}
 
 type return_statement = {token: Token.token; return_value: expression}
 
 type let_statement =
   {token: Token.token; name: identifier_expression; value: expression}
 
-let expression_str (e : expression) : string =
+let rec expression_str (e : expression) : string =
   match e with
   | Identifier {token= _; value} ->
       value
   | IntegerLiteral {token= _; value} ->
       string_of_int value
+  | PrefixExpression {operator; right} ->
+      "(" ^ operator ^ expression_str right ^ ")"
 
 let identifier_str {value} = value
 

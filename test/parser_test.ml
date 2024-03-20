@@ -1,5 +1,28 @@
 let blank () = ()
 
+let test_prefix_expression () =
+  let prefix_tests = [("!5;", "!", 5); ("-15;", "-", 15)] in
+  let test_inputs (input, operator, _value) =
+    let l = Lexer.new' input in
+    let p = Parser.new_parser l in
+    let program = Parser.parse_program p in
+    if List.length program.statements <> 1 then
+      failwith
+        ( "program.Statements does not contain enought statements got"
+        ^ string_of_int
+        @@ List.length program.statements ) ;
+    match List.nth program.statements 0 with
+    | Ast.Expressionstatement stm -> (
+      match stm.expression with
+      | Ast.PrefixExpression pe ->
+          Alcotest.(check string) "Checking operator" pe.operator operator
+      | _ ->
+          failwith "needs to be a prefix expression" )
+    | _ ->
+        failwith "not an expression statement"
+  in
+  List.iter test_inputs prefix_tests
+
 let test_int_literal () =
   let input = "5;" in
   let l = Lexer.new' input in
@@ -122,4 +145,7 @@ let () =
       , [ test_case "test the identifier expression statement" `Quick
             test_ident_expression (* test_ident_expression *) ] )
     ; ( "integers"
-      , [test_case "test the integer expressions" `Quick test_int_literal] ) ]
+      , [test_case "test the integer expressions" `Quick test_int_literal] )
+    ; ( "prefix operators"
+      , [test_case "Test the operators values" `Quick test_prefix_expression] )
+    ]
