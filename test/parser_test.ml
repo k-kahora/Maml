@@ -1,11 +1,18 @@
 let blank () = ()
 
 let test_prefix_expression () =
-  let prefix_tests = [("!5;", "!", 5); ("-15;", "-", 15)] in
-  let test_inputs (input, operator, _value) =
+  let prefix_tests = [("!6456456;", "!", 6456456); ("-15;", "-", 15)] in
+  let test_inputs (input, operator, value) =
     let l = Lexer.new' input in
     let p = Parser.new_parser l in
     let program = Parser.parse_program p in
+    let check_int_literal exp =
+      match exp with
+      | Ast.IntegerLiteral {value} ->
+          value
+      | _ ->
+          failwith "Non integer expression found"
+    in
     if List.length program.statements <> 1 then
       failwith
         ( "program.Statements does not contain enought statements got"
@@ -15,7 +22,9 @@ let test_prefix_expression () =
     | Ast.Expressionstatement stm -> (
       match stm.expression with
       | Ast.PrefixExpression pe ->
-          Alcotest.(check string) "Checking operator" pe.operator operator
+          Alcotest.(check string) "Checking operator" operator pe.operator ;
+          Alcotest.(check int) "Checking integer literal" value
+          @@ check_int_literal pe.right
       | _ ->
           failwith "needs to be a prefix expression" )
     | _ ->

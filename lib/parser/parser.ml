@@ -6,9 +6,9 @@ type parser =
   ; infinxParseFns: (Token.token_name, infixParseFn) Utils.Token_AssocList.t
   ; errors: string list }
 
-and prefixParseFn = parser -> Ast.expression
+and prefixParseFn = parser -> Ast.expression * parser
 
-and infixParseFn = parser -> Ast.expression
+and infixParseFn = parser -> Ast.expression * parser
 
 type precedence =
   | LOWEST
@@ -69,13 +69,35 @@ let next_token (p : parser) : parser =
   (* Token.token_to_string_debug nextToken.type' ; *)
   {p with curToken= p.peekToken; peekToken= nextToken; l}
 
-let parse_integer_literal (p : parser) : Ast.expression =
-  Ast.IntegerLiteral {token= p.curToken; value= int_of_string p.curToken.literal}
+let parse_expression (_precedence' : precedence) (p : parser) :
+    Ast.expression * parser =
+  let prefix =
+    match Utils.Token_AssocList.find p.curToken.type' p.prefixParseFns with
+    | Some pre ->
+        pre
+    | None ->
+        failwith
+          ( "No prefix parse function registed for "
+          ^ Token.token_to_string_debug p.curToken.type'
+          ^ " operator" )
+  in
+  prefix p
+
+let parse_integer_literal (p : parser) : Ast.expression * parser =
+  ( Ast.IntegerLiteral
+      {token= p.curToken; value= int_of_string p.curToken.literal}
+  , p )
 
 (* let lit = int_of_string p.curToken.literal in *)
 
-let parse_identifier (p : parser) : Ast.expression =
-  Ast.Identifier {token= p.curToken; value= p.curToken.literal}
+let parse_prefix_expression (p : parser) : Ast.expression * parser =
+  let expression, new_p = next_token p |> parse_expression PREFIX in
+  ( Ast.PrefixExpression
+      {token= p.curToken; operator= p.curToken.literal; right= expression}
+  , new_p )
+
+let parse_identifier (p : parser) : Ast.expression * parser =
+  (Ast.Identifier {token= p.curToken; value= p.curToken.literal}, p)
 
 let new_parser (l : Lexer.lexer) : parser =
   let curToken, cur = Lexer.next_token l in
@@ -88,6 +110,8 @@ let new_parser (l : Lexer.lexer) : parser =
   ; infinxParseFns= Utils.Token_AssocList.empty }
   |> register_prefix ~t:Token.IDENT ~fn:parse_identifier
   |> register_prefix ~t:Token.INT ~fn:parse_integer_literal
+  |> register_prefix ~t:Token.BANG ~fn:parse_prefix_expression
+  |> register_prefix ~t:Token.MINUS ~fn:parse_prefix_expression
 
 module type Monad = sig
   type 'a t
@@ -133,21 +157,12 @@ let parse_return_statement (p : parser) : Ast.statement * parser =
   (stmt, p)
 
 (* See if a parsing function is associated with the token and call that function *)
-let parse_expression (p : parser) (_precedence' : precedence) : Ast.expression =
-  let prefix =
-    match Utils.Token_AssocList.find p.curToken.type' p.prefixParseFns with
-    | Some pre ->
-        pre
-    | None ->
-        failwith "not ready for this need to test only identifier"
-  in
-  prefix p
 
 let parse_expression_statement p =
+  let expr, p = parse_expression LOWEST p in
   let stmt =
     let tok = {Token.type'= Token.ILLEGAL; literal= "null"} in
-    Ast.Expressionstatement
-      {token= tok; expression= (*NOTE ==> *) parse_expression p LOWEST}
+    Ast.Expressionstatement {token= tok; expression= (*NOTE ==> *) expr}
   in
   let p = if peek_token_is p Token.SEMICOLON then next_token p else p in
   (* Skip semeicolons*)
