@@ -1,18 +1,58 @@
 let blank () = ()
 
-let test_prefix_expression () =
+let check_int_literal exp =
+  match exp with
+  | Ast.IntegerLiteral {value} ->
+      value
+  | _ ->
+      failwith "Non integer expression found"
+
+let test_infix_expressions () =
+  let infix_tests =
+    [ ("5 + 5", 5, "+", 5)
+    ; ("5 - 5", 5, "-", 5)
+    ; ("5 * 5", 5, "*", 5)
+    ; ("5 / 5", 5, "/", 5)
+    ; ("5 > 5", 5, ">", 5)
+    ; ("5 < 5", 5, "<", 5)
+    ; ("5 == 5", 5, "==", 5)
+    ; ("5 != 5", 5, "!=", 5) ]
+  in
+  let test_infix_helper (input, left_value, operator, right_value) =
+    let l = Lexer.new' input in
+    let p = Parser.new_parser l in
+    let program = Parser.parse_program p in
+    match List.nth_opt program.statements 0 with
+    | Some exp -> (
+      (* Expression statement matching *)
+      match exp with
+      | Ast.Expressionstatement stmt -> (
+        (* Expression type checking *)
+        match stmt.expression with
+        | Ast.InfixExpression infix ->
+            Alcotest.(check int) "Checking int literal on the left" left_value
+            @@ check_int_literal infix.left ;
+            Alcotest.(check string) "Checking operator" operator infix.operator ;
+            Alcotest.(check int) "Checking int literal on the right" right_value
+            @@ check_int_literal infix.right
+        | _ ->
+            failwith "Not a infix expression" )
+      | _ ->
+          failwith "not an expression statement" )
+    | None ->
+        failwith (* FIXME Error message is incorrect *)
+          ( "To many statements; found"
+          ^ (string_of_int @@ List.length program.statements)
+          ^ "should be one" )
+  in
+  List.iter test_infix_helper infix_tests
+
+let test_prefix_expressions () =
   let prefix_tests = [("!6456456;", "!", 6456456); ("-15;", "-", 15)] in
   let test_inputs (input, operator, value) =
     let l = Lexer.new' input in
     let p = Parser.new_parser l in
     let program = Parser.parse_program p in
-    let check_int_literal exp =
-      match exp with
-      | Ast.IntegerLiteral {value} ->
-          value
-      | _ ->
-          failwith "Non integer expression found"
-    in
     if List.length program.statements <> 1 then
       failwith
         ( "program.Statements does not contain enought statements got"
@@ -156,5 +196,8 @@ let () =
     ; ( "integers"
       , [test_case "test the integer expressions" `Quick test_int_literal] )
     ; ( "prefix operators"
-      , [test_case "Test the operators values" `Quick test_prefix_expression] )
-    ]
+      , [test_case "Test the operators values" `Quick test_prefix_expressions]
+      )
+    ; ( "infix operators"
+      , [ test_case "Test the infix operators values" `Quick
+            test_infix_expressions ] ) ]

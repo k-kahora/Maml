@@ -9,8 +9,12 @@ type expression =
   | Identifier of identifier_expression
   | IntegerLiteral of integer_literal
   | PrefixExpression of prefix
+  | InfixExpression of infix
 
 and prefix = {token: Token.token; operator: string; right: expression}
+
+and infix =
+  {token: Token.token; left: expression; operator: string; right: expression}
 
 type return_statement = {token: Token.token; return_value: expression}
 
@@ -25,6 +29,9 @@ let rec expression_str (e : expression) : string =
       string_of_int value
   | PrefixExpression {operator; right} ->
       "(" ^ operator ^ expression_str right ^ ")"
+  | InfixExpression {left; operator; right} ->
+      "(" ^ expression_str left ^ " " ^ operator ^ " " ^ expression_str right
+      ^ ")"
 
 let identifier_str {value} = value
 
