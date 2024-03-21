@@ -58,8 +58,8 @@ let statement_str (s : statement) : string =
       let_statement_str let_stmt
   | Returnstatement return_stmt ->
       return_statement_str return_stmt
-  | _ ->
-      "FILLER FOR EXPRESSION STMT"
+  | Expressionstatement exp_stmt ->
+      expression_str exp_stmt.expression
 
 (* Simplified for demonstration *)
 (* ; value: expression (\* Assuming this is an expression node *\) } *)

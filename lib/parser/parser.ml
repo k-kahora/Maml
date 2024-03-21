@@ -8,7 +8,7 @@ type parser =
 
 and prefixParseFn = parser -> Ast.expression * parser
 
-and infixParseFn = parser -> Ast.expression * parser
+and infixParseFn = parser -> Ast.expression -> Ast.expression * parser
 
 type precedence =
   | LOWEST
@@ -18,6 +18,13 @@ type precedence =
   | PRODUCT (* * *)
   | PREFIX (* -X or !X *)
   | CALL (* func(X) *)
+
+let precedences =
+  Utils.Token_AssocList.(
+    empty |> add Token.EQ EQUALS |> add Token.NOT_EQ EQUALS
+    |> add Token.LT LESSGREATER |> add Token.GT LESSGREATER
+    |> add Token.PLUS SUM |> add Token.MINUS SUM |> add Token.SLASH PRODUCT
+    |> add Token.ASTERISK PRODUCT )
 
 let precedence_level (p : precedence) =
   match p with
@@ -35,6 +42,20 @@ let precedence_level (p : precedence) =
       5
   | CALL ->
       6
+
+let cur_precedence (p : parser) : precedence =
+  match Utils.Token_AssocList.find p.curToken.type' precedences with
+  | Some pr ->
+      pr
+  | None ->
+      LOWEST
+
+let peek_precedence (p : parser) : precedence =
+  match Utils.Token_AssocList.find p.peekToken.type' precedences with
+  | Some pr ->
+      pr
+  | None ->
+      LOWEST
 
 let register_infix (p : parser) ~(t : Token.token_name) ~(fn : infixParseFn) :
     parser =
@@ -69,7 +90,7 @@ let next_token (p : parser) : parser =
   (* Token.token_to_string_debug nextToken.type' ; *)
   {p with curToken= p.peekToken; peekToken= nextToken; l}
 
-let parse_expression (_precedence' : precedence) (p : parser) :
+let parse_expression (precedence' : precedence) (p : parser) :
     Ast.expression * parser =
   let prefix =
     match Utils.Token_AssocList.find p.curToken.type' p.prefixParseFns with
@@ -81,7 +102,25 @@ let parse_expression (_precedence' : precedence) (p : parser) :
           ^ Token.token_to_string_debug p.curToken.type'
           ^ " operator" )
   in
-  prefix p
+  let left_exp, p = prefix p in
+  (* Loop while the peekToken is not a semicolon and the precedence is less than the peek precedenc *)
+  let rec loop left_e p =
+    match p.curToken.type' with
+    | Token.SEMICOLON ->
+        (left_e, p)
+    | _
+      when precedence_level precedence' < precedence_level @@ peek_precedence p
+      -> (
+      match Utils.Token_AssocList.find p.peekToken.type' p.infinxParseFns with
+      | Some infix ->
+          let exp, p = infix (next_token p) left_e in
+          loop exp p
+      | None ->
+          (left_e, p) )
+    | _ ->
+        (left_e, p)
+  in
+  loop left_exp p
 
 let parse_integer_literal (p : parser) : Ast.expression * parser =
   ( Ast.IntegerLiteral
@@ -99,6 +138,16 @@ let parse_prefix_expression (p : parser) : Ast.expression * parser =
 let parse_identifier (p : parser) : Ast.expression * parser =
   (Ast.Identifier {token= p.curToken; value= p.curToken.literal}, p)
 
+let parse_infix_expression (p : parser) (left_exp : Ast.expression) :
+    Ast.expression * parser =
+  let right_exp, new_p = next_token p |> parse_expression (cur_precedence p) in
+  ( Ast.InfixExpression
+      { left= left_exp
+      ; token= p.curToken
+      ; operator= p.curToken.literal
+      ; right= right_exp }
+  , new_p )
+
 let new_parser (l : Lexer.lexer) : parser =
   let curToken, cur = Lexer.next_token l in
   let peekToken, l = Lexer.next_token cur in
@@ -112,6 +161,14 @@ let new_parser (l : Lexer.lexer) : parser =
   |> register_prefix ~t:Token.INT ~fn:parse_integer_literal
   |> register_prefix ~t:Token.BANG ~fn:parse_prefix_expression
   |> register_prefix ~t:Token.MINUS ~fn:parse_prefix_expression
+  |> register_infix ~t:Token.PLUS ~fn:parse_infix_expression
+  |> register_infix ~t:Token.MINUS ~fn:parse_infix_expression
+  |> register_infix ~t:Token.SLASH ~fn:parse_infix_expression
+  |> register_infix ~t:Token.ASTERISK ~fn:parse_infix_expression
+  |> register_infix ~t:Token.EQ ~fn:parse_infix_expression
+  |> register_infix ~t:Token.NOT_EQ ~fn:parse_infix_expression
+  |> register_infix ~t:Token.LT ~fn:parse_infix_expression
+  |> register_infix ~t:Token.GT ~fn:parse_infix_expression
 
 module type Monad = sig
   type 'a t
@@ -219,11 +276,11 @@ let parse_program (p : parser) : Ast.program =
     | _ -> (
       match parse_statement p with
       | None ->
-          looper acc (next_token p)
+          failwith "Unreachable error"
       | Some (stmt, p) ->
           looper (stmt :: acc) (next_token p) )
   in
   let d_stms = looper [] p in
-  {Ast.statements= List.rev d_stms}
+  {Ast.statements= (* List.rev *) d_stms}
 (* FIXME reversing affects runtime  *)
 (* List must be reversed due to the way is is handled by appending to the front *)

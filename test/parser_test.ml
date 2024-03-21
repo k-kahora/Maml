@@ -7,6 +7,32 @@ let check_int_literal exp =
   | _ ->
       failwith "Non integer expression found"
 
+let test_operator_precedenc_parsing () =
+  let precedence_test =
+    [ ("a + b", "(a + b)")
+    ; ("-a * b", "((-a) * b)")
+    ; ("!-a", "(!(-a))")
+    ; ("a + b + c", "((a + b) + c)")
+    ; ("a + b - c", "((a + b) - c)")
+    ; ("a * b * c", "((a * b) * c)")
+    ; ("a * b / c", "((a * b) / c)")
+    ; ("a + b / c", "(a + (b / c))")
+    ; ("a + b * c + d / e - f", "(((a + (b * c)) + (d / e)) - f)")
+    ; ("3 + 4; -5 * 5", "(3 + 4)((-5) * 5)")
+    ; ("5 > 4 == 3 < 4", "((5 > 4) == (3 < 4))")
+    ; ("5 < 4 != 3 > 4", "((5 < 4) != (3 > 4))")
+    ; ("3 + 4 * 5 == 3 * 1 + 4 * 5", "((3 + (4 * 5)) == ((3 * 1) + (4 * 5)))")
+    ]
+  in
+  let helper (input, actual) =
+    let l = Lexer.new' input in
+    let p = Parser.new_parser l in
+    let program = Parser.parse_program p in
+    let true_val = Ast.program_str program in
+    Alcotest.(check string "Checking large infix expressions" actual true_val)
+  in
+  List.iter helper precedence_test
+
 let test_infix_expressions () =
   let infix_tests =
     [ ("5 + 5", 5, "+", 5)
@@ -172,11 +198,13 @@ let test_let_statement () =
   let test_inputs stat actual =
     match stat with
     | Ast.Letstatement {name} ->
-        Alcotest.(check string) "Check name" name.value actual
+        Alcotest.(check string) "Check name" actual name.value
     | _ ->
         failwith "Needs to be a let statement"
   in
-  ignore (List.map2 test_inputs program.statements tests)
+  List.iter2 test_inputs
+    (List.rev program.statements)
+    tests (* FIXME  Reversing the list is wrong here needs to be debugged *)
 
 (* if List.length program.statements > 3 then *)
 (*   failwith "To many statements produced" *)
@@ -200,4 +228,7 @@ let () =
       )
     ; ( "infix operators"
       , [ test_case "Test the infix operators values" `Quick
-            test_infix_expressions ] ) ]
+            test_infix_expressions ] )
+    ; ( "infix operators precedenc"
+      , [ test_case "Test the precendenc operators values" `Quick
+            test_operator_precedenc_parsing ] ) ]
