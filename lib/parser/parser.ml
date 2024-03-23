@@ -90,6 +90,7 @@ let next_token (p : parser) : parser =
   (* Token.token_to_string_debug nextToken.type' ; *)
   {p with curToken= p.peekToken; peekToken= nextToken; l}
 
+(* TODO trace through 1 + 2 * 3 to understand operator precedenc *)
 let parse_expression (precedence' : precedence) (p : parser) :
     Ast.expression * parser =
   let prefix =
@@ -113,11 +114,15 @@ let parse_expression (precedence' : precedence) (p : parser) :
       -> (
       match Utils.Token_AssocList.find p.peekToken.type' p.infinxParseFns with
       | Some infix ->
+          (* NOTE this is where the magic happens *)
+          (* for 1 + 2 + 3 this returns [Ast.InfixExpression (1 + 2)] for exp*)
+          (* This is where less precedenc expressions get sucked into the left arm *)
           let exp, p = infix (next_token p) left_e in
           loop exp p
       | None ->
           (left_e, p) )
     | _ ->
+        (* This is triggered for right binding No expression will be put into a left arm if this match statement is trigged *)
         (left_e, p)
   in
   loop left_exp p

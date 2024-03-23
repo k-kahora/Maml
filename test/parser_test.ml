@@ -1,5 +1,18 @@
 let blank () = ()
 
+type int_or_string = String of string | Int of int
+
+let test_ident (exp : Ast.expression) (value : string) : bool =
+  match exp with
+  | Ast.Identifier {value} when value != value ->
+      false
+  | Ast.Identifier {token} when token.literal != value ->
+      false
+  | Ast.Identifier _ ->
+      true
+  | _ ->
+      failwith "test_ident expects a ident ast"
+
 let check_int_literal exp =
   match exp with
   | Ast.IntegerLiteral {value} ->
@@ -7,10 +20,48 @@ let check_int_literal exp =
   | _ ->
       failwith "Non integer expression found"
 
+let test_int_literal (exp : Ast.expression) (value : int) : bool =
+  match exp with
+  | Ast.IntegerLiteral i when i.value != value ->
+      false
+  | Ast.IntegerLiteral _ ->
+      true
+  | _ ->
+      failwith "Expected int literal expression not this"
+
+let test_literal_expressions (exp : Ast.expression) (expected : int_or_string) :
+    bool =
+  match expected with
+  | String str ->
+      test_ident exp str
+  | Int it ->
+      test_int_literal exp it
+
+let test_infix_expressions (exp : Ast.expression) (left : int_or_string)
+    (operator : string) (right : int_or_string) : unit =
+  let test_infix (infix : Ast.infix) =
+    Alcotest.(check bool)
+      "Checking left expression"
+      (test_literal_expressions infix.left left)
+      true ;
+    Alcotest.(check string) "Checking operator" operator infix.operator ;
+    Alcotest.(check bool)
+      "Checking operator"
+      (test_literal_expressions infix.right right)
+      true ;
+    ()
+  in
+  match exp with
+  | Ast.InfixExpression i ->
+      test_infix i
+  | _ ->
+      failwith "Exp is not an infix experssion"
+
 let test_operator_precedenc_parsing () =
   let precedence_test =
     [ ("a + b", "(a + b)")
     ; ("-a * b", "((-a) * b)")
+    ; ("1 + 2 + 3;", "((1 + 2) + 3)")
     ; ("!-a", "(!(-a))")
     ; ("a + b + c", "((a + b) + c)")
     ; ("a + b - c", "((a + b) - c)")
@@ -21,6 +72,7 @@ let test_operator_precedenc_parsing () =
     ; ("3 + 4; -5 * 5", "(3 + 4)((-5) * 5)")
     ; ("5 > 4 == 3 < 4", "((5 > 4) == (3 < 4))")
     ; ("5 < 4 != 3 > 4", "((5 < 4) != (3 > 4))")
+    ; ("400 - 30 * 50 / 10; foo * bar", "(400 - ((30 * 50) / 10))(foo * bar)")
     ; ("3 + 4 * 5 == 3 * 1 + 4 * 5", "((3 + (4 * 5)) == ((3 * 1) + (4 * 5)))")
     ]
   in
@@ -33,7 +85,7 @@ let test_operator_precedenc_parsing () =
   in
   List.iter helper precedence_test
 
-let test_infix_expressions () =
+let test_parsing_infix_expressions () =
   let infix_tests =
     [ ("5 + 5", 5, "+", 5)
     ; ("5 - 5", 5, "-", 5)
@@ -228,7 +280,7 @@ let () =
       )
     ; ( "infix operators"
       , [ test_case "Test the infix operators values" `Quick
-            test_infix_expressions ] )
+            test_parsing_infix_expressions ] )
     ; ( "infix operators precedenc"
       , [ test_case "Test the precendenc operators values" `Quick
             test_operator_precedenc_parsing ] ) ]
