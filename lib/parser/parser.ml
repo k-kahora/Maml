@@ -127,6 +127,13 @@ let parse_expression (precedence' : precedence) (p : parser) :
   in
   loop left_exp p
 
+let cur_token_is (p : parser) (t : Token.token_name) : bool =
+  p.curToken.type' = t
+
+let parse_bool (p : parser) : Ast.expression * parser =
+  ( Ast.BooleanExpression {token= p.curToken; value= cur_token_is p Token.TRUE}
+  , p )
+
 let parse_integer_literal (p : parser) : Ast.expression * parser =
   ( Ast.IntegerLiteral
       {token= p.curToken; value= int_of_string p.curToken.literal}
@@ -166,6 +173,8 @@ let new_parser (l : Lexer.lexer) : parser =
   |> register_prefix ~t:Token.INT ~fn:parse_integer_literal
   |> register_prefix ~t:Token.BANG ~fn:parse_prefix_expression
   |> register_prefix ~t:Token.MINUS ~fn:parse_prefix_expression
+  |> register_prefix ~t:Token.TRUE ~fn:parse_bool
+  |> register_prefix ~t:Token.FALSE ~fn:parse_bool
   |> register_infix ~t:Token.PLUS ~fn:parse_infix_expression
   |> register_infix ~t:Token.MINUS ~fn:parse_infix_expression
   |> register_infix ~t:Token.SLASH ~fn:parse_infix_expression
@@ -190,9 +199,6 @@ module Maybe : Monad = struct
 
   let ( >>= ) m f = match m with None -> None | Some x -> f x
 end
-
-let cur_token_is (p : parser) (t : Token.token_name) : bool =
-  p.curToken.type' = t
 
 let peek_token_is (p : parser) (t : Token.token_name) : bool =
   p.peekToken.type' = t

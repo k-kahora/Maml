@@ -1,12 +1,12 @@
 let blank () = ()
 
-type int_or_string = String of string | Int of int
+type generic = String of string | Int of int | Bool of bool
 
 let test_ident (exp : Ast.expression) (value : string) : bool =
   match exp with
-  | Ast.Identifier {value} when value != value ->
+  | Ast.Identifier {value} when value <> value ->
       false
-  | Ast.Identifier {token} when token.literal != value ->
+  | Ast.Identifier {token} when token.literal <> value ->
       false
   | Ast.Identifier _ ->
       true
@@ -22,28 +22,45 @@ let check_int_literal exp =
 
 let test_int_literal (exp : Ast.expression) (value : int) : bool =
   match exp with
-  | Ast.IntegerLiteral i when i.value != value ->
+  | Ast.IntegerLiteral i when i.value <> value ->
       false
   | Ast.IntegerLiteral _ ->
       true
   | _ ->
       failwith "Expected int literal expression not this"
 
-let test_literal_expressions (exp : Ast.expression) (expected : int_or_string) :
-    bool =
+let test_bool_expression (exp : Ast.expression) (value : bool) : bool =
+  match exp with
+  | Ast.BooleanExpression bo when value <> bo.value ->
+      ignore (Alcotest.fail "boolean value not equal") ;
+      false
+  | Ast.BooleanExpression bo when string_of_bool value <> bo.token.literal ->
+      print_endline bo.token.literal ;
+      print_endline @@ string_of_bool value ;
+      Alcotest.(check string)
+        "Token value check" (string_of_bool value) bo.token.literal ;
+      false
+  | Ast.BooleanExpression _ ->
+      true
+  | _ ->
+      failwith "Not a boolean expression"
+
+let test_literal_expressions (exp : Ast.expression) (expected : generic) : bool
+    =
   match expected with
   | String str ->
       test_ident exp str
   | Int it ->
       test_int_literal exp it
+  | Bool b ->
+      test_bool_expression exp b
 
-let test_infix_expressions (exp : Ast.expression) (left : int_or_string)
-    (operator : string) (right : int_or_string) : unit =
+let test_infix_expressions (exp : Ast.expression) (left : generic)
+    (operator : string) (right : generic) : unit =
   let test_infix (infix : Ast.infix) =
     Alcotest.(check bool)
-      "Checking left expression"
-      (test_literal_expressions infix.left left)
-      true ;
+      "Checking left expression" true
+      (test_literal_expressions infix.left left) ;
     Alcotest.(check string) "Checking operator" operator infix.operator ;
     Alcotest.(check bool)
       "Checking operator"
@@ -57,9 +74,32 @@ let test_infix_expressions (exp : Ast.expression) (left : int_or_string)
   | _ ->
       failwith "Exp is not an infix experssion"
 
-let test_operator_precedenc_parsing () =
+let bool_tests () =
+  let tests = [("true", true); ("false", false)] in
+  let helper (input, actual) =
+    let l = Lexer.new' input in
+    let p = Parser.new_parser l in
+    let program = Parser.parse_program p in
+    if List.length program.statements <> 1 then failwith "not enough statements" ;
+    match List.hd program.statements with
+    | Ast.Expressionstatement exp -> (
+      match exp.expression with
+      | Ast.BooleanExpression b ->
+          Alcotest.(check bool) "Checking boolean values" actual b.value
+      | _ ->
+          failwith "should be a boolean value" )
+    | _ ->
+        failwith "should be an expression"
+  in
+  List.iter helper tests
+
+let test_operator_precedence_parsing () =
   let precedence_test =
-    [ ("a + b", "(a + b)")
+    [ ("false", "false")
+    ; ("true", "true")
+    ; ("3 > 5 == false", "((3 > 5) == false)")
+    ; ("3 < 5 == true", "((3 < 5) == true)")
+    ; ("a + b", "(a + b)")
     ; ("-a * b", "((-a) * b)")
     ; ("1 + 2 + 3;", "((1 + 2) + 3)")
     ; ("!-a", "(!(-a))")
@@ -87,14 +127,16 @@ let test_operator_precedenc_parsing () =
 
 let test_parsing_infix_expressions () =
   let infix_tests =
-    [ ("5 + 5", 5, "+", 5)
-    ; ("5 - 5", 5, "-", 5)
-    ; ("5 * 5", 5, "*", 5)
-    ; ("5 / 5", 5, "/", 5)
-    ; ("5 > 5", 5, ">", 5)
-    ; ("5 < 5", 5, "<", 5)
-    ; ("5 == 5", 5, "==", 5)
-    ; ("5 != 5", 5, "!=", 5) ]
+    [ ("5 + 5", Int 5, "+", Int 5)
+    ; ("5 - 5", Int 5, "-", Int 5)
+    ; ("5 * 5", Int 5, "*", Int 5)
+    ; ("5 / 5", Int 5, "/", Int 5)
+    ; ("5 > 5", Int 5, ">", Int 5)
+    ; ("5 < 5", Int 5, "<", Int 5)
+    ; ("5 == 5", Int 5, "==", Int 5)
+    ; ("5 != 5", Int 5, "!=", Int 5)
+    ; ("true / true", Bool true, "/", Bool true) ]
+    (* ; ("true == true", Bool true, "==", Bool true) ] *)
   in
   let test_infix_helper (input, left_value, operator, right_value) =
     let l = Lexer.new' input in
@@ -104,22 +146,14 @@ let test_parsing_infix_expressions () =
     | Some exp -> (
       (* Expression statement matching *)
       match exp with
-      | Ast.Expressionstatement stmt -> (
-        (* Expression type checking *)
-        match stmt.expression with
-        | Ast.InfixExpression infix ->
-            Alcotest.(check int) "Checking int literal on the left" left_value
-            @@ check_int_literal infix.left ;
-            Alcotest.(check string) "Checking operator" operator infix.operator ;
-            Alcotest.(check int) "Checking int literal on the right" right_value
-            @@ check_int_literal infix.right
-        | _ ->
-            failwith "Not a infix expression" )
+      | Ast.Expressionstatement stmt ->
+          (* Expression type checking *)
+          test_infix_expressions stmt.expression left_value operator right_value
       | _ ->
           failwith "not an expression statement" )
     | None ->
         failwith (* FIXME Error message is incorrect *)
-          ( "To many statements; found"
+          ( "Incorrect number of statements found"
           ^ (string_of_int @@ List.length program.statements)
           ^ "should be one" )
   in
@@ -283,4 +317,6 @@ let () =
             test_parsing_infix_expressions ] )
     ; ( "infix operators precedenc"
       , [ test_case "Test the precendenc operators values" `Quick
-            test_operator_precedenc_parsing ] ) ]
+            test_operator_precedence_parsing ] )
+    ; ( "Testing boolean expressions"
+      , [test_case "boolean expressions" `Quick bool_tests] ) ]

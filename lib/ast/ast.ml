@@ -2,6 +2,8 @@
 
 type integer_literal = {token: Token.token (* The ident token *); value: int}
 
+type boolean = {token: Token.token; value: bool}
+
 type identifier_expression =
   {token: Token.token (* The ident token *); value: string}
 
@@ -10,6 +12,7 @@ type expression =
   | IntegerLiteral of integer_literal
   | PrefixExpression of prefix
   | InfixExpression of infix
+  | BooleanExpression of boolean
 
 and prefix = {token: Token.token; operator: string; right: expression}
 
@@ -32,6 +35,8 @@ let rec expression_str (e : expression) : string =
   | InfixExpression {left; operator; right} ->
       "(" ^ expression_str left ^ " " ^ operator ^ " " ^ expression_str right
       ^ ")"
+  | BooleanExpression {token} ->
+      token.literal
 
 let identifier_str {value} = value
 
