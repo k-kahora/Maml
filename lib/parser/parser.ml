@@ -117,6 +117,7 @@ let parse_expression (precedence' : precedence) (p : parser) :
           (* NOTE this is where the magic happens *)
           (* for 1 + 2 + 3 this returns [Ast.InfixExpression (1 + 2)] for exp*)
           (* This is where less precedenc expressions get sucked into the left arm *)
+          (* FIXME this is a critcal moment in the parser make that more clear *)
           let exp, p = infix (next_token p) left_e in
           loop exp p
       | None ->
@@ -129,6 +130,13 @@ let parse_expression (precedence' : precedence) (p : parser) :
 
 let cur_token_is (p : parser) (t : Token.token_name) : bool =
   p.curToken.type' = t
+
+let peek_token_is (p : parser) (t : Token.token_name) : bool =
+  p.peekToken.type' = t
+
+let expect_peek (p : parser) (t : Token.token_name) : (parser, string) result =
+  let b = peek_token_is p t in
+  if b then Ok (next_token p) else Error (peek_error p t)
 
 let parse_bool (p : parser) : Ast.expression * parser =
   ( Ast.BooleanExpression {token= p.curToken; value= cur_token_is p Token.TRUE}
@@ -150,6 +158,15 @@ let parse_prefix_expression (p : parser) : Ast.expression * parser =
 let parse_identifier (p : parser) : Ast.expression * parser =
   (Ast.Identifier {token= p.curToken; value= p.curToken.literal}, p)
 
+let parse_group_expression (p : parser) : Ast.expression * parser =
+  (* Advance the parser by one after a LPAREN parse the entire expression *)
+  let exp, new_p = next_token p |> parse_expression LOWEST in
+  let open Result in
+  let ( >>= ) = bind in
+  (* After the expression has been parsed there better be a Right paren *)
+  let next_token = Ok new_p >>= fun ft -> expect_peek ft Token.RPAREN in
+  match next_token with Ok p -> (exp, p) | Error e -> failwith e
+
 let parse_infix_expression (p : parser) (left_exp : Ast.expression) :
     Ast.expression * parser =
   let right_exp, new_p = next_token p |> parse_expression (cur_precedence p) in
@@ -159,6 +176,127 @@ let parse_infix_expression (p : parser) (left_exp : Ast.expression) :
       ; operator= p.curToken.literal
       ; right= right_exp }
   , new_p )
+
+let rec skip_expression nxt =
+  match nxt with
+  | pst when cur_token_is pst Token.SEMICOLON ->
+      nxt
+  | _ ->
+      skip_expression (next_token nxt)
+
+let rec parse_statement (p : parser) : (Ast.statement * parser) option =
+  match p.curToken.type' with
+  | Token.LET ->
+      Some (parse_let_statement p)
+  | Token.RETURN ->
+      Some (parse_return_statement p)
+  | _ ->
+      Some (parse_expression_statement p)
+
+and parse_let_statement (p : parser) : Ast.statement * parser =
+  let open Result in
+  let ( >>= ) = bind in
+  let stmt =
+    Ast.Letstatement
+      { token= p.curToken
+      ; name= Identifier {token= p.curToken; value= "null"}
+      ; value= Identifier {token= p.curToken; value= "null"} }
+  in
+  (* First check for the ident token *)
+  let last_token =
+    Ok p >>= fun ft -> expect_peek ft Token.IDENT |> check_error
+  in
+  (* Set statement name = to the current token *)
+  let stmt =
+    match stmt with
+    | Ast.Letstatement st ->
+        Ast.Letstatement
+          { st with
+            name=
+              Identifier
+                { token= (get_ok last_token).curToken
+                ; value= (get_ok last_token).curToken.literal } }
+    | _ ->
+        failwith "FIXME This setup is super janky"
+  in
+  (* check for the ASSIGN token *)
+  let last_token =
+    last_token >>= fun nt -> expect_peek nt Token.ASSIGN |> check_error
+  in
+  (stmt, skip_expression @@ get_ok last_token)
+
+(* Ast.new_let_satement () *)
+and parse_return_statement (p : parser) : Ast.statement * parser =
+  let stmt =
+    Ast.Returnstatement
+      { token= p.curToken
+      ; return_value= Identifier {token= p.curToken; value= "null"} }
+  in
+  let p = skip_expression p in
+  (stmt, p)
+
+and parse_expression_statement p =
+  let expr, p = parse_expression LOWEST p in
+  let stmt =
+    let tok = {Token.type'= Token.ILLEGAL; literal= "null"} in
+    Ast.Expressionstatement {token= tok; expression= (*NOTE ==> *) expr}
+  in
+  let p = if peek_token_is p Token.SEMICOLON then next_token p else p in
+  (* Skip semeicolons*)
+  (stmt, p)
+
+let parse_block (p : parser) : Ast.block * parser =
+  (* Loop whle the cur token is not a RBRACE or EOF *)
+  let rec looper p acc =
+    match p.curToken.type' with
+    | Token.RBRACE | Token.EOF ->
+        (acc, p)
+    | _ ->
+        let stmt, new_p = Option.get (parse_statement p) in
+        (looper [@tailcall]) (next_token new_p) (stmt :: acc)
+  in
+  let st, new_p = looper (next_token p) [] in
+  ({statements= st; token= p.curToken}, new_p)
+
+let parse_if_expression (p : parser) : Ast.expression * parser =
+  (* condition, alterntive; consequence; token *)
+  let open Result in
+  let ( >>= ) = bind in
+  (* NOTE check next token for a LPAREN *)
+  let paren_parse = Ok p >>= fun ft -> expect_peek ft Token.LPAREN in
+  (* NOTE advance the parser and set the condition equal to the expression *)
+  let cond, new_p =
+    get_ok paren_parse |> next_token |> parse_expression LOWEST
+  in
+  (* NOTE check for a consequence and an ealterntive *)
+  let n_parse =
+    Ok new_p
+    >>= fun ft ->
+    expect_peek ft Token.RPAREN >>= fun fn -> expect_peek fn Token.LBRACE
+  in
+  let cons, new_p = get_ok n_parse |> parse_block in
+  match new_p.peekToken.type' with
+  | Token.ELSE -> (
+      let new_p = next_token new_p in
+      let monad_p = Ok new_p >>= fun ft -> expect_peek ft Token.LBRACE in
+      match monad_p with
+      | Ok np ->
+          let block, new_p = parse_block np in
+          ( Ast.IfExpression
+              { token= p.curToken
+              ; consquence= Ast.BlockStatement cons
+              ; altenative= Some (Ast.BlockStatement block)
+              ; condition= cond }
+          , new_p )
+      | Error e ->
+          failwith ("error is -> " ^ e ^ "\n") )
+  | _ ->
+      ( Ast.IfExpression
+          { token= p.curToken
+          ; consquence= Ast.BlockStatement cons
+          ; altenative= None
+          ; condition= cond }
+      , new_p )
 
 let new_parser (l : Lexer.lexer) : parser =
   let curToken, cur = Lexer.next_token l in
@@ -175,6 +313,8 @@ let new_parser (l : Lexer.lexer) : parser =
   |> register_prefix ~t:Token.MINUS ~fn:parse_prefix_expression
   |> register_prefix ~t:Token.TRUE ~fn:parse_bool
   |> register_prefix ~t:Token.FALSE ~fn:parse_bool
+  |> register_prefix ~t:Token.LPAREN ~fn:parse_group_expression
+  |> register_prefix ~t:Token.IF ~fn:parse_if_expression
   |> register_infix ~t:Token.PLUS ~fn:parse_infix_expression
   |> register_infix ~t:Token.MINUS ~fn:parse_infix_expression
   |> register_infix ~t:Token.SLASH ~fn:parse_infix_expression
@@ -200,83 +340,9 @@ module Maybe : Monad = struct
   let ( >>= ) m f = match m with None -> None | Some x -> f x
 end
 
-let peek_token_is (p : parser) (t : Token.token_name) : bool =
-  p.peekToken.type' = t
-
-let expect_peek (p : parser) (t : Token.token_name) : (parser, string) result =
-  let b = peek_token_is p t in
-  if b then Ok (next_token p) else Error (peek_error p t)
-
-let rec skip_expression nxt =
-  match nxt with
-  | pst when cur_token_is pst Token.SEMICOLON ->
-      nxt
-  | _ ->
-      skip_expression (next_token nxt)
-
 (* all the bindings will fail if the incorrect token is found *)
-let parse_return_statement (p : parser) : Ast.statement * parser =
-  let stmt =
-    Ast.Returnstatement
-      { token= p.curToken
-      ; return_value= Identifier {token= p.curToken; value= "null"} }
-  in
-  let p = skip_expression p in
-  (stmt, p)
 
 (* See if a parsing function is associated with the token and call that function *)
-
-let parse_expression_statement p =
-  let expr, p = parse_expression LOWEST p in
-  let stmt =
-    let tok = {Token.type'= Token.ILLEGAL; literal= "null"} in
-    Ast.Expressionstatement {token= tok; expression= (*NOTE ==> *) expr}
-  in
-  let p = if peek_token_is p Token.SEMICOLON then next_token p else p in
-  (* Skip semeicolons*)
-  (stmt, p)
-
-(* all the bindings will fail if the incorrect token is found *)
-let parse_let_statement (p : parser) : Ast.statement * parser =
-  let open Result in
-  let ( >>= ) = bind in
-  let stmt =
-    Ast.Letstatement
-      { token= p.curToken
-      ; name= {token= p.curToken; value= "null"}
-      ; value= Identifier {token= p.curToken; value= "null"} }
-  in
-  (* First check for the ident token *)
-  let last_token =
-    Ok p >>= fun ft -> expect_peek ft Token.IDENT |> check_error
-  in
-  (* Set statement name = to the current token *)
-  let stmt =
-    match stmt with
-    | Ast.Letstatement st ->
-        Ast.Letstatement
-          { st with
-            name=
-              { token= (get_ok last_token).curToken
-              ; value= (get_ok last_token).curToken.literal } }
-    | _ ->
-        failwith "FIXME This setup is super janky"
-  in
-  (* check for the ASSIGN token *)
-  let last_token =
-    last_token >>= fun nt -> expect_peek nt Token.ASSIGN |> check_error
-  in
-  (stmt, skip_expression @@ get_ok last_token)
-(* Ast.new_let_satement () *)
-
-let parse_statement (p : parser) : (Ast.statement * parser) option =
-  match p.curToken.type' with
-  | Token.LET ->
-      Some (parse_let_statement p)
-  | Token.RETURN ->
-      Some (parse_return_statement p)
-  | _ ->
-      Some (parse_expression_statement p)
 
 let parse_program (p : parser) : Ast.program =
   (* Parse each token until there is a EOF token *)

@@ -2,11 +2,13 @@ let blank () = ()
 
 type generic = String of string | Int of int | Bool of bool
 
-let test_ident (exp : Ast.expression) (value : string) : bool =
+let test_ident (exp : Ast.expression) (value' : string) : bool =
   match exp with
-  | Ast.Identifier {value} when value <> value ->
+  | Ast.Identifier {value} when value <> value' ->
+      Alcotest.(check string) "Checking identifer value" value' value ;
       false
-  | Ast.Identifier {token} when token.literal <> value ->
+  | Ast.Identifier {token} when token.literal <> value' ->
+      Alcotest.(check string) "Checking identifer literal" value' token.literal ;
       false
   | Ast.Identifier _ ->
       true
@@ -57,20 +59,16 @@ let test_literal_expressions (exp : Ast.expression) (expected : generic) : bool
 
 let test_infix_expressions (exp : Ast.expression) (left : generic)
     (operator : string) (right : generic) : unit =
-  let test_infix (infix : Ast.infix) =
-    Alcotest.(check bool)
-      "Checking left expression" true
-      (test_literal_expressions infix.left left) ;
-    Alcotest.(check string) "Checking operator" operator infix.operator ;
-    Alcotest.(check bool)
-      "Checking operator"
-      (test_literal_expressions infix.right right)
-      true ;
-    ()
-  in
   match exp with
-  | Ast.InfixExpression i ->
-      test_infix i
+  | Ast.InfixExpression infix ->
+      Alcotest.(check bool)
+        "Checking left expression" true
+        (test_literal_expressions infix.left left) ;
+      Alcotest.(check string) "Checking operator" operator infix.operator ;
+      Alcotest.(check bool)
+        "Checking operator"
+        (test_literal_expressions infix.right right)
+        true
   | _ ->
       failwith "Exp is not an infix experssion"
 
@@ -114,7 +112,13 @@ let test_operator_precedence_parsing () =
     ; ("5 < 4 != 3 > 4", "((5 < 4) != (3 > 4))")
     ; ("400 - 30 * 50 / 10; foo * bar", "(400 - ((30 * 50) / 10))(foo * bar)")
     ; ("3 + 4 * 5 == 3 * 1 + 4 * 5", "((3 + (4 * 5)) == ((3 * 1) + (4 * 5)))")
-    ]
+      (* Grouped experssions *)
+    ; ("1 + (2 + 3) + 4", "((1 + (2 + 3)) + 4)")
+    ; ("(5 + 5) * 2", "((5 + 5) * 2)")
+    ; ("10 * (3 + 2)", "(10 * (3 + 2))")
+    ; ("2 / (5 + 5)", "(2 / (5 + 5))")
+    ; ("-(5 + 5)", "(-(5 + 5))")
+    ; ("!(true == true)", "(!(true == true))") ]
   in
   let helper (input, actual) =
     let l = Lexer.new' input in
@@ -135,7 +139,9 @@ let test_parsing_infix_expressions () =
     ; ("5 < 5", Int 5, "<", Int 5)
     ; ("5 == 5", Int 5, "==", Int 5)
     ; ("5 != 5", Int 5, "!=", Int 5)
-    ; ("true / true", Bool true, "/", Bool true) ]
+    ; ("true == true", Bool true, "==", Bool true)
+    ; ("true != false", Bool true, "!=", Bool false)
+    ; ("false == false", Bool false, "==", Bool false) ]
     (* ; ("true == true", Bool true, "==", Bool true) ] *)
   in
   let test_infix_helper (input, left_value, operator, right_value) =
@@ -160,7 +166,15 @@ let test_parsing_infix_expressions () =
   List.iter test_infix_helper infix_tests
 
 let test_prefix_expressions () =
-  let prefix_tests = [("!6456456;", "!", 6456456); ("-15;", "-", 15)] in
+  let prefix_tests =
+    [ ("!6456456;", "!", Int 6456456)
+    ; ("-15;", "-", Int 15)
+    ; ("!foobar;", "!", String "foobar")
+    ; ("-ohmygod;", "-", String "ohmygod")
+    ; ("-false;", "-", Bool false)
+    ; ("!false;", "!", Bool false)
+    ; ("-true;", "-", Bool true) ]
+  in
   let test_inputs (input, operator, value) =
     let l = Lexer.new' input in
     let p = Parser.new_parser l in
@@ -174,9 +188,10 @@ let test_prefix_expressions () =
     | Ast.Expressionstatement stm -> (
       match stm.expression with
       | Ast.PrefixExpression pe ->
-          Alcotest.(check string) "Checking operator" operator pe.operator ;
-          Alcotest.(check int) "Checking integer literal" value
-          @@ check_int_literal pe.right
+          Alcotest.(check string) "Testing operator" operator pe.operator ;
+          Alcotest.(check bool)
+            "Testing prefix expressions" true
+            (test_literal_expressions pe.right value)
       | _ ->
           failwith "needs to be a prefix expression" )
     | _ ->
@@ -283,8 +298,12 @@ let test_let_statement () =
   if List.length program.statements <> 4 then failwith "not enought statements" ;
   let test_inputs stat actual =
     match stat with
-    | Ast.Letstatement {name} ->
-        Alcotest.(check string) "Check name" actual name.value
+    | Ast.Letstatement {name} -> (
+      match name with
+      | Ast.Identifier ident ->
+          Alcotest.(check string) "Check name" actual ident.value
+      | _ ->
+          failwith "Let statements requires ident in this position" )
     | _ ->
         failwith "Needs to be a let statement"
   in
@@ -295,6 +314,106 @@ let test_let_statement () =
 (* if List.length program.statements > 3 then *)
 (*   failwith "To many statements produced" *)
 (* else ignore 10 ignore 10 *)
+
+let test_if_expression () =
+  let test_block_statement (s : Ast.statement) : unit =
+    let open Ast in
+    match s with
+    | BlockStatement {statements} -> (
+        (* NOTE this test is not very general*)
+        if List.length statements <> 1 then
+          Fmt.failwith
+            "consequence statements does not contain %d statement got %d\n" 1
+            (List.length statements) ;
+        match List.nth statements 0 with
+        | Expressionstatement exp ->
+            Alcotest.(check bool) "Checking ident in block" true
+            @@ test_ident exp.expression "x"
+        | _ ->
+            failwith "needs to be an expression statement" )
+    | _ ->
+        failwith
+          "not a block statement if expressions can only contain block \
+           statements"
+  in
+  let input = "if (x < y) {x}" in
+  let statements =
+    Lexer.new' input |> Parser.new_parser |> Parser.parse_program
+    |> fun a -> a.statements
+  in
+  if List.length statements <> 1 then
+    Fmt.failwith "program statements does not contain %d statement got %d\n" 1
+    @@ List.length statements ;
+  let stmt = List.nth_opt statements 0 in
+  match stmt with
+  | Some st -> (
+    match st with
+    | Ast.Expressionstatement exp -> (
+      match exp.expression with
+      | Ast.IfExpression {token= _token; condition; consquence; altenative} -> (
+          test_infix_expressions condition (String "x") "<" (String "y") ;
+          test_block_statement consquence ;
+          match altenative with
+          | None ->
+              ()
+          | Some _ ->
+              failwith "There should be no alternertive statement block" )
+      | _ ->
+          failwith "needs to be an IfExpression" )
+    | _ ->
+        failwith "Needs to be an expression statement" )
+  | None ->
+      failwith "statement list is empty"
+
+let test_if_else_expression () =
+  let test_block_statement (s : Ast.statement) (ident : string) : unit =
+    let open Ast in
+    match s with
+    | BlockStatement {statements} -> (
+        (* NOTE this test is not very general*)
+        if List.length statements <> 1 then
+          Fmt.failwith
+            "consequence statements does not contain %d statement got %d\n" 1
+            (List.length statements) ;
+        match List.nth statements 0 with
+        | Expressionstatement exp ->
+            Alcotest.(check bool) "Checking ident in block" true
+            @@ test_ident exp.expression ident
+        | _ ->
+            failwith "needs to be an expression statement" )
+    | _ ->
+        failwith
+          "not a block statement if expressions can only contain block \
+           statements"
+  in
+  let input = "if (x < y) {x} else {y}" in
+  let statements =
+    Lexer.new' input |> Parser.new_parser |> Parser.parse_program
+    |> fun a -> a.statements
+  in
+  if List.length statements <> 1 then
+    Fmt.failwith "program statements does not contain %d statement got %d\n" 1
+    @@ List.length statements ;
+  let stmt = List.nth_opt statements 0 in
+  match stmt with
+  | Some st -> (
+    match st with
+    | Ast.Expressionstatement exp -> (
+      match exp.expression with
+      | Ast.IfExpression {token= _token; condition; consquence; altenative} -> (
+          test_infix_expressions condition (String "x") "<" (String "y") ;
+          test_block_statement consquence "x" ;
+          match altenative with
+          | None ->
+              ()
+          | Some alt ->
+              test_block_statement alt "y" )
+      | _ ->
+          failwith "needs to be an IfExpression" )
+    | _ ->
+        failwith "Needs to be an expression statement" )
+  | None ->
+      failwith "statement list is empty"
 
 let () =
   let open Alcotest in
@@ -315,8 +434,12 @@ let () =
     ; ( "infix operators"
       , [ test_case "Test the infix operators values" `Quick
             test_parsing_infix_expressions ] )
-    ; ( "infix operators precedenc"
+    ; ( "infix operators precedence"
       , [ test_case "Test the precendenc operators values" `Quick
             test_operator_precedence_parsing ] )
     ; ( "Testing boolean expressions"
-      , [test_case "boolean expressions" `Quick bool_tests] ) ]
+      , [test_case "boolean expressions" `Quick bool_tests] )
+    ; ( "Testing if expressions"
+      , [test_case "if expression" `Quick test_if_expression] )
+    ; ( "Test if else expression"
+      , [test_case "if expression" `Quick test_if_else_expression] ) ]
