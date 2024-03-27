@@ -13,7 +13,7 @@ type expression =
       ; consquence: statement
       ; altenative: statement option }
   | FunctionLiteral of
-      {token: Token.token; parameters: ident list; body: statement}
+      {token: Token.token; parameters: expression list; body: statement}
 (* TODO IS there a way t restrict the type to a blockstatement *)
 
 and statement =
@@ -51,7 +51,9 @@ let ast_to_str a =
             "" )
     | FunctionLiteral {token; parameters; body} ->
         token.literal ^ "("
-        ^ List.fold_left (fun acc {value} -> value ^ acc) "" parameters
+        ^ List.fold_left
+            (fun acc next_exp -> expression_str next_exp ^ acc)
+            "" parameters
         ^ ")" ^ statement_str_helper body
   (* {token: Token.token; parameters: ident list; body: statement} *)
   (* TODO "if" ^ expression_str condition ^ " " ^ consequence *)

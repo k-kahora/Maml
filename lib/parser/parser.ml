@@ -298,6 +298,19 @@ let parse_if_expression (p : parser) : Ast.expression * parser =
           ; condition= cond }
       , new_p )
 
+let parse_function_literal p =
+  let open Result in
+  let ( >>= ) = bind in
+  let n_p = Ok p >>= fun ft -> expect_peek ft Token in
+  (* Handle n_p *)
+  let parameters, n_p = parse_function_parameters n_p in
+  let n_p = Ok p >>= fun ft -> expect_peek ft Token.LBRACE in
+  (* Handle n_p *)
+  let body_block, n_p = parse_block n_p 
+
+
+  (Ast.FunctionLiteral {token=;body=;parameters=;} ,n_p)
+
 let new_parser (l : Lexer.lexer) : parser =
   let curToken, cur = Lexer.next_token l in
   let peekToken, l = Lexer.next_token cur in
@@ -315,6 +328,7 @@ let new_parser (l : Lexer.lexer) : parser =
   |> register_prefix ~t:Token.FALSE ~fn:parse_bool
   |> register_prefix ~t:Token.LPAREN ~fn:parse_group_expression
   |> register_prefix ~t:Token.IF ~fn:parse_if_expression
+  |> register_prefix ~t:Token.FUNCTION ~fn:parse_function_literal
   |> register_infix ~t:Token.PLUS ~fn:parse_infix_expression
   |> register_infix ~t:Token.MINUS ~fn:parse_infix_expression
   |> register_infix ~t:Token.SLASH ~fn:parse_infix_expression

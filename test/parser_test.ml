@@ -415,6 +415,53 @@ let test_if_else_expression () =
   | None ->
       failwith "statement list is empty"
 
+let test_func_literal_parsing () =
+  let open Ast in
+  let input = "fn(x, y) {x + y}" in
+  let statements =
+    Lexer.new' input |> Parser.new_parser |> Parser.parse_program
+    |> fun a -> a.statements
+  in
+  if List.length statements <> 1 then
+    Fmt.failwith "program statements does not contain %d statement got %d\n" 1
+    @@ List.length statements ;
+  let stmt = List.nth_opt statements 0 in
+  match stmt with
+  | Some st -> (
+    match st with
+    | Expressionstatement exp -> (
+      match exp.expression with
+      | FunctionLiteral {parameters; body; token= _token} -> (
+          Alcotest.(check int)
+            "Checking parameter list" 2 (List.length parameters) ;
+          Alcotest.(check bool) "Testing parameter one" true
+          @@ test_literal_expressions (List.nth parameters 0)
+          @@ String "x" ;
+          Alcotest.(check bool) "Testing parameter one" true
+          @@ test_literal_expressions (List.nth parameters 0)
+          @@ String "y" ;
+          let block =
+            match body with
+            | BlockStatement block ->
+                block
+            | _ ->
+                failwith "body must be a block statement"
+          in
+          Alcotest.(check int)
+            "Checking block statement list" 1
+            (List.length block.statements) ;
+          match List.nth block.statements 0 with
+          | Expressionstatement exp ->
+              test_infix_expressions exp.expression (String "x") "+" (String "y")
+          | _ ->
+              failwith "block body is not an expression statement" )
+      | _ ->
+          failwith "not a function literal" )
+    | _ ->
+        failwith "not an expression statement" )
+  | None ->
+      failwith "not statements found"
+
 let () =
   let open Alcotest in
   run "parser tests"
@@ -442,4 +489,6 @@ let () =
     ; ( "Testing if expressions"
       , [test_case "if expression" `Quick test_if_expression] )
     ; ( "Test if else expression"
-      , [test_case "if expression" `Quick test_if_else_expression] ) ]
+      , [test_case "if else expression" `Quick test_if_else_expression] )
+    ; ( "Function literals"
+      , [test_case "if expression" `Quick test_func_literal_parsing] ) ]
