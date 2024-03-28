@@ -52,9 +52,7 @@ let rec expression_str (e : expression) : string =
           "" )
   | FunctionLiteral {token; parameters; body} ->
       token.literal ^ "("
-      ^ List.fold_left
-          (fun acc next_exp -> expression_str next_exp ^ acc)
-          "" parameters
+      ^ String.concat ", " (List.map (fun exp -> expression_str exp) parameters)
       ^ ")" ^ statement_str_helper body
   | CallExpression {arguments; func} ->
       expression_str func ^ "("
