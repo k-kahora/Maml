@@ -243,7 +243,7 @@ let parse_block (p : parser) : Ast.block * parser =
         (looper [@tailcall]) (next_token new_p) (stmt :: acc)
   in
   let st, new_p = looper (next_token p) [] in
-  ({statements= st; token= p.curToken}, new_p)
+  ({statements= List.rev st; token= p.curToken}, new_p)
 
 let parse_if_expression (p : parser) : Ast.expression * parser =
   (* condition, alterntive; consequence; token *)

@@ -52,9 +52,7 @@ let rec expression_str (e : expression) : string =
           "" )
   | FunctionLiteral {token; parameters; body} ->
       token.literal ^ "("
-      ^ List.fold_left
-          (fun acc next_exp -> expression_str next_exp ^ acc)
-          "" parameters
+      ^ String.concat ", " (List.map (fun exp -> expression_str exp) parameters)
       ^ ")" ^ statement_str_helper body
   | CallExpression {arguments; func} ->
       expression_str func ^ "("
@@ -80,9 +78,10 @@ and statement_str_helper stat =
   | Expressionstatement exp_stmt ->
       expression_str exp_stmt.expression
   | BlockStatement bl ->
-      List.fold_left
-        (fun acc nxt -> acc ^ statement_str_helper nxt)
-        "" bl.statements
+      "{\n"
+      ^ ( String.concat "\n"
+        @@ List.map (fun acc -> statement_str_helper acc) bl.statements )
+      ^ "\n}\n"
 
 let statement_str s = statement_str_helper s
 

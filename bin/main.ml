@@ -27,7 +27,10 @@ let rec repl () =
     print_endline "Goodbye!"
   else
     let l = Lexer.new' input in
-    let () = evaluate l in
+    let p = Parser.new_parser l in
+    let program = Parser.parse_program p in
+    (* let () = evaluate l in *)
+    print_endline (Ast.program_str program) ;
     (* Evaluate the input *)
     (* Print the evaluation result *)
     repl () (* Continue the loop *)
