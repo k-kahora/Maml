@@ -14,6 +14,8 @@ type expression =
       ; altenative: statement option }
   | FunctionLiteral of
       {token: Token.token; parameters: expression list; body: statement}
+  | CallExpression of
+      {token: Token.token; func: expression; arguments: expression list}
 (* TODO IS there a way t restrict the type to a blockstatement *)
 
 and statement =
@@ -54,6 +56,10 @@ let rec expression_str (e : expression) : string =
           (fun acc next_exp -> expression_str next_exp ^ acc)
           "" parameters
       ^ ")" ^ statement_str_helper body
+  | CallExpression {arguments; func} ->
+      expression_str func ^ "("
+      ^ List.fold_left (fun acc nxt -> expression_str nxt ^ acc) "" arguments
+      ^ ")"
 
 (* {token: Token.token; parameters: ident list; body: statement} *)
 (* TODO "if" ^ expression_str condition ^ " " ^ consequence *)

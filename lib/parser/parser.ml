@@ -316,7 +316,6 @@ let parse_function_parameters p =
           (acc, p)
     in
     let contents, par = helper acc p in
-    List.iter (List.rev contents) ;
     (* token check *)
     let open Result in
     let ( >>= ) = bind in

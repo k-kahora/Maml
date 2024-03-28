@@ -415,6 +415,84 @@ let test_if_else_expression () =
   | None ->
       failwith "statement list is empty"
 
+let test_call_expression_parsing () =
+  let open Ast in
+  let input = "add(1, 2 * 3, 4 + 5);" in
+  let statements =
+    Lexer.new' input |> Parser.new_parser |> Parser.parse_program
+    |> fun a -> a.statements
+  in
+  if List.length statements <> 1 then
+    Fmt.failwith "program statements does not contain %d statement got %d\n" 1
+    @@ List.length statements ;
+  let stmt = List.nth_opt statements 0 in
+  match stmt with
+  | Some st -> (
+    match st with
+    | Expressionstatement exp -> (
+      match exp.expression with
+      | CallExpression {func; arguments} ->
+          Alcotest.(check bool) "func ident" true (test_ident func "add") ;
+          Alcotest.(check int) "Argument list length" 3 (List.length arguments) ;
+          Alcotest.(check bool)
+            "arg 1" true
+            (test_literal_expressions (List.nth arguments 0) (Int 1)) ;
+          test_infix_expressions (List.nth arguments 1) (Int 1) "*" (Int 3) ;
+          test_infix_expressions (List.nth arguments 2) (Int 4) "+" (Int 5)
+      | _ ->
+          failwith "not a function literal" )
+    | _ ->
+        failwith "not an expression statement" )
+  | None ->
+      failwith "not statements found"
+
+let test_call_parameter_parsing () =
+  let tests =
+    [ ("add()", "add", [])
+    ; ("add(1)", "add", ["1"])
+    ; ("add(1,2*3,4 + 5)", "add", ["1"; "2*3"; "4+5"]) ]
+  in
+  (* let statements = *)
+  (*   Lexer.new' input |> Parser.new_parser |> Parser.parse_program *)
+  (*   |> fun a -> a.statements *)
+  (* in *)
+  let f (input, ident, p_list) =
+    let statements =
+      Lexer.new' input |> Parser.new_parser |> Parser.parse_program
+      |> fun a -> a.statements
+    in
+    let extract_val = function
+      | Ast.Identifier {value} ->
+          value
+      | _ ->
+          "fail"
+    in
+    let stmt = List.nth_opt statements 0 in
+    let open Ast in
+    match stmt with
+    | Some s -> (
+      match s with
+      | Expressionstatement exp -> (
+        match exp.expression with
+        | CallExpression {func; arguments} ->
+            Alcotest.(check int)
+              "argument list length" (List.length p_list)
+              (List.length arguments) ;
+            Alcotest.(check string) "checking ident" ident (extract_val func) ;
+            List.iter2
+              (fun expected actual ->
+                Alcotest.(check string)
+                  "checking parameter list" expected (extract_val actual) )
+              p_list arguments
+        | _ ->
+            failwith "not a function literal" )
+      | _ ->
+          failwith "needs to be an expression statement" )
+    | None ->
+        failwith "statement list is empty"
+  in
+  List.iter f tests
+
 let test_func_literal_parsing () =
   let open Ast in
   let input = "fn(x, y) {x + y}" in
@@ -530,4 +608,9 @@ let () =
     ; ( "Test if else expression"
       , [test_case "if else expression" `Quick test_if_else_expression] )
     ; ( "Function literals"
-      , [test_case "if expression" `Quick test_func_literal_parsing] ) ]
+      , [test_case "functions" `Quick test_func_literal_parsing] )
+    ; ( "call expressions"
+      , [test_case "call expressions" `Quick test_call_expression_parsing] )
+    ; ( "call expressions arguments"
+      , [ test_case "call expressions arguments" `Quick
+            test_call_parameter_parsing ] ) ]
