@@ -196,44 +196,31 @@ let rec parse_statement (p : parser) : (Ast.statement * parser) option =
 and parse_let_statement (p : parser) : Ast.statement * parser =
   let open Result in
   let ( >>= ) = bind in
-  let stmt =
-    Ast.Letstatement
-      { token= p.curToken
-      ; name= Identifier {token= p.curToken; value= "null"}
-      ; value= Identifier {token= p.curToken; value= "null"} }
-  in
   (* First check for the ident token *)
   let last_token =
     Ok p >>= fun ft -> expect_peek ft Token.IDENT |> check_error
   in
   (* Set statement name = to the current token *)
-  let stmt =
-    match stmt with
-    | Ast.Letstatement st ->
-        Ast.Letstatement
-          { st with
-            name=
-              Identifier
-                { token= (get_ok last_token).curToken
-                ; value= (get_ok last_token).curToken.literal } }
-    | _ ->
-        failwith "FIXME This setup is super janky"
+  let ident =
+    Ast.Identifier
+      { token= (get_ok last_token).curToken
+      ; value= (get_ok last_token).curToken.literal }
   in
   (* check for the ASSIGN token *)
   let last_token =
     last_token >>= fun nt -> expect_peek nt Token.ASSIGN |> check_error
   in
-  (stmt, skip_expression @@ get_ok last_token)
+  let value, n_p = parse_expression LOWEST (next_token @@ get_ok last_token) in
+  let n_p = if peek_token_is n_p Token.SEMICOLON then next_token n_p else n_p in
+  (Ast.Letstatement {name= ident; token= p.curToken; value}, n_p)
 
 (* Ast.new_let_satement () *)
 and parse_return_statement (p : parser) : Ast.statement * parser =
-  let stmt =
-    Ast.Returnstatement
-      { token= p.curToken
-      ; return_value= Identifier {token= p.curToken; value= "null"} }
-  in
-  let p = skip_expression p in
-  (stmt, p)
+  let n_p = next_token p in
+  let exp, n_p = parse_expression LOWEST n_p in
+  let return = Ast.Returnstatement {token= p.curToken; return_value= exp} in
+  let n_p = if peek_token_is n_p Token.SEMICOLON then next_token n_p else n_p in
+  (return, n_p)
 
 and parse_expression_statement p =
   let expr, p = parse_expression LOWEST p in

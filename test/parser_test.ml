@@ -261,59 +261,75 @@ let test_ident_expression () =
   if token.literal <> "foobar" then
     failwith ("value not correct it is " ^ token.literal)
 
-let test_return_statements () =
-  let input = {|
-return 5; 
-return 10; 
-return 993322; 
-|} in
-  let l = Lexer.new' input in
-  let p = Parser.new_parser l in
-  let program = Parser.parse_program p in
-  if List.length program.statements <> 3 then failwith "should be 3 statements" ;
-  let test_inputs stat =
-    match stat with
-    | Ast.Returnstatement {token} ->
-        Format.printf "True-Token: %s\n"
-          (Token.token_to_string_debug token.type') ;
+let test_return_statement () =
+  let open Ast in
+  let test_return_statement (l : Ast.statement) (expression_value : generic) =
+    match l with
+    | Ast.Returnstatement {token; return_value} ->
+        (* Alcotest.(check string) "Checking let token" "let" token.literal ; *)
         Alcotest.(check string)
-          "Check return statement"
-          (Token.token_to_string_debug token.type')
-          "RETURN"
+          "checking return statement token" "return" token.literal ;
+        Alcotest.(check bool)
+          "checking return statement" true
+          (test_literal_expressions return_value expression_value)
     | _ ->
-        failwith "should be a return statement"
+        failwith "should be a let statement"
   in
-  List.iter test_inputs program.statements
+  let inputs =
+    [ ("return 5;", Int 5)
+    ; ("return 10", Int 10)
+    ; ("return 4565460;", Int 4565460) ]
+  in
+  let f (input, expectedValue) =
+    let l = Lexer.new' input in
+    let p = Parser.new_parser l in
+    let program = Parser.parse_program p in
+    Alcotest.(check int) "length" 1 (List.length program.statements) ;
+    test_return_statement (List.nth program.statements 0) expectedValue ;
+    ()
+  in
+  List.iter f inputs
+
+(* if List.length program.statements > 3 then *)
+(*   failwith "To many statements produced" *)
+(* else ignore 10 ignore 10 *)
 
 let test_let_statement () =
-  let input =
-    {|
-   let x = 5;
-   let y = 10;
-   let foobar = 838383;
-   let special_ident = 10;
-   |}
-  in
-  let tests = ["x"; "y"; "foobar"; "special_ident"] in
-  let l = Lexer.new' input in
-  let p = Parser.new_parser l in
-  let program = Parser.parse_program p in
-  let _ = print_endline (Ast.program_str program) in
-  if List.length program.statements <> 4 then failwith "not enought statements" ;
-  let test_inputs stat actual =
-    match stat with
-    | Ast.Letstatement {name} -> (
-      match name with
-      | Ast.Identifier ident ->
-          Alcotest.(check string) "Check name" actual ident.value
-      | _ ->
-          failwith "Let statements requires ident in this position" )
+  let open Ast in
+  let test_let_statement (l : Ast.statement) (expected_name : string)
+      (expression_value : generic) =
+    match l with
+    | Ast.Letstatement {name; value; token= _token} -> (
+        (* Alcotest.(check string) "Checking let token" "let" token.literal ; *)
+        Alcotest.(check bool)
+          "checking let statement value" true
+          (test_literal_expressions value expression_value) ;
+        match name with
+        | Identifier {value; token} ->
+            Alcotest.(check string) "Checking ident" expected_name value ;
+            Alcotest.(check string)
+              "Checking ident token" expected_name token.literal
+        | _ ->
+            failwith "expressioin shoulb be an ident" )
     | _ ->
-        failwith "Needs to be a let statement"
+        failwith "should be a let statement"
   in
-  List.iter2 test_inputs
-    (List.rev program.statements)
-    tests (* FIXME  Reversing the list is wrong here needs to be debugged *)
+  let inputs =
+    [ ("let x = 5;", "x", Int 5)
+    ; ("let y = true;", "y", Bool true)
+    ; ("let foobar = y;", "foobar", String "y") ]
+  in
+  let f (input, expectedIdent, expectedValue) =
+    let l = Lexer.new' input in
+    let p = Parser.new_parser l in
+    let program = Parser.parse_program p in
+    Alcotest.(check int) "length" 1 (List.length program.statements) ;
+    test_let_statement
+      (List.nth program.statements 0)
+      expectedIdent expectedValue ;
+    ()
+  in
+  List.iter f inputs
 
 (* if List.length program.statements > 3 then *)
 (*   failwith "To many statements produced" *)
@@ -589,8 +605,7 @@ let () =
     [ ( "Let statements"
       , [test_case "Test the let statements" `Quick test_let_statement] )
     ; ( "Return statements"
-      , [test_case "Test the return statements" `Quick test_return_statements]
-      )
+      , [test_case "Test the return statements" `Quick test_return_statement] )
     ; ( "identifiers"
       , [ test_case "test the identifier expression statement" `Quick
             test_ident_expression (* test_ident_expression *) ] )
