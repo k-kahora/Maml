@@ -298,18 +298,57 @@ let parse_if_expression (p : parser) : Ast.expression * parser =
           ; condition= cond }
       , new_p )
 
+let parse_function_parameters p =
+  (* TODO make tail recursive *)
+  let loop_through_params p =
+    let ident = Ast.Identifier {token= p.curToken; value= p.curToken.literal} in
+    let acc = [ident] in
+    let rec helper acc p =
+      match p.peekToken.type' with
+      | Token.COMMA ->
+          let new_p = next_token p |> next_token in
+          helper
+            ( Ast.Identifier
+                {token= new_p.curToken; value= new_p.curToken.literal}
+            :: acc )
+            new_p
+      | _ ->
+          (acc, p)
+    in
+    let contents, par = helper acc p in
+    List.iter (List.rev contents) ;
+    (* token check *)
+    let open Result in
+    let ( >>= ) = bind in
+    let inter =
+      let inte = Ok par >>= fun ft -> expect_peek ft Token.RPAREN in
+      match inte with
+      | Error _ ->
+          failwith "invalid syntax needs to end in a RPAREN"
+      | Ok l ->
+          l
+    in
+    (List.rev contents, inter)
+  in
+  if peek_token_is p Token.RPAREN then ([], next_token p)
+  else loop_through_params (next_token p)
+
 let parse_function_literal p =
   let open Result in
   let ( >>= ) = bind in
-  let n_p = Ok p >>= fun ft -> expect_peek ft Token in
-  (* Handle n_p *)
+  let n_p =
+    let intermediate = Ok p >>= fun ft -> expect_peek ft Token.LPAREN in
+    match intermediate with Error _e -> failwith "failed" | Ok l -> l
+  in
   let parameters, n_p = parse_function_parameters n_p in
-  let n_p = Ok p >>= fun ft -> expect_peek ft Token.LBRACE in
-  (* Handle n_p *)
-  let body_block, n_p = parse_block n_p 
-
-
-  (Ast.FunctionLiteral {token=;body=;parameters=;} ,n_p)
+  let n_p =
+    let intermediate = Ok n_p >>= fun ft -> expect_peek ft Token.LBRACE in
+    match intermediate with Error _e -> failwith "invalide syntax" | Ok r -> r
+  in
+  let body_block, n_p = parse_block n_p in
+  ( Ast.FunctionLiteral
+      {token= p.curToken; body= Ast.BlockStatement body_block; parameters}
+  , n_p )
 
 let new_parser (l : Lexer.lexer) : parser =
   let curToken, cur = Lexer.next_token l in

@@ -438,7 +438,7 @@ let test_func_literal_parsing () =
           @@ test_literal_expressions (List.nth parameters 0)
           @@ String "x" ;
           Alcotest.(check bool) "Testing parameter one" true
-          @@ test_literal_expressions (List.nth parameters 0)
+          @@ test_literal_expressions (List.nth parameters 1)
           @@ String "y" ;
           let block =
             match body with
@@ -461,6 +461,45 @@ let test_func_literal_parsing () =
         failwith "not an expression statement" )
   | None ->
       failwith "not statements found"
+
+let test_function_parameter_passing () =
+  let tests =
+    [("fn() {};", []); ("fn(x) {x};", ["x"]); ("fn(x,y,z) {};", ["x"; "y"; "z"])]
+  in
+  (* let statements = *)
+  (*   Lexer.new' input |> Parser.new_parser |> Parser.parse_program *)
+  (*   |> fun a -> a.statements *)
+  (* in *)
+  let f (input, p_list) =
+    let statements =
+      Lexer.new' input |> Parser.new_parser |> Parser.parse_program
+      |> fun a -> a.statements
+    in
+    let stmt = List.nth_opt statements 0 in
+    let open Ast in
+    match stmt with
+    | Some s -> (
+      match s with
+      | Expressionstatement exp -> (
+        match exp.expression with
+        | FunctionLiteral fn ->
+            Alcotest.(check int)
+              "parameter list length" (List.length p_list)
+              (List.length fn.parameters) ;
+            List.iter2
+              (fun expected actual ->
+                Alcotest.(check bool)
+                  "checking parameter list" true
+                  (test_literal_expressions actual @@ String expected) )
+              p_list fn.parameters
+        | _ ->
+            failwith "not a function literal" )
+      | _ ->
+          failwith "needs to be an expression statement" )
+    | None ->
+        failwith "statement list is empty"
+  in
+  List.iter f tests
 
 let () =
   let open Alcotest in

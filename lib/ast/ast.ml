@@ -26,61 +26,61 @@ and block = {token: Token.token; statements: statement list}
 
 and ident = {token: Token.token (* The ident token *); value: string}
 
-let ast_to_str a =
-  let rec expression_str (e : expression) : string =
-    match e with
-    | Identifier {token= _; value} ->
-        value
-    | IntegerLiteral {token= _; value} ->
-        string_of_int value
-    | PrefixExpression {operator; right} ->
-        "(" ^ operator ^ expression_str right ^ ")"
-    | InfixExpression {left; operator; right} ->
-        "(" ^ expression_str left ^ " " ^ operator ^ " " ^ expression_str right
-        ^ ")"
-    | BooleanExpression {token} ->
-        token.literal
-    | IfExpression {condition; consquence; altenative} -> (
-        "if" ^ expression_str condition ^ " "
-        ^ statement_str_helper consquence
-        ^
-        match altenative with
-        | Some alt ->
-            "else" ^ statement_str_helper alt
-        | None ->
-            "" )
-    | FunctionLiteral {token; parameters; body} ->
-        token.literal ^ "("
-        ^ List.fold_left
-            (fun acc next_exp -> expression_str next_exp ^ acc)
-            "" parameters
-        ^ ")" ^ statement_str_helper body
-  (* {token: Token.token; parameters: ident list; body: statement} *)
-  (* TODO "if" ^ expression_str condition ^ " " ^ consequence *)
-  and statement_str_helper stat =
-    match stat with
-    | Letstatement {token; name; value} -> (
-      match name with
-      | Identifier {value= name_value} ->
-          Token.token_to_string_debug token.type'
-          ^ " " ^ name_value ^ " = " ^ expression_str value ^ ";"
-      | _ ->
-          failwith "Needs to be an identifier" )
-    | Returnstatement {token; return_value} ->
-        Token.token_to_string_debug token.type'
-        ^ " "
-        ^ expression_str return_value
-        ^ ";"
-    | Expressionstatement exp_stmt ->
-        expression_str exp_stmt.expression
-    | BlockStatement bl ->
-        List.fold_left
-          (fun acc nxt -> acc ^ statement_str_helper nxt)
-          "" bl.statements
-  in
-  statement_str_helper a
+let rec expression_str (e : expression) : string =
+  match e with
+  | Identifier {token= _; value} ->
+      value
+  | IntegerLiteral {token= _; value} ->
+      string_of_int value
+  | PrefixExpression {operator; right} ->
+      "(" ^ operator ^ expression_str right ^ ")"
+  | InfixExpression {left; operator; right} ->
+      "(" ^ expression_str left ^ " " ^ operator ^ " " ^ expression_str right
+      ^ ")"
+  | BooleanExpression {token} ->
+      token.literal
+  | IfExpression {condition; consquence; altenative} -> (
+      "if" ^ expression_str condition ^ " "
+      ^ statement_str_helper consquence
+      ^
+      match altenative with
+      | Some alt ->
+          "else" ^ statement_str_helper alt
+      | None ->
+          "" )
+  | FunctionLiteral {token; parameters; body} ->
+      token.literal ^ "("
+      ^ List.fold_left
+          (fun acc next_exp -> expression_str next_exp ^ acc)
+          "" parameters
+      ^ ")" ^ statement_str_helper body
 
-let statement_str s = ast_to_str s
+(* {token: Token.token; parameters: ident list; body: statement} *)
+(* TODO "if" ^ expression_str condition ^ " " ^ consequence *)
+and statement_str_helper stat =
+  match stat with
+  | Letstatement {token; name; value} -> (
+    match name with
+    | Identifier {value= name_value} ->
+        Token.token_to_string_debug token.type'
+        ^ " " ^ name_value ^ " = " ^ expression_str value ^ ";"
+    | _ ->
+        failwith "Needs to be an identifier" )
+  | Returnstatement {token; return_value} ->
+      Token.token_to_string_debug token.type'
+      ^ " "
+      ^ expression_str return_value
+      ^ ";"
+  | Expressionstatement exp_stmt ->
+      expression_str exp_stmt.expression
+  | BlockStatement bl ->
+      List.fold_left
+        (fun acc nxt -> acc ^ statement_str_helper nxt)
+        "" bl.statements
+
+let statement_str s = statement_str_helper s
+
+let expr_str e = expression_str e
 
 (* Simplified for demonstration *)
 (* ; value: expression (\* Assuming this is an expression node *\) } *)
