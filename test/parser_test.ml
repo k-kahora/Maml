@@ -118,7 +118,11 @@ let test_operator_precedence_parsing () =
     ; ("10 * (3 + 2)", "(10 * (3 + 2))")
     ; ("2 / (5 + 5)", "(2 / (5 + 5))")
     ; ("-(5 + 5)", "(-(5 + 5))")
-    ; ("!(true == true)", "(!(true == true))") ]
+    ; ("!(true == true)", "(!(true == true))")
+    ; ("a + add(b * c) + d", "((a + add((b * c))) + d)")
+    ; ( "add(a, b, 1, 2 * 3, 4 + 5, add(6, 7 * 8))"
+      , "add(a, b, 1, (2 * 3), (4 + 5), add(6, (7 * 8)))" )
+    ; ("add(a + b + c * d / f + g)", "add((((a + b) + ((c * d) / f)) + g))") ]
   in
   let helper (input, actual) =
     let l = Lexer.new' input in
@@ -437,7 +441,7 @@ let test_call_expression_parsing () =
           Alcotest.(check bool)
             "arg 1" true
             (test_literal_expressions (List.nth arguments 0) (Int 1)) ;
-          test_infix_expressions (List.nth arguments 1) (Int 1) "*" (Int 3) ;
+          test_infix_expressions (List.nth arguments 1) (Int 2) "*" (Int 3) ;
           test_infix_expressions (List.nth arguments 2) (Int 4) "+" (Int 5)
       | _ ->
           failwith "not a function literal" )
@@ -450,7 +454,7 @@ let test_call_parameter_parsing () =
   let tests =
     [ ("add()", "add", [])
     ; ("add(1)", "add", ["1"])
-    ; ("add(1,2*3,4 + 5)", "add", ["1"; "2*3"; "4+5"]) ]
+    ; ("add(1,2*3,4 + 5)", "add", ["1"; "(2 * 3)"; "(4 + 5)"]) ]
   in
   (* let statements = *)
   (*   Lexer.new' input |> Parser.new_parser |> Parser.parse_program *)
@@ -482,7 +486,7 @@ let test_call_parameter_parsing () =
             List.iter2
               (fun expected actual ->
                 Alcotest.(check string)
-                  "checking parameter list" expected (extract_val actual) )
+                  "checking parameter list" expected (expression_str actual) )
               p_list arguments
         | _ ->
             failwith "not a function literal" )

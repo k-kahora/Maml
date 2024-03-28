@@ -58,7 +58,7 @@ let rec expression_str (e : expression) : string =
       ^ ")" ^ statement_str_helper body
   | CallExpression {arguments; func} ->
       expression_str func ^ "("
-      ^ List.fold_left (fun acc nxt -> expression_str nxt ^ acc) "" arguments
+      ^ (String.concat ", " @@ List.map (fun a -> expression_str a) arguments)
       ^ ")"
 
 (* {token: Token.token; parameters: ident list; body: statement} *)

@@ -24,7 +24,7 @@ let precedences =
     empty |> add Token.EQ EQUALS |> add Token.NOT_EQ EQUALS
     |> add Token.LT LESSGREATER |> add Token.GT LESSGREATER
     |> add Token.PLUS SUM |> add Token.MINUS SUM |> add Token.SLASH PRODUCT
-    |> add Token.ASTERISK PRODUCT )
+    |> add Token.ASTERISK PRODUCT |> add Token.LPAREN CALL )
 
 let precedence_level (p : precedence) =
   match p with
@@ -349,6 +349,39 @@ let parse_function_literal p =
       {token= p.curToken; body= Ast.BlockStatement body_block; parameters}
   , n_p )
 
+let parse_arguments (p : parser) =
+  let open Result in
+  let ( >>= ) = bind in
+  let looper p =
+    let exp, n_p = next_token p |> parse_expression LOWEST in
+    let acc = [exp] in
+    let rec helper p acc =
+      match p.peekToken.type' with
+      | Token.COMMA ->
+          let exp, n_p =
+            next_token p |> next_token |> parse_expression LOWEST
+          in
+          helper n_p (exp :: acc)
+      | _ ->
+          (acc, p)
+    in
+    let args, n_p = helper n_p acc in
+    let pars =
+      let inte = Ok n_p >>= fun ft -> expect_peek ft Token.RPAREN in
+      match inte with
+      | Error _ ->
+          failwith "invalid syntax needs to end in a RPAREN"
+      | Ok l ->
+          l
+    in
+    (List.rev args, pars)
+  in
+  if peek_token_is p Token.RPAREN then ([], next_token p) else looper p
+
+let parse_call_expression p func =
+  let args, new_p = parse_arguments p in
+  (Ast.CallExpression {token= p.curToken; arguments= args; func}, new_p)
+
 let new_parser (l : Lexer.lexer) : parser =
   let curToken, cur = Lexer.next_token l in
   let peekToken, l = Lexer.next_token cur in
@@ -375,6 +408,7 @@ let new_parser (l : Lexer.lexer) : parser =
   |> register_infix ~t:Token.NOT_EQ ~fn:parse_infix_expression
   |> register_infix ~t:Token.LT ~fn:parse_infix_expression
   |> register_infix ~t:Token.GT ~fn:parse_infix_expression
+  |> register_infix ~t:Token.LPAREN ~fn:parse_call_expression
 
 module type Monad = sig
   type 'a t
