@@ -1,4 +1,4 @@
 (executable
  (public_name Interpreter)
  (name main)
- (libraries Interpreter lexer parser ast))
+ (libraries Interpreter lexer parser ast evaluater))

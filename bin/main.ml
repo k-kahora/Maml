@@ -26,14 +26,13 @@ let rec repl () =
     (* Check if the input is a command to exit *)
     print_endline "Goodbye!"
   else
+    (* FIXME NOTE This code failwis unless an int is passed *)
     let l = Lexer.new' input in
     let p = Parser.new_parser l in
     let program = Parser.parse_program p in
-    (* let () = evaluate l in *)
-    print_endline (Ast.program_str program) ;
-    (* Evaluate the input *)
-    (* Print the evaluation result *)
-    repl () (* Continue the loop *)
+    (* print_endline (Ast.program_str program) ; *)
+    let evaluated = Evaluater.eval program in
+    print_endline @@ Object.item_to_string evaluated ;
+    repl ()
 
-(* Start the REPL *)
 let () = repl ()

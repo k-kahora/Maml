@@ -38,3 +38,5 @@ val token_to_string_debug : token_name -> string
 type token = {type': token_name; literal: string}
 
 val look_up_ident : string -> token_name
+
+val dummy_token : token

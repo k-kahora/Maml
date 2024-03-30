@@ -174,3 +174,5 @@ let look_up_ident (s : string) : token_name =
       FALSE
   | _ ->
       IDENT
+
+let dummy_token = {type'= FALSE; literal= "false"}
