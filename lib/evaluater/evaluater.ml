@@ -98,8 +98,9 @@ let eval name =
   and eval_helper = function
     | Letstatement _ ->
         failwith "Let statement not yet implemented"
-    | Returnstatement _ ->
-        failwith "Return statement not yet implemented"
+    | Returnstatement p ->
+        let value = eval_expression p.return_value in
+        value
     | Expressionstatement exp ->
         eval_expression exp.expression
     | BlockStatement block ->
@@ -109,6 +110,8 @@ let eval name =
     match stmt_list with
     | [] ->
         failwith "list is empty"
+    | Ast.Returnstatement stmt :: _ ->
+        eval_expression stmt.return_value
     | [x] ->
         eval_helper x
     | _ :: t ->

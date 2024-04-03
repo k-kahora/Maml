@@ -20,7 +20,7 @@ let test_int_object expected = function
   | _ ->
       failwith "needs to be an int object"
 
-let test_eval input =
+let test_eval (input : string) : Object.item =
   Lexer.new' input |> Parser.new_parser |> Parser.parse_program
   |> Evaluater.eval
 
@@ -88,6 +88,19 @@ let test_bang_operator () =
       test_bool_object expected evaluated )
     tests
 
+let test_return_statement () =
+  let tests =
+    [ ("return 10;", 10)
+    ; ("return 10; 9;", 10)
+    ; ("return 2 * 5; 9;", 10)
+    ; ("9; return 2 * 5; 9;", 10) ]
+  in
+  List.iter
+    (fun (input, expected) ->
+      let evaluated = test_eval input in
+      test_int_object expected evaluated )
+    tests
+
 let test_eval_integer_exp () =
   let tests =
     [ ("5", 5)
@@ -126,4 +139,7 @@ let () =
     ; ("testing bang operator", [test_case "bang" `Quick test_bang_operator])
     ; ( "testing the if expression"
       , [ test_case "testing if expression evalaution" `Quick
-            test_if_else_expression ] ) ]
+            test_if_else_expression ] )
+    ; ( "testing return statements"
+      , [ test_case "testing return expression evalaution" `Quick
+            test_return_statement ] ) ]
