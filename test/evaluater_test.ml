@@ -11,6 +11,9 @@ let test_bool_object expected = function
   | _ ->
       failwith "needs to be an bool object"
 
+let test_null_object value =
+  Alcotest.(check string) "null check" "Null" (Object.item_to_string value)
+
 let test_int_object expected = function
   | Object.Int actual ->
       Alcotest.(check int) "Checking int object" expected actual
@@ -48,6 +51,26 @@ let test_eval_bool_exp () =
     (fun (input, expected) ->
       let evaluated = test_eval input in
       test_bool_object expected evaluated )
+    tests
+
+let test_if_else_expression () =
+  let tests =
+    [ ("if (true) { 10 }", Some 10)
+    ; ("if (false) { 10 }", None)
+    ; ("if (1) { 10 }", Some 10)
+    ; ("if (1 < 2) { 10 }", Some 10)
+    ; ("if (1 > 2) { 10 }", None)
+    ; ("if (1 > 2) { 10 } else { 20 }", Some 20)
+    ; ("if (1 < 2) { 10 } else { 20 }", Some 10) ]
+  in
+  List.iter
+    (fun (input, expected) ->
+      let evaluated = test_eval input in
+      match expected with
+      | Some value ->
+          test_int_object value evaluated
+      | None ->
+          test_null_object evaluated )
     tests
 
 let test_bang_operator () =
@@ -100,4 +123,7 @@ let () =
     ; ( "evaluation boolean expressions"
       , [test_case "Testing evaluatin bool literals" `Quick test_eval_bool_exp]
       )
-    ; ("testing bang operator", [test_case "bang" `Quick test_bang_operator]) ]
+    ; ("testing bang operator", [test_case "bang" `Quick test_bang_operator])
+    ; ( "testing the if expression"
+      , [ test_case "testing if expression evalaution" `Quick
+            test_if_else_expression ] ) ]

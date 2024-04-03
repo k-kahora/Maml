@@ -4,6 +4,15 @@ let false_object = Object.Bool false
 
 let null_object = Object.Null
 
+let is_truth b =
+  match b with
+  | Object.Bool boolean ->
+      boolean
+  | Object.Null ->
+      false
+  | _ ->
+      true
+
 let eval name =
   let open Ast in
   let rec eval_expression = function
@@ -20,8 +29,10 @@ let eval name =
         eval_infix left p.operator right
     | BooleanExpression p ->
         if p.value then true_object else false_object
-    | IfExpression _ ->
-        failwith "IfExpression not yet implemented"
+    | IfExpression p ->
+        let condition = eval_expression p.condition in
+        if is_truth condition then eval_helper p.consquence
+        else Option.fold ~none:Object.Null ~some:eval_helper p.altenative
     | FunctionLiteral _ ->
         failwith "FunctionLiteral not yet implemented"
     | CallExpression _ ->
@@ -84,19 +95,17 @@ let eval name =
         eval_infix_bool_expression l operator r
     | _ ->
         Object.Null
-  in
-  let eval_helper = function
+  and eval_helper = function
     | Letstatement _ ->
-        failwith "not yet implemented"
+        failwith "Let statement not yet implemented"
     | Returnstatement _ ->
-        failwith "not yet implemented"
+        failwith "Return statement not yet implemented"
     | Expressionstatement exp ->
         eval_expression exp.expression
-    | BlockStatement _ ->
-        failwith "not yet implemented"
-  in
+    | BlockStatement block ->
+        eval_statements block.statements
   (* receives a statement list and evaluates the last statement*)
-  let rec eval_statements stmt_list =
+  and eval_statements stmt_list =
     match stmt_list with
     | [] ->
         failwith "list is empty"
