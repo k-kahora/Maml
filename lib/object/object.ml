@@ -1,6 +1,11 @@
 type 'a obj_ops = {to_str: 'a -> string; print: 'a -> unit}
 
-type item = Int of int | Bool of bool | Null | Return of item
+type item =
+  | Int of int
+  | Bool of bool
+  | Null
+  | Return of item
+  | Error of string
 
 let unwrap_return = function
   | Return a ->
@@ -17,5 +22,7 @@ let rec item_to_string = function
       item_to_string it
   | Null ->
       "Null"
+  | Error e ->
+      "ERROR: " ^ e
 
 let is_return a = match a with Return _ -> true | _ -> false
