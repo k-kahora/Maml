@@ -17,8 +17,8 @@ let test_null_object value =
 let test_int_object expected = function
   | Object.Int actual ->
       Alcotest.(check int) "Checking int object" expected actual
-  | _ ->
-      failwith "needs to be an int object"
+  | a ->
+      failwith ("needs to be an int object got" ^ Object.item_to_string a)
 
 let test_eval (input : string) : Object.item =
   Lexer.new' input |> Parser.new_parser |> Parser.parse_program
@@ -91,8 +91,10 @@ let test_bang_operator () =
 let test_return_statement () =
   let tests =
     [ ("return 10;", 10)
-    ; ("return 10; 9;", 10)
-    ; ("return 2 * 5; 9;", 10)
+    ; ("return 9; 10;", 9)
+    ; ("return 2 * 6; 9;", 12)
+    ; ("if (true) {return 13;} return 3", 13)
+    ; ("if (10 > 1) {\nif (10 > 1) {\nreturn 9;\n}\n        return 1;\n}", 9)
     ; ("9; return 2 * 5; 9;", 10) ]
   in
   List.iter

@@ -97,7 +97,7 @@ let program_str (pgm : program) : string =
   let rec program_str_helper (acc : string) (list : statement list) : string =
     match list with
     | h :: t ->
-        program_str_helper (statement_str h ^ acc) t
+        program_str_helper (acc ^ statement_str h) t
     | [] ->
         acc
   in

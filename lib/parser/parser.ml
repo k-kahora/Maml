@@ -177,13 +177,6 @@ let parse_infix_expression (p : parser) (left_exp : Ast.expression) :
       ; right= right_exp }
   , new_p )
 
-let rec skip_expression nxt =
-  match nxt with
-  | pst when cur_token_is pst Token.SEMICOLON ->
-      nxt
-  | _ ->
-      skip_expression (next_token nxt)
-
 let rec parse_statement (p : parser) : (Ast.statement * parser) option =
   match p.curToken.type' with
   | Token.LET ->
@@ -431,6 +424,6 @@ let parse_program (p : parser) : Ast.program =
           looper (stmt :: acc) (next_token p) )
   in
   let d_stms = looper [] p in
-  {Ast.statements= (* List.rev *) d_stms}
+  {Ast.statements= List.rev d_stms}
 (* FIXME reversing affects runtime  *)
 (* List must be reversed due to the way is is handled by appending to the front *)
