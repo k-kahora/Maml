@@ -1,3 +1,5 @@
 (env
 (dev
-(flags (:standard -w -66-34-69-37-32-9)))) ; Ony keep 9 here
+(flags (:standard -w -66-34-69-37-32-9-8)))) ; Ony keep 9 here
+;; 8 is for this type of pattern matching
+;; let Object.Int left, Object.Int right = (left, right) 

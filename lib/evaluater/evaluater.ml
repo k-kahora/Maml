@@ -4,6 +4,8 @@ let false_object = Object.Bool false
 
 let null_object = Object.Null
 
+let new_error fmt = Object.Error fmt
+
 let is_truth b =
   match b with
   | Object.Bool boolean ->
@@ -16,7 +18,12 @@ let is_truth b =
 (* looks for return statements for early returns *)
 let eval_prefix operator right =
   let eval_minus_operator right =
-    match right with Object.Int b -> Object.Int (b * -1) | _ -> Object.Null
+    match right with
+    | Object.Int b ->
+        Object.Int (b * -1)
+    | _ ->
+        new_error
+          (Format.sprintf "unknown operator: -%s" @@ Object.object_string right)
   in
   let eval_bang_operator right =
     match right with
@@ -32,20 +39,30 @@ let eval_prefix operator right =
       eval_bang_operator right
   | "-" ->
       eval_minus_operator right
-  | _ ->
-      failwith "only two operators shoulb be possible"
+  | a ->
+      new_error
+        (Format.sprintf "unknown operator: %s %s" a
+           (Object.item_to_string right) )
 
 let eval_infix left operator right =
-  let eval_infix_bool_expression left operator right =
+  let eval_infix_bool_expression left_obj operator right_obj =
+    (* this is risky but is handled in the calling function *)
+    let Object.Bool left, Object.Bool right = (left_obj, right_obj) in
     match operator with
     | "==" ->
         Object.Bool (left == right)
     | "!=" ->
         Object.Bool (left != right)
     | _ ->
-        Object.Null
+        new_error
+        @@ (Format.sprintf "unknown operator: %s %s %s")
+             (Object.object_string left_obj)
+             operator
+             (Object.object_string right_obj)
   in
   let eval_infix_expression left operator right =
+    (* this is risky but is handled in the calling function *)
+    let Object.Int left, Object.Int right = (left, right) in
     match operator with
     | "+" ->
         Object.Int (left + right)
@@ -63,16 +80,23 @@ let eval_infix left operator right =
         Object.Bool (left <> right)
     | "==" ->
         Object.Bool (left = right)
-    | _ ->
-        Object.Null
+    | a ->
+        new_error (Format.sprintf "unknown operator: %s" a)
   in
   match (left, right) with
-  | Object.Int l, Object.Int r ->
+  | (Object.Int _ as l), (Object.Int _ as r) ->
       eval_infix_expression l operator r
-  | Object.Bool l, Object.Bool r ->
+  | (Object.Bool _ as l), (Object.Bool _ as r) ->
       eval_infix_bool_expression l operator r
+  | Object.Bool _, Object.Int _ | Object.Int _, Object.Bool _ ->
+      new_error
+      @@ (Format.sprintf "type mismatch: %s %s %s")
+           (Object.object_string left)
+           operator
+           (Object.object_string right)
   | _ ->
-      Object.Null
+      failwith
+        "No case detected for this scenario *eval_infix**eval_infix_expression"
 
 (* let eval name = *)
 (*   let open Ast in *)
@@ -116,6 +140,8 @@ and eval_statements stmt_list =
     match stmt_list with
     | _ when Object.is_return acc ->
         Object.unwrap_return acc
+    | _ when Object.is_error acc ->
+        acc
     | [] ->
         acc
     | Ast.Returnstatement stmt :: _ ->
@@ -130,6 +156,8 @@ and eval_block_statement statements =
   let rec eval_block_statement' acc statements =
     match statements with
     | [] ->
+        acc
+    | _ when Object.is_error acc ->
         acc
     | _ when Object.is_return acc ->
         acc

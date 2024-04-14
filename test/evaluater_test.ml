@@ -147,7 +147,7 @@ let test_error_handling () =
         \    return true + false;\n\
         \  }\n\n\
         \  return 1;"
-      , "unknow operator: BOOLEAN + BOOLEAN" ) ]
+      , "unknown operator: BOOLEAN + BOOLEAN" ) ]
   in
   List.iter
     (fun (input, expected) ->
