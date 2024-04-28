@@ -26,7 +26,9 @@
             legacyPackages.ocamlformat
             legacyPackages.fswatch
             legacyPackages.ocaml
+            legacyPackages.tree-sitter-grammars.tree-sitter-ocaml
             legacyPackages.opam
+            legacyPackages.nodejs_21 # needed for tree sitter
             legacyPackages.rlwrap
             legacyPackages.just # like a makefile
             ocamlPackages.odoc

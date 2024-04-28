@@ -147,12 +147,26 @@ let test_error_handling () =
         \    return true + false;\n\
         \  }\n\n\
         \  return 1;"
-      , "unknown operator: BOOLEAN + BOOLEAN" ) ]
+      , "unknown operator: BOOLEAN + BOOLEAN" )
+    ; ("foobar", "identifier not found: foobar") ]
   in
   List.iter
     (fun (input, expected) ->
       let evaluated = test_eval input in
       test_error_object expected evaluated )
+    tests
+
+let test_let_statements () =
+  let tests =
+    [ ("let a = 5; a", 5)
+    ; ("let a = 5 * 5; a;", 25)
+    ; ("let a = 5; let b = a; b;", 5)
+    ; ("let a = 5; let b = a; let c = a + b + 5; c;", 15) ]
+  in
+  List.iter
+    (fun (input, expected) ->
+      let evaluated = test_eval input in
+      test_int_object expected evaluated )
     tests
 
 let () =
@@ -173,4 +187,6 @@ let () =
       , [ test_case "testing return expression evalaution" `Quick
             test_return_statement ] )
     ; ( "testing errors"
-      , [test_case "testing error logging" `Quick test_error_handling] ) ]
+      , [test_case "testing error logging" `Quick test_error_handling] )
+    ; ( "testing let bindings"
+      , [test_case "binding test" `Quick test_let_statements] ) ]

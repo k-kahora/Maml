@@ -107,16 +107,22 @@ let rec eval_expression = function
       Object.Int p.value
   | PrefixExpression p ->
       let right = eval_expression p.right in
-      eval_prefix p.operator right
+      let open Object in
+      if is_error right then right else eval_prefix p.operator right
   | InfixExpression p ->
       let right = eval_expression p.right in
       let left = eval_expression p.left in
-      eval_infix left p.operator right
+      let open Object in
+      if is_error left then left
+      else if is_error right then right
+      else eval_infix left p.operator right
   | BooleanExpression p ->
       if p.value then true_object else false_object
   | IfExpression p ->
       let condition = eval_expression p.condition in
-      if is_truth condition then eval_statement p.consquence
+      let open Object in
+      if is_error condition then condition
+      else if is_truth condition then eval_statement p.consquence
       else Option.fold ~none:Object.Null ~some:eval_statement p.altenative
   | FunctionLiteral _ ->
       failwith "FunctionLiteral not yet implemented"
@@ -124,11 +130,14 @@ let rec eval_expression = function
       failwith "CallExpression not yet implemented"
 
 and eval_statement = function
-  | Letstatement _ ->
-      failwith "Let statement not yet implemented"
+  | Letstatement p ->
+      let value = eval_expression p.value in
+      if is_error value then value else (* Now what *)
+                                     ()
   | Returnstatement p ->
       let value = eval_expression p.return_value in
-      Return value
+      let open Object in
+      if is_error value then value else Return value
   | Expressionstatement exp ->
       eval_expression exp.expression
   | BlockStatement block ->
