@@ -1,3 +1,3 @@
 (library
  (name Interpreter)
- (libraries lexer token ast parser utils object evaluater))
+ (libraries lexer token ast parser utils object evaluater environment))

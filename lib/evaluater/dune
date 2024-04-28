@@ -1,4 +1,4 @@
 (library
  (name evaluater)
-(libraries ast object))
+(libraries ast object environment))
 

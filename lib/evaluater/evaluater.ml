@@ -130,10 +130,11 @@ let rec eval_expression = function
       failwith "CallExpression not yet implemented"
 
 and eval_statement = function
-  | Letstatement p ->
-      let value = eval_expression p.value in
-      if is_error value then value else (* Now what *)
-                                     ()
+  | Letstatement _p ->
+      failwith "failure"
+      (* let value = eval_expression p.value in *)
+      (* if Object.is_error value then value else () *)
+      (* Now what *)
   | Returnstatement p ->
       let value = eval_expression p.return_value in
       let open Object in
@@ -175,7 +176,7 @@ and eval_block_statement statements =
   in
   eval_block_statement' Object.Null statements
 
-let eval name =
+let eval _environment name =
   let open Ast in
   print_endline @@ program_str name ;
   eval_statements name.statements

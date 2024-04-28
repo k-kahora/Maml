@@ -30,8 +30,9 @@ let rec repl () =
     let l = Lexer.new' input in
     let p = Parser.new_parser l in
     let program = Parser.parse_program p in
+    let env = Environment.new_environment () in
     (* print_endline (Ast.program_str program) ; *)
-    let evaluated = Evaluater.eval program in
+    let evaluated = Evaluater.eval env program in
     print_endline @@ Object.item_to_string evaluated ;
     repl ()
 
