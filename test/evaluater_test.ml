@@ -142,6 +142,7 @@ let test_error_handling () =
     ; ("true + false;", "unknown operator: BOOLEAN + BOOLEAN")
     ; ("5; true + false; 5", "unknown operator: BOOLEAN + BOOLEAN")
     ; ("if (10 > 1) { true + false; }", "unknown operator: BOOLEAN + BOOLEAN")
+    ; ("foobar", "identifier not found: foobar")
     ; ( "if (10 > 1) {\n\
         \  if (10 > 1) {\n\
         \    return true + false;\n\
@@ -160,6 +161,7 @@ let test_let_statements () =
   let tests =
     [ ("let a = 5; a", 5)
     ; ("let a = 5 * 5; a;", 25)
+    ; ("let z = 5 * 5; let x = -5; z + x;", 20)
     ; ("let a = 5; let b = a; b;", 5)
     ; ("let a = 5; let b = a; let c = a + b + 5; c;", 15) ]
   in
@@ -187,6 +189,6 @@ let () =
       , [ test_case "testing return expression evalaution" `Quick
             test_return_statement ] )
     ; ( "testing errors"
-      , [test_case "testing error logging" `Quick test_error_handling] ) ]
-(* ; ( "testing let bindings" *)
-(*   , [test_case "binding test" `Quick test_let_statements] ) ] *)
+      , [test_case "testing error logging" `Quick test_error_handling] ) 
+; ( "testing let bindings"
+  , [test_case "binding test" `Quick test_let_statements] ) ]

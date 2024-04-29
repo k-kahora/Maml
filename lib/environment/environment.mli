@@ -1,4 +1,4 @@
-type environment = {store: (string, Object.item) Utils.Token_AssocList.t}
+type environment = {mutable store: (string, Object.item) Utils.Token_AssocList.t}
 
 val get : environment -> string -> Object.item
 
