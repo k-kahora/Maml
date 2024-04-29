@@ -1,8 +1,7 @@
-type 'a obj_ops = {to_str: 'a -> string; print: 'a -> unit}
-
 type item =
   | Int of int
   | Bool of bool
+  | Function of Ast.ident list * Ast.expression (* * Environment.environment *)
   | Null
   | Return of item
   | Error of string
@@ -25,6 +24,8 @@ let object_string obj =
       "INTEGER"
   | Bool _ ->
       "BOOLEAN"
+  | Function _ ->
+      "FUNCTION"
   | Null ->
       "Null"
   | Return _ ->
