@@ -16,7 +16,7 @@ let rec evaluate (l : lexer) : unit =
 
 (* Define the REPL function *)
 
-let env = Environment.new_environment ()
+let env = Object.Environment.new_environment ()
 
 let rec repl () =
   print_string "==> " ;
@@ -35,8 +35,7 @@ let rec repl () =
     let program = Parser.parse_program p in
     (* print_endline (Ast.program_str program) ; *)
     let evaluated = Evaluater.eval env program in
-    print_endline @@ Object.item_to_string evaluated ;
+    print_endline @@ Object.Obj.item_to_string evaluated ;
     repl ()
 
 let () = repl ()
-

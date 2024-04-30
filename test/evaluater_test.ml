@@ -1,3 +1,5 @@
+open Object
+
 let dummy_token =
   let open Token in
   {type'= EOF; literal= "fail"}
@@ -6,27 +8,27 @@ let set_up_program input =
   Lexer.new' input |> Parser.new_parser |> Parser.parse_program
 
 let test_bool_object expected = function
-  | Object.Bool actual ->
+  | Obj.Bool actual ->
       Alcotest.(check bool) "Checking bool object" expected actual
   | _ ->
       failwith "needs to be an bool object"
 
 let test_null_object value =
-  Alcotest.(check string) "null check" "Null" (Object.item_to_string value)
+  Alcotest.(check string) "null check" "Null" (Obj.item_to_string value)
 
 let test_error_object expected = function
-  | Object.Error actual ->
+  | Obj.Error actual ->
       Alcotest.(check string) "Checking error object" expected actual
   | a ->
-      failwith ("needs to be an error object got " ^ Object.item_to_string a)
+      failwith ("needs to be an error object got " ^ Obj.item_to_string a)
 
 let test_int_object expected = function
-  | Object.Int actual ->
+  | Obj.Int actual ->
       Alcotest.(check int) "Checking int object" expected actual
   | a ->
-      failwith ("needs to be an int object got" ^ Object.item_to_string a)
+      failwith ("needs to be an int object got" ^ Obj.item_to_string a)
 
-let test_eval (input : string) : Object.item =
+let test_eval (input : string) : Obj.item =
   Lexer.new' input |> Parser.new_parser |> Parser.parse_program
   |> Evaluater.eval (Environment.new_environment ())
 
@@ -157,6 +159,19 @@ let test_error_handling () =
       test_error_object expected evaluated )
     tests
 
+let test_function_application () =
+  let tests =
+    [ ("let identity = fn(x) { x; }; identity(5);", 5)
+    ; ("let identity = fn(x) { return x; }; identity(5);", 5)
+    ; ("let double = fn(x) { x * 2; }; double(5);", 10)
+    ; ("let add = fn(x, y) { x + y; }; add(5, 5);", 10)
+    ; ("let add = fn(x, y) { x + y; }; add(5 + 5, add(5, 5));", 20)
+    ; ("fn(x) { x; }(5)", 5) ]
+  in
+  List.iter
+    (fun (input, expected) -> test_int_object expected (test_eval input))
+    tests
+
 let test_let_statements () =
   let tests =
     [ ("let a = 5; a", 5)
@@ -170,6 +185,37 @@ let test_let_statements () =
       let evaluated = test_eval input in
       test_int_object expected evaluated )
     tests
+
+let test_function_object () =
+  let input = "fn(x) { x + 2 };" in
+  let parameters, body, _env =
+    match test_eval input with
+    | Obj.Function (p, b, e) ->
+        (p, b, e)
+    | _ ->
+        failwith "object is not a function"
+  in
+  let p =
+    match List.hd parameters with
+    | Ast.Identifier i ->
+        i.value
+    | _ ->
+        failwith "parameter need to be a ident"
+  in
+  let body = Ast.statement_str body in
+  Alcotest.(check int) "Parameter list length" 1 (List.length parameters) ;
+  Alcotest.(check string) "Parameter name" "x" p ;
+  Alcotest.(check string) "Cheking body" "(x + 2)" body
+
+let test_closures () =
+  let input =
+    {|let newAdder = fn(x,y) {
+        fn(z) {x + y - z};
+      };
+      let addTwo = newAdder(2,4);
+      addTwo(10);|}
+  in
+  test_int_object (-4) @@ test_eval input
 
 let () =
   let open Alcotest in
@@ -189,6 +235,11 @@ let () =
       , [ test_case "testing return expression evalaution" `Quick
             test_return_statement ] )
     ; ( "testing errors"
-      , [test_case "testing error logging" `Quick test_error_handling] ) 
-; ( "testing let bindings"
-  , [test_case "binding test" `Quick test_let_statements] ) ]
+      , [test_case "testing error logging" `Quick test_error_handling] )
+    ; ( "testing functions"
+      , [test_case "low level func test" `Quick test_function_object] )
+    ; ("testing clojures", [test_case "clojures" `Quick test_closures])
+    ; ( "testing function application"
+      , [test_case "func app test" `Quick test_function_application] )
+    ; ( "testing let bindings"
+      , [test_case "binding test" `Quick test_let_statements] ) ]

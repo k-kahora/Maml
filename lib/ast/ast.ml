@@ -78,10 +78,8 @@ and statement_str_helper stat =
   | Expressionstatement exp_stmt ->
       expression_str exp_stmt.expression
   | BlockStatement bl ->
-      "{\n"
-      ^ ( String.concat "\n"
+      ( String.concat "\n"
         @@ List.map (fun acc -> statement_str_helper acc) bl.statements )
-      ^ "\n}\n"
 
 let statement_str s = statement_str_helper s
 

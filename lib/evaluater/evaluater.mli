@@ -1,1 +1,1 @@
-val eval : Environment.environment -> Ast.program -> Object.item
+val eval : Object.Environment.environment -> Ast.program -> Object.Obj.item
