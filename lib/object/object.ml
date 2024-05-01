@@ -46,7 +46,7 @@ end = struct
     | Int _ ->
         "INTEGER"
     | String _ ->
-        "String"
+        "STRING"
     | Bool _ ->
         "BOOLEAN"
     | Function _ ->

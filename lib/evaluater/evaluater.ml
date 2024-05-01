@@ -55,6 +55,16 @@ let eval_infix left operator right =
              operator
              (Obj.object_string right_obj)
   in
+  let eval_infix_string_expression l o r =
+    let Obj.String left, Obj.String right = (l, r) in
+    match o with
+    | "+" ->
+        Obj.String (left ^ right)
+    | _ ->
+        new_error
+          (Format.sprintf "unknown operator: %s %s %s" (Obj.object_string l)
+             operator (Obj.object_string r) )
+  in
   let eval_infix_expression left operator right =
     (* this is risky but is handled in the calling function *)
     let Obj.Int left, Obj.Int right = (left, right) in
@@ -87,6 +97,8 @@ let eval_infix left operator right =
       eval_infix_expression l operator r
   | (Obj.Bool _ as l), (Obj.Bool _ as r) ->
       eval_infix_bool_expression l operator r
+  | (Obj.String _ as l), (Obj.String _ as r) ->
+      eval_infix_string_expression l operator r
   | Obj.Bool _, Obj.Int _ | Obj.Int _, Obj.Bool _ ->
       new_error
       @@ (Format.sprintf "type mismatch: %s %s %s")
@@ -99,14 +111,14 @@ let eval_infix left operator right =
 (*   let open Ast in *)
 let eval_ident env value = Environment.get env value
 
-let rec eval_expression (env : Environment.environment) = let open Ast in
+let rec eval_expression (env : Environment.environment) =
+  let open Ast in
   function
   | Identifier {value; _} ->
       eval_ident env value
   | IntegerLiteral p ->
       Obj.Int p.value
-
-  | StringLiteral str -> 
+  | StringLiteral str ->
       Obj.String str.value
   | PrefixExpression p ->
       let open Object.Obj in
@@ -139,7 +151,8 @@ let rec eval_expression (env : Environment.environment) = let open Ast in
           if List.hd args = Obj.Null then List.hd args
           else apply_function func args )
 
-and eval_statement (env : Environment.environment) = let open Ast in
+and eval_statement (env : Environment.environment) =
+  let open Ast in
   function
   | Letstatement p ->
       let value = eval_expression env p.value in

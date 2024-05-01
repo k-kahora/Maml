@@ -149,6 +149,7 @@ let test_error_handling () =
     ; ("5; true + false; 5", "unknown operator: BOOLEAN + BOOLEAN")
     ; ("if (10 > 1) { true + false; }", "unknown operator: BOOLEAN + BOOLEAN")
     ; ("foobar", "identifier not found: foobar")
+    ; ("\"Hello\" - \"World\"", "unknown operator: STRING - STRING")
     ; ( "if (10 > 1) {\n\
         \  if (10 > 1) {\n\
         \    return true + false;\n\
@@ -241,6 +242,13 @@ let test_string_literal () =
   | _ ->
       failwith "not an object string"
 
+let test_string_concat () = 
+  let input = "\"Hello\" + \" \" +  \"World\"" in
+  let evaluated = test_eval input in
+  match evaluated with
+    | Obj.String str -> Alcotest.(check string) "String concat test" "Hello World" str
+    | _ -> failwith "Object is not a string"
+
 let test_closures () =
   let input =
     {|let newAdder = fn(x,y) {
@@ -274,6 +282,7 @@ let () =
       , [test_case "low level func test" `Quick test_function_object] )
     ; ("testing clojures", [test_case "clojures" `Quick test_closures])
     ; ("testing string literals", [test_case "strings" `Quick test_string_literal])
+    ; ("testing string concat", [test_case "concat" `Quick test_string_concat])
     ; ("recursive test", [test_case "fibanci seq" `Quick test_recursive])
     ; ( "testing function application"
       , [test_case "func app test" `Quick test_function_application] )
