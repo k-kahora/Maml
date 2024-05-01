@@ -65,6 +65,21 @@ let read_identifier (l : lexer) : string * lexer =
 let next_token (l : lexer) : Token.token * lexer =
   let token l =
     match l.ch with
+    | '"' ->
+        let read_string l =
+          let pos = l.position + 1 in
+          let rec aux l =
+            match l.ch with
+            | '"' ->
+                (l.position - pos, l)
+            | _ ->
+                aux (read_char l)
+          in
+          let end_pos, l = aux l in
+          (String.sub l.input pos end_pos, l)
+        in
+        let str, l = read_string (read_char l) in
+        ({Token.type'= Token.STRING; Token.literal= str}, l)
     | '=' -> (
       match peek_char l with
       | '=' ->
@@ -89,10 +104,22 @@ let next_token (l : lexer) : Token.token * lexer =
         (newToken Token.SLASH l.ch, read_char l)
     | '*' ->
         (newToken Token.ASTERISK l.ch, read_char l)
-    | '<' ->
-        (newToken Token.LT l.ch, read_char l)
-    | '>' ->
-        (newToken Token.GT l.ch, read_char l)
+    | '<' -> (
+      match peek_char l with
+      | '=' ->
+          ( { Token.type'= Token.LTEQ
+            ; Token.literal= String.make 1 l.ch ^ String.make 1 (peek_char l) }
+          , read_char @@ read_char l )
+      | _ ->
+          (newToken Token.LT l.ch, read_char l) )
+    | '>' -> (
+      match peek_char l with
+      | '=' ->
+          ( { Token.type'= Token.GTEQ
+            ; Token.literal= String.make 1 l.ch ^ String.make 1 (peek_char l) }
+          , read_char @@ read_char l )
+      | _ ->
+          (newToken Token.GT l.ch, read_char l) )
     | ';' ->
         (newToken Token.SEMICOLON l.ch, read_char l)
     | '(' ->

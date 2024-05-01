@@ -69,8 +69,12 @@ let eval_infix left operator right =
         Obj.Int (left / right)
     | ">" ->
         Obj.Bool (left > right)
+    | ">=" ->
+        Obj.Bool (left >= right)
     | "<" ->
         Obj.Bool (left < right)
+    | "<=" ->
+        Obj.Bool (left <= right)
     | "!=" ->
         Obj.Bool (left <> right)
     | "==" ->

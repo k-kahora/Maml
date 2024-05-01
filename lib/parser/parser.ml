@@ -23,6 +23,7 @@ let precedences =
   Utils.Token_AssocList.(
     empty |> add Token.EQ EQUALS |> add Token.NOT_EQ EQUALS
     |> add Token.LT LESSGREATER |> add Token.GT LESSGREATER
+    |> add Token.GTEQ LESSGREATER |> add Token.LTEQ LESSGREATER
     |> add Token.PLUS SUM |> add Token.MINUS SUM |> add Token.SLASH PRODUCT
     |> add Token.ASTERISK PRODUCT |> add Token.LPAREN CALL )
 
@@ -388,6 +389,8 @@ let new_parser (l : Lexer.lexer) : parser =
   |> register_infix ~t:Token.NOT_EQ ~fn:parse_infix_expression
   |> register_infix ~t:Token.LT ~fn:parse_infix_expression
   |> register_infix ~t:Token.GT ~fn:parse_infix_expression
+  |> register_infix ~t:Token.GTEQ ~fn:parse_infix_expression
+  |> register_infix ~t:Token.LTEQ ~fn:parse_infix_expression
   |> register_infix ~t:Token.LPAREN ~fn:parse_call_expression
 
 module type Monad = sig

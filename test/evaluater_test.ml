@@ -40,6 +40,10 @@ let test_eval_bool_exp () =
     ; ("1 > 2", false)
     ; ("1 < 1", false)
     ; ("1 > 1", false)
+    ; ("1 >= 1", true)
+    ; ("1 <= 1", true)
+    ; ("2 <= 1", false)
+    ; ("1 >= 2", false)
     ; ("10000 > 9999", true)
     ; ("1 == 1", true)
     ; ("1 != 1", false)
@@ -172,6 +176,27 @@ let test_function_application () =
     (fun (input, expected) -> test_int_object expected (test_eval input))
     tests
 
+let test_recursive () =
+  let tests =
+    [ ( "let fib = fn(n) {if (n <= 1) {return n} else {return fib(n - 1) + \
+         fib(n - 2)}}; fib(9)"
+      , 34 ) ]
+    (*   let tests = *)
+    (* [ ( {|let fib = fn(n) { *)
+       (*              if (n <= 1) { *)
+       (*                 return n; *)
+       (*              } else { *)
+       (*              return fib(n - 1) + fib(n - 2);} *)
+       (*           }; fib(4)  *)
+       (* |} *)
+    (*       , 13 ) ] *)
+  in
+  List.iter
+    (fun (input, expected) ->
+      let evaluated = test_eval input in
+      test_int_object expected evaluated )
+    tests
+
 let test_let_statements () =
   let tests =
     [ ("let a = 5; a", 5)
@@ -239,6 +264,7 @@ let () =
     ; ( "testing functions"
       , [test_case "low level func test" `Quick test_function_object] )
     ; ("testing clojures", [test_case "clojures" `Quick test_closures])
+    ; ("recursive test", [test_case "fibanci seq" `Quick test_recursive])
     ; ( "testing function application"
       , [test_case "func app test" `Quick test_function_application] )
     ; ( "testing let bindings"

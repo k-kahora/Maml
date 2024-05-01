@@ -1,4 +1,5 @@
 (* ttype':ype token_type = string *)
+
 type token_name =
   | ILLEGAL
   | EOF
@@ -13,7 +14,9 @@ type token_name =
   | ASTERISK
   | SLASH
   | LT
+  | LTEQ
   | GT
+  | GTEQ
   | EQ
   | NOT_EQ
   (* Delimeters *)
@@ -31,6 +34,7 @@ type token_name =
   | IF
   | ELSE
   | RETURN
+  | STRING
 
 let token_to_string_debug (t : token_name) : string =
   match t with
@@ -58,8 +62,12 @@ let token_to_string_debug (t : token_name) : string =
       "SLASH"
   | LT ->
       "LT"
+  | LTEQ ->
+      "LTEQ"
   | GT ->
       "GT"
+  | GTEQ ->
+      "GTEQ"
   | EQ ->
       "EQ"
   | NOT_EQ ->
@@ -92,6 +100,8 @@ let token_to_string_debug (t : token_name) : string =
       "ELSE"
   | RETURN ->
       "RETURN"
+  | STRING ->
+      "STRING"
 
 let token_to_string (t : token_name) : string =
   match t with
@@ -123,6 +133,10 @@ let token_to_string (t : token_name) : string =
       ">"
   | EQ ->
       "=="
+  | LTEQ ->
+      "<="
+  | GTEQ ->
+      ">="
   | NOT_EQ ->
       "!="
   (* Delimeters *)
@@ -153,6 +167,8 @@ let token_to_string (t : token_name) : string =
       "ELSE"
   | RETURN ->
       "RETURN"
+  | STRING ->
+      "STRING"
 
 type token = {type': token_name; literal: string}
 

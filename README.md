@@ -17,3 +17,4 @@ Noticed a case where if the last of the input is a {keyword|number} my loops do 
 * Use emojis
 * Maybe change keywords to something obscene
 * Add a unique feature that makes development hell
+* Add less than or equal to and greater than respectively

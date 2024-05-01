@@ -12,7 +12,9 @@ type token_name =
   | ASTERISK
   | SLASH
   | LT
+  | LTEQ
   | GT
+  | GTEQ
   | EQ
   | NOT_EQ
   (* Delimeters *)
@@ -30,6 +32,7 @@ type token_name =
   | IF
   | ELSE
   | RETURN
+  | STRING
 
 val token_to_string : token_name -> string
 
