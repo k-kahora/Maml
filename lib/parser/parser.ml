@@ -143,6 +143,11 @@ let parse_bool (p : parser) : Ast.expression * parser =
   ( Ast.BooleanExpression {token= p.curToken; value= cur_token_is p Token.TRUE}
   , p )
 
+let parse_string_literal p = 
+  ( Ast.StringLiteral
+      {token= p.curToken; value= p.curToken.literal}
+  , p )
+
 let parse_integer_literal (p : parser) : Ast.expression * parser =
   ( Ast.IntegerLiteral
       {token= p.curToken; value= int_of_string p.curToken.literal}
@@ -374,6 +379,7 @@ let new_parser (l : Lexer.lexer) : parser =
   ; infinxParseFns= Utils.Token_AssocList.empty }
   |> register_prefix ~t:Token.IDENT ~fn:parse_identifier
   |> register_prefix ~t:Token.INT ~fn:parse_integer_literal
+  |> register_prefix ~t:Token.STRING ~fn:parse_string_literal
   |> register_prefix ~t:Token.BANG ~fn:parse_prefix_expression
   |> register_prefix ~t:Token.MINUS ~fn:parse_prefix_expression
   |> register_prefix ~t:Token.TRUE ~fn:parse_bool

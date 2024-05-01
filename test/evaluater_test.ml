@@ -232,6 +232,15 @@ let test_function_object () =
   Alcotest.(check string) "Parameter name" "x" p ;
   Alcotest.(check string) "Cheking body" "(x + 2)" body
 
+let test_string_literal () =
+  let input = {|"Hello World"|} in
+  let evaluated = test_eval input in
+  match evaluated with
+  | Obj.String str ->
+      Alcotest.(check string) "Checking object string" "Hello World" str
+  | _ ->
+      failwith "not an object string"
+
 let test_closures () =
   let input =
     {|let newAdder = fn(x,y) {
@@ -264,6 +273,7 @@ let () =
     ; ( "testing functions"
       , [test_case "low level func test" `Quick test_function_object] )
     ; ("testing clojures", [test_case "clojures" `Quick test_closures])
+    ; ("testing string literals", [test_case "strings" `Quick test_string_literal])
     ; ("recursive test", [test_case "fibanci seq" `Quick test_recursive])
     ; ( "testing function application"
       , [test_case "func app test" `Quick test_function_application] )

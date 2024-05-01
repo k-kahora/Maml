@@ -116,7 +116,9 @@ if (5 < 10) {
     ; (Token.INT, "10")
     ; (Token.SEMICOLON, ";")
     ; (Token.STRING, "foobar")
+    ; (Token.SEMICOLON, ";")
     ; (Token.STRING, "foo bar")
+    ; (Token.SEMICOLON, ";")
     ; (Token.EOF, "\000") ]
   in
   let l = Lexer.new' input in

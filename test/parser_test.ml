@@ -4,10 +4,10 @@ type generic = String of string | Int of int | Bool of bool
 
 let test_ident (exp : Ast.expression) (value' : string) : bool =
   match exp with
-  | Ast.Identifier {value} when value <> value' ->
+  | Ast.Identifier {value; _} when value <> value' ->
       Alcotest.(check string) "Checking identifer value" value' value ;
       false
-  | Ast.Identifier {token} when token.literal <> value' ->
+  | Ast.Identifier {token; _} when token.literal <> value' ->
       Alcotest.(check string) "Checking identifer literal" value' token.literal ;
       false
   | Ast.Identifier _ ->
@@ -17,7 +17,7 @@ let test_ident (exp : Ast.expression) (value' : string) : bool =
 
 let check_int_literal exp =
   match exp with
-  | Ast.IntegerLiteral {value} ->
+  | Ast.IntegerLiteral {value; _} ->
       value
   | _ ->
       failwith "Non integer expression found"
@@ -339,7 +339,7 @@ let test_if_expression () =
   let test_block_statement (s : Ast.statement) : unit =
     let open Ast in
     match s with
-    | BlockStatement {statements} -> (
+    | BlockStatement {statements; _} -> (
         (* NOTE this test is not very general*)
         if List.length statements <> 1 then
           Fmt.failwith
@@ -389,7 +389,7 @@ let test_if_else_expression () =
   let test_block_statement (s : Ast.statement) (ident : string) : unit =
     let open Ast in
     match s with
-    | BlockStatement {statements} -> (
+    | BlockStatement {statements; _} -> (
         (* NOTE this test is not very general*)
         if List.length statements <> 1 then
           Fmt.failwith
@@ -451,7 +451,7 @@ let test_call_expression_parsing () =
     match st with
     | Expressionstatement exp -> (
       match exp.expression with
-      | CallExpression {func; arguments} ->
+      | CallExpression {func; arguments; _} ->
           Alcotest.(check bool) "func ident" true (test_ident func "add") ;
           Alcotest.(check int) "Argument list length" 3 (List.length arguments) ;
           Alcotest.(check bool)
@@ -482,7 +482,7 @@ let test_call_parameter_parsing () =
       |> fun a -> a.statements
     in
     let extract_val = function
-      | Ast.Identifier {value} ->
+      | Ast.Identifier {value; _} ->
           value
       | _ ->
           "fail"
@@ -494,7 +494,7 @@ let test_call_parameter_parsing () =
       match s with
       | Expressionstatement exp -> (
         match exp.expression with
-        | CallExpression {func; arguments} ->
+        | CallExpression {func; arguments; _} ->
             Alcotest.(check int)
               "argument list length" (List.length p_list)
               (List.length arguments) ;
@@ -599,6 +599,29 @@ let test_function_parameter_passing () =
   in
   List.iter f tests
 
+let test_string_literal () =
+  let input = "\"hello world\"" in
+  let statements =
+    Lexer.new' input |> Parser.new_parser |> Parser.parse_program
+    |> fun a -> a.statements
+  in
+  let stmt = List.nth_opt statements 0 in
+  match stmt with
+  | Some st -> (
+    match st with
+    | Ast.Expressionstatement exp -> (
+      match exp.expression with
+      | Ast.StringLiteral str ->
+          Alcotest.(check string)
+            "Checking string literal" "hello world" str.value
+      | p ->
+          failwith ("expected string literal got " ^ Ast.expression_str_debug p)
+      )
+    | _ ->
+        failwith "" )
+  | None ->
+      failwith "need at least one statement"
+
 let () =
   let open Alcotest in
   run "parser tests"
@@ -630,6 +653,8 @@ let () =
       , [test_case "functions" `Quick test_func_literal_parsing] )
     ; ( "call expressions"
       , [test_case "call expressions" `Quick test_call_expression_parsing] )
+    ; ( "string hello world test"
+      , [test_case "string expressions" `Quick test_string_literal] )
     ; ( "call expressions arguments"
       , [ test_case "call expressions arguments" `Quick
             test_call_parameter_parsing ] ) ]

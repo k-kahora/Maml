@@ -67,16 +67,16 @@ let next_token (l : lexer) : Token.token * lexer =
     match l.ch with
     | '"' ->
         let read_string l =
-          let pos = l.position + 1 in
+          let start = l.position in
           let rec aux l =
             match l.ch with
-            | '"' ->
-                (l.position - pos, l)
+            | '"' | '\x00' ->
+                (l.position - start, read_char l)
             | _ ->
                 aux (read_char l)
           in
           let end_pos, l = aux l in
-          (String.sub l.input pos end_pos, l)
+          (String.sub l.input start end_pos, l)
         in
         let str, l = read_string (read_char l) in
         ({Token.type'= Token.STRING; Token.literal= str}, l)

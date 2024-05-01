@@ -3,6 +3,7 @@
 type expression =
   | Identifier of ident
   | IntegerLiteral of {token: Token.token (* The ident token *); value: int}
+  | StringLiteral of {token: Token.token (* The ident token *); value: string}
   | PrefixExpression of {token: Token.token; operator: string; right: expression}
   | InfixExpression of
       {token: Token.token; left: expression; operator: string; right: expression}
@@ -28,20 +29,43 @@ and block = {token: Token.token; statements: statement list}
 
 and ident = {token: Token.token (* The ident token *); value: string}
 
+let expression_str_debug e =
+  match e with
+  | Identifier _ ->
+      "Identifier"
+  | StringLiteral _ ->
+      "StringLiteral"
+  | IntegerLiteral _ ->
+      "IntegerLiteral"
+  | PrefixExpression _ ->
+      "PrefixExpression"
+  | InfixExpression _ ->
+      "InfixExpression"
+  | BooleanExpression _ ->
+      "BooleanExpression"
+  | IfExpression _ ->
+      "IfExpression"
+  | FunctionLiteral _ ->
+      "FunctionLiteral"
+  | CallExpression _ ->
+      "CallExpression"
+
 let rec expression_str (e : expression) : string =
   match e with
   | Identifier {token= _; value} ->
       value
+  | StringLiteral {token= _; value} ->
+      value
   | IntegerLiteral {token= _; value} ->
       string_of_int value
-  | PrefixExpression {operator; right} ->
+  | PrefixExpression {operator; right; _} ->
       "(" ^ operator ^ expression_str right ^ ")"
-  | InfixExpression {left; operator; right} ->
+  | InfixExpression {left; operator; right; _} ->
       "(" ^ expression_str left ^ " " ^ operator ^ " " ^ expression_str right
       ^ ")"
-  | BooleanExpression {token} ->
+  | BooleanExpression {token; _} ->
       token.literal
-  | IfExpression {condition; consquence; altenative} -> (
+  | IfExpression {condition; consquence; altenative; _} -> (
       "if" ^ expression_str condition ^ " "
       ^ statement_str_helper consquence
       ^
@@ -54,7 +78,7 @@ let rec expression_str (e : expression) : string =
       token.literal ^ "("
       ^ String.concat ", " (List.map (fun exp -> expression_str exp) parameters)
       ^ ")" ^ statement_str_helper body
-  | CallExpression {arguments; func} ->
+  | CallExpression {arguments; func; _} ->
       expression_str func ^ "("
       ^ (String.concat ", " @@ List.map (fun a -> expression_str a) arguments)
       ^ ")"
@@ -65,7 +89,7 @@ and statement_str_helper stat =
   match stat with
   | Letstatement {token; name; value} -> (
     match name with
-    | Identifier {value= name_value} ->
+    | Identifier {value= name_value; _} ->
         Token.token_to_string_debug token.type'
         ^ " " ^ name_value ^ " = " ^ expression_str value ^ ";"
     | _ ->
@@ -78,8 +102,8 @@ and statement_str_helper stat =
   | Expressionstatement exp_stmt ->
       expression_str exp_stmt.expression
   | BlockStatement bl ->
-      ( String.concat "\n"
-        @@ List.map (fun acc -> statement_str_helper acc) bl.statements )
+      String.concat "\n"
+      @@ List.map (fun acc -> statement_str_helper acc) bl.statements
 
 let statement_str s = statement_str_helper s
 

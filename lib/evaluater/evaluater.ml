@@ -99,11 +99,15 @@ let eval_infix left operator right =
 (*   let open Ast in *)
 let eval_ident env value = Environment.get env value
 
-let rec eval_expression (env : Environment.environment) = function
-  | Ast.Identifier {value} ->
+let rec eval_expression (env : Environment.environment) = let open Ast in
+  function
+  | Identifier {value; _} ->
       eval_ident env value
   | IntegerLiteral p ->
       Obj.Int p.value
+
+  | StringLiteral str -> 
+      Obj.String str.value
   | PrefixExpression p ->
       let open Object.Obj in
       let right = eval_expression env p.right in
@@ -123,9 +127,9 @@ let rec eval_expression (env : Environment.environment) = function
       if is_error condition then condition
       else if is_truth condition then eval_statement env p.consquence
       else Option.fold ~none:Obj.Null ~some:(eval_statement env) p.altenative
-  | FunctionLiteral {parameters; body} ->
+  | FunctionLiteral {parameters; body; _} ->
       Obj.Function (parameters, body, env)
-  | CallExpression {func; arguments} -> (
+  | CallExpression {func; arguments; _} -> (
       let func = eval_expression env func in
       match func with
       | Object.Obj.Error _ ->
@@ -135,7 +139,8 @@ let rec eval_expression (env : Environment.environment) = function
           if List.hd args = Obj.Null then List.hd args
           else apply_function func args )
 
-and eval_statement (env : Environment.environment) = function
+and eval_statement (env : Environment.environment) = let open Ast in
+  function
   | Letstatement p ->
       let value = eval_expression env p.value in
       if Obj.is_error value then value
@@ -144,7 +149,7 @@ and eval_statement (env : Environment.environment) = function
           (* FIXME why the hell does set return a tuple you only need te env *)
           Environment.set env
             ( match p.name with
-            | Ast.Identifier {value= name} ->
+            | Ast.Identifier {value= name; _} ->
                 name
             | _ ->
                 failwith "LetStatement does not have an ident *weird error*" )
@@ -210,7 +215,7 @@ and apply_function (func : Obj.item) (args : Obj.item list) =
   in
   let extract_parameter exp =
     match exp with
-    | Ast.Identifier {value} ->
+    | Ast.Identifier {value; _} ->
         value
     | _ ->
         failwith "imposibble"

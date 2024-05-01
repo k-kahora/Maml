@@ -1,6 +1,7 @@
 module rec Obj : sig
   type item =
     | Int of int
+    | String of string
     | Bool of bool
     (* Parameters, Body, Environment *)
     | Function of Ast.expression list * Ast.statement * Environment.environment
@@ -22,6 +23,7 @@ module rec Obj : sig
 end = struct
   type item =
     | Int of int
+    | String of string
     | Bool of bool
     | Function of Ast.expression list * Ast.statement * Environment.environment
     | Null
@@ -43,6 +45,8 @@ end = struct
   let object_string = function
     | Int _ ->
         "INTEGER"
+    | String _ ->
+        "String"
     | Bool _ ->
         "BOOLEAN"
     | Function _ ->
@@ -57,9 +61,11 @@ end = struct
   let rec item_to_string = function
     | Int i ->
         string_of_int i
+    | String i ->
+        i
     | Bool b ->
         string_of_bool b
-    | Function (_p, _b, _) ->
+    | Function (_, _, _) ->
       "fn ("
     | Return it ->
         item_to_string it
