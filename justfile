@@ -1,0 +1,2 @@
+run:
+	dune exec Interpreter

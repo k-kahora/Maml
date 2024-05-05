@@ -109,7 +109,17 @@ let eval_infix left operator right =
 
 (* let eval name = *)
 (*   let open Ast in *)
-let eval_ident env value = Environment.get env value
+(* The binding not being found is error checked in environment*)
+(* Obj.Error ("identifier not found: " ^ name) *)
+
+let eval_ident env value =
+  match Environment.get env value with
+  | Some e ->
+      e
+  | None ->
+      Option.value
+        (Utils.Token_AssocList.find value Builtin.built_in_list)
+        ~default:(new_error @@ Format.sprintf "identifier not found: %s" value)
 
 let rec eval_expression (env : Environment.environment) =
   let open Ast in
@@ -259,8 +269,10 @@ and apply_function (func : Obj.item) (args : Obj.item list) =
             failwith ""
       in
       unwrap_return_value evaluated
+  | Obj.Builtin fn ->
+      fn args
   | _ ->
-      Obj.Error "not a function"
+      Obj.new_error @@ "not a function" ^ Obj.item_to_string func
 
 let eval (env : Environment.environment) name =
   let open Ast in

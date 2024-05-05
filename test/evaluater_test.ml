@@ -1,5 +1,8 @@
 open Object
 
+(* This is exclusivley used for the builtin test function *)
+type int_string = Int of int | String of string
+
 let dummy_token =
   let open Token in
   {type'= EOF; literal= "fail"}
@@ -183,6 +186,7 @@ let test_recursive () =
          fib(n - 2)}}; fib(9)"
       , 34 ) ]
     (*   let tests = *)
+
     (* [ ( {|let fib = fn(n) { *)
        (*              if (n <= 1) { *)
        (*                 return n; *)
@@ -242,12 +246,14 @@ let test_string_literal () =
   | _ ->
       failwith "not an object string"
 
-let test_string_concat () = 
+let test_string_concat () =
   let input = "\"Hello\" + \" \" +  \"World\"" in
   let evaluated = test_eval input in
   match evaluated with
-    | Obj.String str -> Alcotest.(check string) "String concat test" "Hello World" str
-    | _ -> failwith "Object is not a string"
+  | Obj.String str ->
+      Alcotest.(check string) "String concat test" "Hello World" str
+  | _ ->
+      failwith "Object is not a string"
 
 let test_closures () =
   let input =
@@ -258,6 +264,29 @@ let test_closures () =
       addTwo(10);|}
   in
   test_int_object (-4) @@ test_eval input
+
+let test_builtin_length () =
+  let tests =
+    [ ("len(\"\")", Int 0)
+    ; ("len(\"four\")", Int 4)
+    ; ("len(\"hello world\")", Int 11)
+    ; ("len(1)", String "argument to `len` not supported, got INTEGER")
+    ; ( "len(\" one \", \" two \")"
+      , String "wrong number of arguments. got=2, want=1" ) ]
+  in
+  List.iter
+    (fun (input, expected) ->
+      let evaluated = test_eval input in
+      match expected with
+      | Int i ->
+          test_int_object i evaluated
+      | String s -> (
+        match evaluated with
+        | Obj.Error e ->
+            Alcotest.(check string) "error checking" s e
+        | _ ->
+            failwith "object is not an error" ) )
+    tests
 
 let () =
   let open Alcotest in
@@ -281,9 +310,12 @@ let () =
     ; ( "testing functions"
       , [test_case "low level func test" `Quick test_function_object] )
     ; ("testing clojures", [test_case "clojures" `Quick test_closures])
-    ; ("testing string literals", [test_case "strings" `Quick test_string_literal])
+    ; ( "testing string literals"
+      , [test_case "strings" `Quick test_string_literal] )
     ; ("testing string concat", [test_case "concat" `Quick test_string_concat])
     ; ("recursive test", [test_case "fibanci seq" `Quick test_recursive])
+    ; ( "testing builtin functions"
+      , [test_case "length check" `Quick test_builtin_length] )
     ; ( "testing function application"
       , [test_case "func app test" `Quick test_function_application] )
     ; ( "testing let bindings"
