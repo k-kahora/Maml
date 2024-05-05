@@ -11,10 +11,4 @@ Noticed a case where if the last of the input is a {keyword|number} my loops do 
 - [ ] Need to add mli files for all ml files with proper name space exposure
 - [ ] Reversing let statements but not block statements very weird
 - [ ] Refractoring to results and options instead of failswith (asserts arent bad honostly for dev phase)
-
-## Future plans
-- [ ] Make a freaky branch (current ideas)
-* Use emojis
-* Maybe change keywords to something obscene
-* Add a unique feature that makes development hell
-* Add less than or equal to and greater than respectively
+- [ ] Make every failswith return a error instead of a runtime error return an error object
