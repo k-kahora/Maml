@@ -622,6 +622,26 @@ let test_string_literal () =
   | None ->
       failwith "need at least one statement"
 
+let test_array_literal () =
+  let input = "[1,2 * 2, 3 + 3]" in
+  let statements =
+    Lexer.new' input |> Parser.new_parser |> Parser.parse_program
+    |> fun a -> a.statements
+  in
+  match List.nth statements 0 with
+  | Ast.Expressionstatement {token= _; expression} -> (
+    match expression with
+    | Ast.ArrayLiteral {token= _; elements= array} ->
+        Alcotest.(check int)
+          "First element" 1
+          (List.nth array 0 |> check_int_literal) ;
+        test_infix_expressions (List.nth array 1) (Int 2) "*" (Int 2) ;
+        test_infix_expressions (List.nth array 3) (Int 2) "*" (Int 2)
+    | _ ->
+        failwith "needs to be an array" )
+  | _ ->
+      failwith "need at least one statement"
+
 let () =
   let open Alcotest in
   run "parser tests"
@@ -655,6 +675,8 @@ let () =
       , [test_case "call expressions" `Quick test_call_expression_parsing] )
     ; ( "string hello world test"
       , [test_case "string expressions" `Quick test_string_literal] )
+    ; ( "test parsing array literal"
+      , [test_case "array literal to string" `Quick test_array_literal] )
     ; ( "call expressions arguments"
       , [ test_case "call expressions arguments" `Quick
             test_call_parameter_parsing ] ) ]

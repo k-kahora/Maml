@@ -143,10 +143,8 @@ let parse_bool (p : parser) : Ast.expression * parser =
   ( Ast.BooleanExpression {token= p.curToken; value= cur_token_is p Token.TRUE}
   , p )
 
-let parse_string_literal p = 
-  ( Ast.StringLiteral
-      {token= p.curToken; value= p.curToken.literal}
-  , p )
+let parse_string_literal p =
+  (Ast.StringLiteral {token= p.curToken; value= p.curToken.literal}, p)
 
 let parse_integer_literal (p : parser) : Ast.expression * parser =
   ( Ast.IntegerLiteral
@@ -335,26 +333,28 @@ let parse_function_literal p =
       {token= p.curToken; body= Ast.BlockStatement body_block; parameters}
   , n_p )
 
-let parse_arguments (p : parser) =
+let parse_expression_list (token_end : Token.token_name) (p : parser) =
   let open Result in
   let ( >>= ) = bind in
   let looper p =
-    let exp, n_p = next_token p |> parse_expression LOWEST in
-    let acc = [exp] in
+    (* FIXME uneccesay line just gets the loop running *)
+    let exp, new_p = next_token p |> parse_expression LOWEST in
     let rec helper p acc =
       match p.peekToken.type' with
       | Token.COMMA ->
-          let exp, n_p =
+          let exp, new_p =
             next_token p |> next_token |> parse_expression LOWEST
           in
-          helper n_p (exp :: acc)
-      | _ ->
+          helper new_p (exp :: acc)
+      | tk when token_end = tk ->
           (acc, p)
+      | _ ->
+          failwith "invalide array or parameter syntax"
     in
-    let args, n_p = helper n_p acc in
+    let args, n_p = helper new_p [exp] in
     let pars =
-      let inte = Ok n_p >>= fun ft -> expect_peek ft Token.RPAREN in
-      match inte with
+      let closing_token = Ok n_p >>= fun ft -> expect_peek ft token_end in
+      match closing_token with
       | Error _ ->
           failwith "invalid syntax needs to end in a RPAREN"
       | Ok l ->
@@ -362,11 +362,15 @@ let parse_arguments (p : parser) =
     in
     (List.rev args, pars)
   in
-  if peek_token_is p Token.RPAREN then ([], next_token p) else looper p
+  if peek_token_is p token_end then ([], next_token p) else looper p
 
 let parse_call_expression p func =
-  let args, new_p = parse_arguments p in
-  (Ast.CallExpression {token= p.curToken; arguments= args; func}, new_p)
+  let elements, new_p = parse_expression_list Token.RPAREN p in
+  (Ast.CallExpression {token= p.curToken; arguments= elements; func}, new_p)
+
+let parse_array_literal p =
+  let elements, new_p = parse_expression_list Token.LPAREN p in
+  (Ast.ArrayLiteral {token= p.curToken; elements}, new_p)
 
 let new_parser (l : Lexer.lexer) : parser =
   let curToken, cur = Lexer.next_token l in
@@ -385,6 +389,7 @@ let new_parser (l : Lexer.lexer) : parser =
   |> register_prefix ~t:Token.TRUE ~fn:parse_bool
   |> register_prefix ~t:Token.FALSE ~fn:parse_bool
   |> register_prefix ~t:Token.LPAREN ~fn:parse_group_expression
+  |> register_prefix ~t:Token.LBRACKET ~fn:parse_array_literal
   |> register_prefix ~t:Token.IF ~fn:parse_if_expression
   |> register_prefix ~t:Token.FUNCTION ~fn:parse_function_literal
   |> register_infix ~t:Token.PLUS ~fn:parse_infix_expression
