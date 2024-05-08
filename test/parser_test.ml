@@ -122,7 +122,10 @@ let test_operator_precedence_parsing () =
     ; ("a + add(b * c) + d", "((a + add((b * c))) + d)")
     ; ( "add(a, b, 1, 2 * 3, 4 + 5, add(6, 7 * 8))"
       , "add(a, b, 1, (2 * 3), (4 + 5), add(6, (7 * 8)))" )
-    ; ("add(a + b + c * d / f + g)", "add((((a + b) + ((c * d) / f)) + g))") ]
+    ; ("add(a + b + c * d / f + g)", "add((((a + b) + ((c * d) / f)) + g))")
+    ; ("a * [1,2,3,4][b * c] * d", "((a * ([1, 2, 3, 4][(b * c)])) * d)")
+    ; ( "add(a * b[2], b[1], 2 * [1,2][1])"
+      , "add((a * (b[2])), (b[1]), (2 * ([1, 2][1])))" ) ]
   in
   let helper (input, actual) =
     let l = Lexer.new' input in
@@ -636,7 +639,7 @@ let test_array_literal () =
           "First element" 1
           (List.nth array 0 |> check_int_literal) ;
         test_infix_expressions (List.nth array 1) (Int 2) "*" (Int 2) ;
-        test_infix_expressions (List.nth array 3) (Int 2) "*" (Int 2)
+        test_infix_expressions (List.nth array 2) (Int 3) "+" (Int 3)
     | _ ->
         failwith "needs to be an array" )
   | _ ->

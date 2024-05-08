@@ -18,6 +18,7 @@ type precedence =
   | PRODUCT (* * *)
   | PREFIX (* -X or !X *)
   | CALL (* func(X) *)
+  | INDEX
 
 let precedences =
   Utils.Token_AssocList.(
@@ -25,7 +26,8 @@ let precedences =
     |> add Token.LT LESSGREATER |> add Token.GT LESSGREATER
     |> add Token.GTEQ LESSGREATER |> add Token.LTEQ LESSGREATER
     |> add Token.PLUS SUM |> add Token.MINUS SUM |> add Token.SLASH PRODUCT
-    |> add Token.ASTERISK PRODUCT |> add Token.LPAREN CALL )
+    |> add Token.ASTERISK PRODUCT |> add Token.LPAREN CALL
+    |> add Token.LBRACKET INDEX )
 
 let precedence_level (p : precedence) =
   match p with
@@ -42,6 +44,8 @@ let precedence_level (p : precedence) =
   | PREFIX ->
       5
   | CALL ->
+      6
+  | INDEX ->
       6
 
 let cur_precedence (p : parser) : precedence =
@@ -348,8 +352,9 @@ let parse_expression_list (token_end : Token.token_name) (p : parser) =
           helper new_p (exp :: acc)
       | tk when token_end = tk ->
           (acc, p)
-      | _ ->
-          failwith "invalide array or parameter syntax"
+      | tk ->
+          failwith
+          @@ Format.sprintf "Expected ',' got %s" (Token.token_to_string tk)
     in
     let args, n_p = helper new_p [exp] in
     let pars =
@@ -369,8 +374,16 @@ let parse_call_expression p func =
   (Ast.CallExpression {token= p.curToken; arguments= elements; func}, new_p)
 
 let parse_array_literal p =
-  let elements, new_p = parse_expression_list Token.LPAREN p in
+  let elements, new_p = parse_expression_list Token.RBRACKET p in
   (Ast.ArrayLiteral {token= p.curToken; elements}, new_p)
+
+let parse_index_expression p left =
+  let idx, new_p = next_token p |> parse_expression LOWEST in
+  let open Result in
+  let ( >>= ) = bind in
+  let next_token = Ok new_p >>= fun ft -> expect_peek ft Token.RBRACKET in
+  let next_token = Result.get_ok next_token in
+  (Ast.IndexExpression {token= p.curToken; left; index= idx}, next_token)
 
 let new_parser (l : Lexer.lexer) : parser =
   let curToken, cur = Lexer.next_token l in
@@ -403,6 +416,7 @@ let new_parser (l : Lexer.lexer) : parser =
   |> register_infix ~t:Token.GTEQ ~fn:parse_infix_expression
   |> register_infix ~t:Token.LTEQ ~fn:parse_infix_expression
   |> register_infix ~t:Token.LPAREN ~fn:parse_call_expression
+  |> register_infix ~t:Token.LBRACKET ~fn:parse_index_expression
 
 module type Monad = sig
   type 'a t

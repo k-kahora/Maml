@@ -3,7 +3,10 @@
 type expression =
   | Identifier of ident
   | IntegerLiteral of {token: Token.token (* The ident token *); value: int}
-  | IndexExpression of {token: Token.token (* The ident token *); left: expression; index: expression}
+  | IndexExpression of
+      { token: Token.token (* The ident token *)
+      ; left: expression
+      ; index: expression }
   | StringLiteral of {token: Token.token (* The ident token *); value: string}
   | ArrayLiteral of
       {token: Token.token (* The ident token *); elements: expression list}
@@ -43,7 +46,7 @@ let expression_str_debug e =
   | PrefixExpression _ ->
       "PrefixExpression"
   | IndexExpression _ ->
-    "IndexExpression"
+      "IndexExpression"
   | InfixExpression _ ->
       "InfixExpression"
   | BooleanExpression _ ->
@@ -67,8 +70,8 @@ let rec expression_str (e : expression) : string =
       string_of_int value
   | PrefixExpression {operator; right; _} ->
       "(" ^ operator ^ expression_str right ^ ")"
-  | IndexExpression {token=_; left; index} ->
-      Format.sprintf "(%s[%s])" (expression_str left) (expression_str index) 
+  | IndexExpression {token= _; left; index} ->
+      Format.sprintf "(%s[%s])" (expression_str left) (expression_str index)
   | InfixExpression {left; operator; right; _} ->
       "(" ^ expression_str left ^ " " ^ operator ^ " " ^ expression_str right
       ^ ")"
