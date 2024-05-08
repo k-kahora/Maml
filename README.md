@@ -19,3 +19,4 @@ Noticed a case where if the last of the input is a {keyword|number} my loops do 
 * Maybe change keywords to something obscene
 * Add a unique feature that makes development hell
 * Add less than or equal to and greater than respectively
+* Make the langugage installable on Nix systems via the flake in your github
