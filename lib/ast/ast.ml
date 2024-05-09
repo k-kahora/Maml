@@ -3,7 +3,13 @@
 type expression =
   | Identifier of ident
   | IntegerLiteral of {token: Token.token (* The ident token *); value: int}
+  | IndexExpression of
+      { token: Token.token (* The ident token *)
+      ; left: expression
+      ; index: expression }
   | StringLiteral of {token: Token.token (* The ident token *); value: string}
+  | ArrayLiteral of
+      {token: Token.token (* The ident token *); elements: expression list}
   | PrefixExpression of {token: Token.token; operator: string; right: expression}
   | InfixExpression of
       {token: Token.token; left: expression; operator: string; right: expression}
@@ -39,6 +45,8 @@ let expression_str_debug e =
       "IntegerLiteral"
   | PrefixExpression _ ->
       "PrefixExpression"
+  | IndexExpression _ ->
+      "IndexExpression"
   | InfixExpression _ ->
       "InfixExpression"
   | BooleanExpression _ ->
@@ -49,6 +57,8 @@ let expression_str_debug e =
       "FunctionLiteral"
   | CallExpression _ ->
       "CallExpression"
+  | ArrayLiteral _ ->
+      "ArrayLiteral"
 
 let rec expression_str (e : expression) : string =
   match e with
@@ -60,6 +70,8 @@ let rec expression_str (e : expression) : string =
       string_of_int value
   | PrefixExpression {operator; right; _} ->
       "(" ^ operator ^ expression_str right ^ ")"
+  | IndexExpression {token= _; left; index} ->
+      Format.sprintf "(%s[%s])" (expression_str left) (expression_str index)
   | InfixExpression {left; operator; right; _} ->
       "(" ^ expression_str left ^ " " ^ operator ^ " " ^ expression_str right
       ^ ")"
@@ -82,6 +94,9 @@ let rec expression_str (e : expression) : string =
       expression_str func ^ "("
       ^ (String.concat ", " @@ List.map (fun a -> expression_str a) arguments)
       ^ ")"
+  | ArrayLiteral {token= _; elements} ->
+      Format.sprintf "[%s]"
+        (List.map expression_str elements |> String.concat ", ")
 
 (* {token: Token.token; parameters: ident list; body: statement} *)
 (* TODO "if" ^ expression_str condition ^ " " ^ consequence *)

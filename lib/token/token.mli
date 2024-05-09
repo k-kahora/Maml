@@ -24,6 +24,8 @@ type token_name =
   | RPAREN
   | LBRACE
   | RBRACE
+  | LBRACKET
+  | RBRACKET
   (* Keywords *)
   | FUNCTION
   | LET

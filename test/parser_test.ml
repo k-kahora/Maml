@@ -122,7 +122,10 @@ let test_operator_precedence_parsing () =
     ; ("a + add(b * c) + d", "((a + add((b * c))) + d)")
     ; ( "add(a, b, 1, 2 * 3, 4 + 5, add(6, 7 * 8))"
       , "add(a, b, 1, (2 * 3), (4 + 5), add(6, (7 * 8)))" )
-    ; ("add(a + b + c * d / f + g)", "add((((a + b) + ((c * d) / f)) + g))") ]
+    ; ("add(a + b + c * d / f + g)", "add((((a + b) + ((c * d) / f)) + g))")
+    ; ("a * [1,2,3,4][b * c] * d", "((a * ([1, 2, 3, 4][(b * c)])) * d)")
+    ; ( "add(a * b[2], b[1], 2 * [1,2][1])"
+      , "add((a * (b[2])), (b[1]), (2 * ([1, 2][1])))" ) ]
   in
   let helper (input, actual) =
     let l = Lexer.new' input in
@@ -622,6 +625,26 @@ let test_string_literal () =
   | None ->
       failwith "need at least one statement"
 
+let test_array_literal () =
+  let input = "[1,2 * 2, 3 + 3]" in
+  let statements =
+    Lexer.new' input |> Parser.new_parser |> Parser.parse_program
+    |> fun a -> a.statements
+  in
+  match List.nth statements 0 with
+  | Ast.Expressionstatement {token= _; expression} -> (
+    match expression with
+    | Ast.ArrayLiteral {token= _; elements= array} ->
+        Alcotest.(check int)
+          "First element" 1
+          (List.nth array 0 |> check_int_literal) ;
+        test_infix_expressions (List.nth array 1) (Int 2) "*" (Int 2) ;
+        test_infix_expressions (List.nth array 2) (Int 3) "+" (Int 3)
+    | _ ->
+        failwith "needs to be an array" )
+  | _ ->
+      failwith "need at least one statement"
+
 let () =
   let open Alcotest in
   run "parser tests"
@@ -655,6 +678,8 @@ let () =
       , [test_case "call expressions" `Quick test_call_expression_parsing] )
     ; ( "string hello world test"
       , [test_case "string expressions" `Quick test_string_literal] )
+    ; ( "test parsing array literal"
+      , [test_case "array literal to string" `Quick test_array_literal] )
     ; ( "call expressions arguments"
       , [ test_case "call expressions arguments" `Quick
             test_call_parameter_parsing ] ) ]

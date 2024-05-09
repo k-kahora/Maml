@@ -132,6 +132,10 @@ let next_token (l : lexer) : Token.token * lexer =
         (newToken Token.LBRACE l.ch, read_char l)
     | '}' ->
         (newToken Token.RBRACE l.ch, read_char l)
+    | '[' ->
+        (newToken Token.LBRACKET l.ch, read_char l)
+    | ']' ->
+        (newToken Token.RBRACKET l.ch, read_char l)
     | '\x00' ->
         (newToken Token.EOF l.ch, read_char l)
     | _ when is_digit l.ch ->

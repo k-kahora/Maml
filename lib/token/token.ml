@@ -26,6 +26,8 @@ type token_name =
   | RPAREN
   | LBRACE
   | RBRACE
+  | LBRACKET
+  | RBRACKET
   (* Keywords *)
   | FUNCTION
   | LET
@@ -85,6 +87,10 @@ let token_to_string_debug (t : token_name) : string =
       "LBRACE"
   | RBRACE ->
       "RBRACE"
+  | LBRACKET ->
+      "LBRACKET"
+  | RBRACKET ->
+      "RBRACKET"
   (* Keywords *)
   | FUNCTION ->
       "FUNCTION"
@@ -152,6 +158,10 @@ let token_to_string (t : token_name) : string =
       "{"
   | RBRACE ->
       "}"
+  | RBRACKET ->
+      "["
+  | LBRACKET ->
+      "]"
   (* Keywords *)
   | FUNCTION ->
       "FUNCTION"

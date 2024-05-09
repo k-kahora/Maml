@@ -33,6 +33,7 @@ if (5 < 10) {
 9 <= 10;
 "foobar";
 "foo bar";
+[1, 2];
 |}
   in
   let tests =
@@ -118,6 +119,12 @@ if (5 < 10) {
     ; (Token.STRING, "foobar")
     ; (Token.SEMICOLON, ";")
     ; (Token.STRING, "foo bar")
+    ; (Token.SEMICOLON, ";")
+    ; (Token.LBRACKET, "[")
+    ; (Token.INT, "1")
+    ; (Token.COMMA, ",")
+    ; (Token.INT, "2")
+    ; (Token.RBRACKET, "]")
     ; (Token.SEMICOLON, ";")
     ; (Token.EOF, "\000") ]
   in
