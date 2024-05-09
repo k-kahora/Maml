@@ -128,6 +128,28 @@ let rec eval_expression (env : Environment.environment) =
       eval_ident env value
   | IntegerLiteral p ->
       Obj.Int p.value
+  | IndexExpression {token= _; left; index} ->
+      let eval_array_index_expression arr idx =
+        if idx < 0 || idx >= Array.length arr then Obj.Null else arr.(idx)
+      in
+      let eval_index_expression l i =
+        match (l, i) with
+        | Obj.Array arr, Obj.Int num ->
+            eval_array_index_expression arr num
+        | _ ->
+            new_error
+              ( Format.sprintf "index operator not supported: %s"
+              @@ Obj.item_to_string l )
+      in
+      let left = eval_expression env left in
+      let index = eval_expression env index in
+      eval_index_expression left index
+  | ArrayLiteral {token= _; elements} ->
+      let elements = eval_expressions env elements in
+      (* bad practice depends on short ciruit eval *)
+      if List.length elements = 1 && Obj.is_error (List.hd elements) then
+        List.hd elements
+      else Obj.Array (Array.of_list elements)
   | StringLiteral str ->
       Obj.String str.value
   | PrefixExpression p ->
@@ -276,7 +298,7 @@ and apply_function (func : Obj.item) (args : Obj.item list) =
 
 let eval (env : Environment.environment) name =
   let open Ast in
-  print_endline @@ program_str name ;
+  (* print_endline @@ program_str name ; *)
   eval_statements env name.statements
 
 (* TODO IS there a way t restrict the type to a blockstatement *)

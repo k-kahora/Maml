@@ -1,7 +1,7 @@
 open Object
 
 (* This is exclusivley used for the builtin test function *)
-type int_string = Int of int | String of string
+type int_string = Int of int | String of string | Array of int array
 
 let dummy_token =
   let open Token in
@@ -24,6 +24,23 @@ let test_error_object expected = function
       Alcotest.(check string) "Checking error object" expected actual
   | a ->
       failwith ("needs to be an error object got " ^ Obj.item_to_string a)
+
+let test_int_array_object expected = function
+  | Obj.Array actual ->
+      Alcotest.(check (array int))
+        "Checking int array" expected
+        (Array.map
+           (fun a ->
+             match a with
+             | Obj.Int i ->
+                 i
+             | a ->
+                 failwith
+                   ( Format.sprintf "needs to be an array of ints got %s"
+                   @@ Obj.item_to_string a ) )
+           actual )
+  | a ->
+      failwith ("needs to be an int array object got" ^ Obj.item_to_string a)
 
 let test_int_object expected = function
   | Obj.Int actual ->
@@ -180,6 +197,30 @@ let test_function_application () =
     (fun (input, expected) -> test_int_object expected (test_eval input))
     tests
 
+let test_map () =
+  let tests =
+    [ ( {|
+
+let map = fn(arr, f) {
+  let iter = fn(arr, accumulated) {
+    if (len(arr) == 0) {
+      accumulated
+    } else {
+      iter(rest(arr), push(accumulated, f(first(arr))));
+    }
+  };
+
+  iter(arr, []);
+};map([1,2,3],fn(x) {x * 4})|}
+      , [|2; 4; 6|] ) ]
+  in
+  List.iter
+    (fun (input, expected) ->
+      let evaluated = test_eval input in
+      test_int_array_object expected evaluated )
+    tests
+(*   let tests = *)
+
 let test_recursive () =
   let tests =
     [ ( "let fib = fn(n) {if (n <= 1) {return n} else {return fib(n - 1) + \
@@ -267,26 +308,88 @@ let test_closures () =
 
 let test_builtin_length () =
   let tests =
-    [ ("len(\"\")", Int 0)
-    ; ("len(\"four\")", Int 4)
-    ; ("len(\"hello world\")", Int 11)
-    ; ("len(1)", String "argument to `len` not supported, got INTEGER")
-    ; ( "len(\" one \", \" two \")"
-      , String "wrong number of arguments. got=2, want=1" ) ]
+    [ ({|len(" ")|}, Some (Int 1))
+    ; ({|len(" four ")|}, Some (Int 6))
+    ; ({|len("hello world")|}, Some (Int 11))
+    ; ({|len(1)|}, Some (String "argument to `len` not supported, got INTEGER"))
+    ; ( {|len(" one ", " two ")|}
+      , Some (String "wrong number of arguments. got=2, want=1") )
+    ; ({|len([1, 2, 3])|}, Some (Int 3))
+    ; ({|len([])|}, Some (Int 0))
+      (* ; ({|puts(" hello ", " world !")|}, None) *)
+    ; ({|first([1, 2, 3])|}, Some (Int 1))
+    ; ({|first([])|}, None)
+    ; ( {|first(1)|}
+      , Some (String "argument to `first` must be ARRAY, got INTEGER") )
+    ; ({|last([1, 2, 3])|}, Some (Int 3))
+    ; ({|last([1, 2, 3])|}, Some (Int 3))
+    ; ({|last([1, 2, 3, 4, 5, 6, 7])|}, Some (Int 7))
+    ; ({|last([])|}, None)
+    ; ( {|last(1)|}
+      , Some (String "argument to `last` must be ARRAY, got INTEGER") )
+    ; ({|rest([1, 2, 3])|}, Some (Array [|2; 3|]))
+    ; ({|rest([1, 2, 3, 4, 5, 6])|}, Some (Array [|2; 3; 4; 5; 6|]))
+    ; ({|rest([])|}, None)
+    ; ({|push([], 1)|}, Some (Array [|1|]))
+    ; ({|push([1,2,3], 1)|}, Some (Array [|1; 2; 3; 1|]))
+    ; ( {|push(1, 1)|}
+      , Some (String "argument to `push` must be ARRAY, got INTEGER") ) ]
   in
   List.iter
     (fun (input, expected) ->
       let evaluated = test_eval input in
       match expected with
-      | Int i ->
-          test_int_object i evaluated
-      | String s -> (
-        match evaluated with
-        | Obj.Error e ->
-            Alcotest.(check string) "error checking" s e
-        | _ ->
-            failwith "object is not an error" ) )
+      | Some e -> (
+        match e with
+        | String str -> (
+          match evaluated with
+          | Obj.Error e ->
+              Alcotest.(check string) "string literal" str e
+          | _ ->
+              failwith "should be an error" )
+        | Int i ->
+            test_int_object i evaluated
+        | Array arr ->
+            test_int_array_object arr evaluated )
+      | None ->
+          test_null_object evaluated )
     tests
+
+let test_array_index_expressions () =
+  let tests =
+    [ ("[1, 2, 3][0]", Some 1)
+    ; ("[1, 2, 3][1]", Some 2)
+    ; ("[1, 2, 3][2]", Some 3)
+    ; ("let i = 0; [1][i];", Some 1)
+    ; ("[1, 2, 3][1 + 1];", Some 3)
+    ; ("let myArray = [1, 2, 3]; myArray[2];", Some 3)
+    ; ("let myArray = [1, 2, 3]; myArray[0] + myArray[1] + myArray[2];", Some 6)
+    ; ("let myArray = [1, 2, 3]; let i = myArray[0]; myArray[i]", Some 2)
+    ; ("[1, 2, 3][3]", None)
+    ; ("[1, 2, 3][-1]", None) ]
+  in
+  List.iter
+    (fun (input, expected) ->
+      let evaluated = test_eval input in
+      match expected with
+      | Some value ->
+          print_endline (Obj.item_to_string evaluated) ;
+          test_int_object value evaluated
+      | None ->
+          test_null_object evaluated )
+    tests
+
+let test_array_literals () =
+  let input = "[1, 2 * 2, 3 + 3]" in
+  let evaluated = test_eval input in
+  match evaluated with
+  | Obj.Array arr ->
+      Alcotest.(check int) "Array length check" 3 (Array.length arr) ;
+      test_int_object 1 arr.(0) ;
+      test_int_object 4 arr.(1) ;
+      test_int_object 6 arr.(2)
+  | _ ->
+      failwith "Object is not a string"
 
 let () =
   let open Alcotest in
@@ -314,8 +417,15 @@ let () =
       , [test_case "strings" `Quick test_string_literal] )
     ; ("testing string concat", [test_case "concat" `Quick test_string_concat])
     ; ("recursive test", [test_case "fibanci seq" `Quick test_recursive])
+    ; ("mapping", [test_case "mapping function" `Quick test_map])
     ; ( "testing builtin functions"
       , [test_case "length check" `Quick test_builtin_length] )
+    ; ( "testing array literals"
+      , [ test_case "testing array literals index by index" `Quick
+            test_array_literals ] )
+    ; ( "testing array indexing"
+      , [test_case "array indexing tests" `Quick test_array_index_expressions]
+      )
     ; ( "testing function application"
       , [test_case "func app test" `Quick test_function_application] )
     ; ( "testing let bindings"

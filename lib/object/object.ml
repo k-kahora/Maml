@@ -8,6 +8,7 @@ module rec Obj : sig
     | Null
     | Return of item
     | Error of string
+    | Array of item array
     | Builtin of built_in_func
 
   and built_in_func = Obj.item list -> Obj.item
@@ -34,6 +35,7 @@ end = struct
     | Null
     | Return of item
     | Error of string
+    | Array of item array
     | Builtin of built_in_func
 
   and built_in_func = Obj.item list -> Obj.item
@@ -84,7 +86,11 @@ end = struct
     | Error e ->
         "ERROR: " ^ e
     | Builtin _ ->
-        "Builtin WIP"
+        "Builtin"
+    | Array arr ->
+        Format.sprintf "[%s]"
+          ( Array.fold_left (fun acc next -> acc @ [item_to_string next]) [] arr
+          |> String.concat ", " )
 
   let is_return a = match a with Return _ -> true | _ -> false
 
@@ -131,12 +137,89 @@ end
 and Builtin : sig
   val built_in_list : (string, Obj.item) Utils.Token_AssocList.t
 end = struct
+  let puts args =
+    List.iter (fun a -> Format.printf "%s" (Obj.item_to_string a)) args ;
+    Obj.Null
+
+  let push args =
+    match args with
+    | [a; b] -> (
+      match a with
+      | Obj.Array arr ->
+          let array_length = Array.length arr in
+          if array_length < 1 then Obj.Array [|b|]
+          else
+            let arr_copy = Array.make (array_length + 1) Obj.Null in
+            Array.blit arr 0 arr_copy 0 array_length ;
+            arr_copy.(array_length) <- b ;
+            (* Modifeis array in place *)
+            Obj.Array arr_copy
+      | t ->
+          Obj.new_error
+          @@ Format.sprintf "argument to `push` must be ARRAY, got %s"
+               (Obj.object_string t) )
+    | _ ->
+        Obj.new_error
+        @@ Format.sprintf "wrong number of arguments. got=%d, want=1"
+             (List.length args)
+
+  let rest args =
+    match args with
+    | [a] -> (
+      match a with
+      | Obj.Array arr ->
+          if Array.length arr > 1 then
+            let arr_copy = Array.copy arr in
+            Obj.Array (Array.sub arr_copy 1 (Array.length arr_copy - 1))
+          else if Array.length arr = 1 then Obj.Array [||]
+          else Obj.Null
+      | t ->
+          Obj.new_error
+          @@ Format.sprintf "argument to `rest` must be ARRAY, got %s"
+               (Obj.object_string t) )
+    | _ ->
+        Obj.new_error
+        @@ Format.sprintf "wrong number of arguments. got=%d, want=1"
+             (List.length args)
+
+  let last args =
+    match args with
+    | [a] -> (
+      match a with
+      | Obj.Array arr ->
+          if Array.length arr > 1 then arr.(Array.length arr - 1) else Obj.Null
+      | t ->
+          Obj.new_error
+          @@ Format.sprintf "argument to `last` must be ARRAY, got %s"
+               (Obj.object_string t) )
+    | _ ->
+        Obj.new_error
+        @@ Format.sprintf "wrong number of arguments. got=%d, want=1"
+             (List.length args)
+
+  let first args =
+    match args with
+    | [a] -> (
+      match a with
+      | Obj.Array arr ->
+          if Array.length arr > 0 then arr.(0) else Obj.Null
+      | t ->
+          Obj.new_error
+          @@ Format.sprintf "argument to `first` must be ARRAY, got %s"
+               (Obj.object_string t) )
+    | _ ->
+        Obj.new_error
+        @@ Format.sprintf "wrong number of arguments. got=%d, want=1"
+             (List.length args)
+
   let length args =
     match args with
     | [a] -> (
       match a with
       | Obj.String s ->
           Obj.Int (String.length s)
+      | Obj.Array arr ->
+          Obj.Int (Array.length arr)
       | t ->
           Obj.new_error
           @@ Format.sprintf "argument to `len` not supported, got %s"
@@ -147,5 +230,12 @@ end = struct
              (List.length args)
 
   let built_in_list =
-    Utils.Token_AssocList.(empty |> add "len" (Obj.Builtin length))
+    Utils.Token_AssocList.(
+      empty
+      |> add "len" (Obj.Builtin length)
+      |> add "first" (Obj.Builtin first)
+      |> add "last" (Obj.Builtin last)
+      |> add "push" (Obj.Builtin push)
+      |> add "puts" (Obj.Builtin puts)
+      |> add "rest" (Obj.Builtin rest) )
 end
