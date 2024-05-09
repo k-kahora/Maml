@@ -14,9 +14,18 @@ Noticed a case where if the last of the input is a {keyword|number} my loops do 
 - [ ] Make every failswith return a error instead of a runtime error return an error object
 
 ## Future plans
-- [ ] Make a freaky branch (current ideas)
 * Use emojis
 * Maybe change keywords to something obscene
 * Add a unique feature that makes development hell
 * Add less than or equal to and greater than respectively
 * Make the langugage installable on Nix systems via the flake in your github
+* Add the langugae to this project [monkeys in the wild](https://github.com/mrnugget/monkeylang/?tab=readme-ov-file#adding-a-new-implementation)
+* Do a nix build of the language so that it can be installed with the flake 
+* Monkey logo modification
+* Macros sections
+* CMD line interprter to run commands
+* .ape file extensions
+* custom lsp for this toy langugae
+* instructions for running the language
+# Priority
+Command line runner to run Monkey code, .ape extensions, Very nice Readme, nixos compatable, implement hash tables, Chapter5, 
