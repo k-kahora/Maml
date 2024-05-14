@@ -40,6 +40,7 @@
             ocamlPackages.utop
             # ocamlPackages.angstrom
             ocamlPackages.core
+            ocamlPackages.core_unix
             # ocamlPackages.re
             ocamlPackages.fmt
             # ocamlPackages.batteries
