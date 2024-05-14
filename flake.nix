@@ -66,7 +66,7 @@
           ];
         };
 
-        defaultPackage = packages.myOcamlApp;
+        #defaultPackage = packages.myOcamlApp;
         packages = {
           myOcamlApp = buildOcamlPackage {
             name = "my-ocaml-app";
