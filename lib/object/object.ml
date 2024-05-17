@@ -138,8 +138,10 @@ and Builtin : sig
   val built_in_list : (string, Obj.item) Utils.Token_AssocList.t
 end = struct
   let puts args =
-    List.iter (fun a -> Format.printf "%s" (Obj.item_to_string a)) args ;
-    Obj.Null
+    let puts_string =
+      List.fold_left (fun acc nxt -> acc ^ Obj.item_to_string nxt) "" args
+    in
+    Obj.String puts_string
 
   let push args =
     match args with

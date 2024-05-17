@@ -13,7 +13,6 @@
         ocamlPackages = legacyPackages.ocamlPackages;
         lib = legacyPackages.lib;
 
-        # Clean the source directory excluding specific directories or files
         src = lib.cleanSourceWith {
           src = ./.;
           filter = name: type: lib.cleanSourceFilter name type && ! (lib.hasSuffix ".git" name);
@@ -66,14 +65,20 @@
           ];
         };
 
-        #defaultPackage = packages.myOcamlApp;
         packages = {
           myOcamlApp = buildOcamlPackage {
             name = "my-ocaml-app";
             buildInputs = [
               ocamlPackages.core
               ocamlPackages.core_unix
-            ]; # Add additional dependencies here
+            ]; 
+          };
+        };
+
+        apps = {
+          myOcamlApp = {
+            type = "app";
+            program = "${self.packages.${system}.myOcamlApp}/bin/Freakyscript";
           };
         };
       }
