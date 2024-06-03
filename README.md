@@ -11,7 +11,7 @@ Noticed a case where if the last of the input is a {keyword|number} my loops do 
 - [ ] Need to add mli files for all ml files with proper name space exposure
 - [ ] Reversing let statements but not block statements very weird
 - [ ] Refractoring to results and options instead of failswith (asserts arent bad honostly for dev phase)
-- [ ] Make every failswith return a error instead of a runtime error return an error object
+- [ ] Make every failswith return a Result instead of a runtime error return an error object using Result by Ocaml
 
 ## Future plans
 * Use emojis
@@ -29,3 +29,7 @@ Noticed a case where if the last of the input is a {keyword|number} my loops do 
 * instructions for running the language
 # Priority
 Command line runner to run Monkey code, .ape extensions, Very nice Readme, nixos compatable, implement hash tables, Chapter5, 
+
+# Bugs
+* Only one print statement triggers at a time in a file
+
