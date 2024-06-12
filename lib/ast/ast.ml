@@ -2,6 +2,8 @@
 
 type expression =
   | Identifier of ident
+  | HashLiteral of
+      {token: Token.token; pairs: (expression, expression) Hashtbl.t}
   | IntegerLiteral of {token: Token.token (* The ident token *); value: int}
   | IndexExpression of
       { token: Token.token (* The ident token *)
@@ -39,6 +41,8 @@ let expression_str_debug e =
   match e with
   | Identifier _ ->
       "Identifier"
+  | HashLiteral _ ->
+      "HashLiteral"
   | StringLiteral _ ->
       "StringLiteral"
   | IntegerLiteral _ ->
@@ -97,6 +101,15 @@ let rec expression_str (e : expression) : string =
   | ArrayLiteral {token= _; elements} ->
       Format.sprintf "[%s]"
         (List.map expression_str elements |> String.concat ", ")
+  | HashLiteral {pairs; token= _} ->
+      "{"
+      ^ Hashtbl.fold
+          (fun key value acc ->
+            acc
+            ^ Format.sprintf "%s: %s, " (expression_str key)
+                (expression_str value) )
+          pairs ""
+      ^ "}"
 
 (* {token: Token.token; parameters: ident list; body: statement} *)
 (* TODO "if" ^ expression_str condition ^ " " ^ consequence *)

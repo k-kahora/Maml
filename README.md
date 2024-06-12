@@ -5,6 +5,18 @@
 - [ ] Clean up the token code seems pretty redeundent to me, (maybe I do not have to convert to a string)
 ## Interesting
 Noticed a case where if the last of the input is a {keyword|number} my loops do a index out of bounds error, however this was never recognized within the tests
+## Features
+- integers
+- booleans
+- strings
+- arrays
+- TODO hashes
+- prefix-, infix- and index operators
+- conditionals
+- global and local bindings
+- first-class functions
+- return statements
+- closures
 
 ## FIXME PRIORTY Sorted
 - [ ] Evaluater is a mess of recursive functions need more modular formatting
@@ -33,3 +45,11 @@ Command line runner to run Monkey code, .ape extensions, Very nice Readme, nixos
 # Bugs
 * Only one print statement triggers at a time in a file
 
+
+
+# Copiler Must
+* Work on the readme as you go
+* Always have mli files
+* Always have internal documentation
+* Always have tail call optimization checks
+* Also use functors and monads to dive deeper into the functional B.S.

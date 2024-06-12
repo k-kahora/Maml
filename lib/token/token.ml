@@ -22,6 +22,7 @@ type token_name =
   (* Delimeters *)
   | COMMA
   | SEMICOLON
+  | COLON
   | LPAREN
   | RPAREN
   | LBRACE
@@ -77,6 +78,8 @@ let token_to_string_debug (t : token_name) : string =
   (* Delimeters *)
   | COMMA ->
       "COMMA"
+  | COLON ->
+      "COLON"
   | SEMICOLON ->
       "SEMICOLON"
   | LPAREN ->
@@ -148,6 +151,8 @@ let token_to_string (t : token_name) : string =
   (* Delimeters *)
   | COMMA ->
       ","
+  | COLON ->
+      ":"
   | SEMICOLON ->
       ";"
   | LPAREN ->

@@ -212,7 +212,7 @@ let map = fn(arr, f) {
 
   iter(arr, []);
 };map([1,2,3],fn(x) {x * 4})|}
-      , [|2; 4; 6|] ) ]
+      , [|4; 8; 12|] ) ]
   in
   List.iter
     (fun (input, expected) ->

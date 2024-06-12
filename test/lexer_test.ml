@@ -34,6 +34,7 @@ if (5 < 10) {
 "foobar";
 "foo bar";
 [1, 2];
+{"foo": "bar"}
 |}
   in
   let tests =
@@ -126,6 +127,11 @@ if (5 < 10) {
     ; (Token.INT, "2")
     ; (Token.RBRACKET, "]")
     ; (Token.SEMICOLON, ";")
+    ; (Token.LBRACE, "{")
+    ; (Token.STRING, "foo")
+    ; (Token.COLON, ":")
+    ; (Token.STRING, "bar")
+    ; (Token.RBRACE, "}")
     ; (Token.EOF, "\000") ]
   in
   let l = Lexer.new' input in

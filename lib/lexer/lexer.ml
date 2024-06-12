@@ -122,6 +122,8 @@ let next_token (l : lexer) : Token.token * lexer =
           (newToken Token.GT l.ch, read_char l) )
     | ';' ->
         (newToken Token.SEMICOLON l.ch, read_char l)
+    | ':' ->
+        (newToken Token.COLON l.ch, read_char l)
     | '(' ->
         (newToken Token.LPAREN l.ch, read_char l)
     | ')' ->
