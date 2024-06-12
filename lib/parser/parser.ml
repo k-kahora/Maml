@@ -72,6 +72,8 @@ let register_prefix (p : parser) ~(t : Token.token_name) ~(fn : prefixParseFn) :
 
 let errors (p : parser) : string list = p.errors
 
+let check_error_bind a = match a with Ok p -> p | Error e -> failwith e
+
 let check_error a = match a with Ok _ -> a | Error e -> failwith e
 
 let peek_error (p : parser) (t : Token.token_name) : string =
@@ -385,6 +387,40 @@ let parse_index_expression p left =
   let next_token = Result.get_ok next_token in
   (Ast.IndexExpression {token= p.curToken; left; index= idx}, next_token)
 
+let parse_hash_literal p =
+  let open Result in
+  let ( >>= ) = bind in
+  let hash = Hashtbl.create 1838 in
+  let rec helper p =
+    match p.peekToken.type' with
+    | Token.RBRACE ->
+        p
+    | _ ->
+        let key, new_p = next_token p |> parse_expression LOWEST in
+        let n_token =
+          Ok new_p
+          >>= (fun ft -> expect_peek ft Token.COLON)
+          |> check_error_bind |> next_token
+        in
+        let value, new_p = parse_expression LOWEST n_token in
+        Hashtbl.add hash key value ;
+        if not @@ peek_token_is new_p Token.RBRACE then
+          let n_p =
+            Ok new_p
+            >>= (fun ft -> expect_peek ft Token.COMMA)
+            |> check_error_bind
+          in
+          helper n_p
+        else helper new_p
+  in
+  let n_p = helper p in
+  let n_token =
+    Ok n_p
+    >>= (fun ft -> expect_peek ft Token.RBRACE)
+    |> function Ok p -> p | Error e -> failwith e
+  in
+  (Ast.HashLiteral {token= p.curToken; pairs= hash}, n_token)
+
 let new_parser (l : Lexer.lexer) : parser =
   let curToken, cur = Lexer.next_token l in
   let peekToken, l = Lexer.next_token cur in
@@ -405,6 +441,7 @@ let new_parser (l : Lexer.lexer) : parser =
   |> register_prefix ~t:Token.LBRACKET ~fn:parse_array_literal
   |> register_prefix ~t:Token.IF ~fn:parse_if_expression
   |> register_prefix ~t:Token.FUNCTION ~fn:parse_function_literal
+  |> register_prefix ~t:Token.LBRACE ~fn:parse_hash_literal
   |> register_infix ~t:Token.PLUS ~fn:parse_infix_expression
   |> register_infix ~t:Token.MINUS ~fn:parse_infix_expression
   |> register_infix ~t:Token.SLASH ~fn:parse_infix_expression

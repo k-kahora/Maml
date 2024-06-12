@@ -645,6 +645,76 @@ let test_array_literal () =
   | _ ->
       failwith "need at least one statement"
 
+let test_empty_hash_literal () =
+  let input = {|{}|} in
+  let statements =
+    Lexer.new' input |> Parser.new_parser |> Parser.parse_program
+    |> fun a -> a.statements
+  in
+  match List.nth statements 0 with
+  | Ast.Expressionstatement {token= _; expression} -> (
+    match expression with
+    | Ast.HashLiteral {token= _; pairs} ->
+        Alcotest.(check int) "Hash table length of empty hash" 0
+        @@ Hashtbl.length pairs
+    | _ ->
+        failwith "needs to be an array" )
+  | _ ->
+      failwith "need at least one statement"
+
+(* This test is horrible refactor so it does not have so mony doomed scenarios *)
+let test_hash_literal () =
+  let input = {|{"one": 1, "two": 2, "three": 3}|} in
+  let statements =
+    Lexer.new' input |> Parser.new_parser |> Parser.parse_program
+    |> fun a -> a.statements
+  in
+  let open Hashtbl in
+  let test_hash = create 3 in
+  add test_hash "one" 1 ;
+  add test_hash "two" 2 ;
+  add test_hash "three" 3 ;
+  match List.nth statements 0 with
+  | Ast.Expressionstatement {token= _; expression} -> (
+    match expression with
+    | Ast.HashLiteral {token= _; pairs} ->
+        Hashtbl.iter
+          (fun key value ->
+            Alcotest.(check int)
+              "Hash check for one"
+              (Hashtbl.find test_hash (Ast.expression_str key))
+              (Ast.expression_str value |> int_of_string) )
+          pairs
+    | _ ->
+        failwith "needs to be an array" )
+  | _ ->
+      failwith "need at least one statement"
+
+(* This test is horrible refactor so it does not have so mony doomed scenarios *)
+let test_hash_infix_literal () =
+  let input = {|{"one": 0 + 1, "two": 10 - 8, "three": 15 / 5}|} in
+  let statements =
+    Lexer.new' input |> Parser.new_parser |> Parser.parse_program
+    |> fun a -> a.statements
+  in
+  let open Hashtbl in
+  let test_hash = create 3 in
+  add test_hash "one" (fun e -> test_infix_expressions e (Int 0) "+" (Int 1)) ;
+  add test_hash "two" (fun e -> test_infix_expressions e (Int 10) "-" (Int 8)) ;
+  add test_hash "three" (fun e -> test_infix_expressions e (Int 15) "/" (Int 5)) ;
+  match List.nth statements 0 with
+  | Ast.Expressionstatement {token= _; expression} -> (
+    match expression with
+    | Ast.HashLiteral {token= _; pairs} ->
+        Hashtbl.iter
+          (fun key value ->
+            Hashtbl.find test_hash (Ast.expr_str key) |> fun a -> a value )
+          pairs
+    | _ ->
+        failwith "needs to be an array" )
+  | _ ->
+      failwith "need at least one statement"
+
 let () =
   let open Alcotest in
   run "parser tests"
@@ -680,6 +750,11 @@ let () =
       , [test_case "string expressions" `Quick test_string_literal] )
     ; ( "test parsing array literal"
       , [test_case "array literal to string" `Quick test_array_literal] )
+    ; ( "test parsing hash literal"
+      , [test_case "hash literal to string" `Quick test_hash_literal] )
+    ; ( "test parsing empty hash literal"
+      , [test_case "empty hash literal to string" `Quick test_empty_hash_literal]
+      )
     ; ( "call expressions arguments"
       , [ test_case "call expressions arguments" `Quick
             test_call_parameter_parsing ] ) ]
