@@ -54,6 +54,7 @@
             ocamlPackages.alcotest
             ocamlPackages.zarith
             ocamlPackages.ocamlformat-rpc-lib
+            ocamlPackages.xxhash # Brought this in to quickly hash a string
             ocamlPackages.utop
             ocamlPackages.core
             ocamlPackages.core_unix

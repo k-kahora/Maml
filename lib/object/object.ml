@@ -1,5 +1,18 @@
 module rec Obj : sig
-  type item =
+  type item_type =
+    | Int'
+    | String'
+    | Bool'
+    (* Parameters, Body, Environment *)
+    | Function'
+    | Null'
+    | Return'
+    | Error'
+    | Array'
+    | Builtin'
+    | HashKey'
+
+  and item =
     | Int of int
     | String of string
     | Bool of bool
@@ -10,6 +23,7 @@ module rec Obj : sig
     | Error of string
     | Array of item array
     | Builtin of built_in_func
+    | HashKey of item_type * int64
 
   and built_in_func = Obj.item list -> Obj.item
 
@@ -25,9 +39,24 @@ module rec Obj : sig
 
   val new_error : string -> item
 
+  val hash_key : Obj.item -> Obj.item
+
   val is_return : item -> bool
 end = struct
-  type item =
+  type item_type =
+    | Int'
+    | String'
+    | Bool'
+    (* Parameters, Body, Environment *)
+    | Function'
+    | Null'
+    | Return'
+    | Error'
+    | Array'
+    | Builtin'
+    | HashKey'
+
+  and item =
     | Int of int
     | String of string
     | Bool of bool
@@ -37,8 +66,55 @@ end = struct
     | Error of string
     | Array of item array
     | Builtin of built_in_func
+    | HashKey of item_type * int64
 
   and built_in_func = Obj.item list -> Obj.item
+
+  let item_of_item_type = function
+    | Int _ ->
+        Int'
+    | String _ ->
+        String'
+    | Bool _ ->
+        Bool'
+    | Function _ ->
+        Function'
+    | Null ->
+        Null'
+    | Return _ ->
+        Return'
+    | Error _ ->
+        Error'
+    | Array _ ->
+        Array'
+    | Builtin _ ->
+        Builtin'
+    | HashKey _ ->
+        HashKey'
+
+  let make_hash item_type hash = HashKey (item_of_item_type item_type, hash)
+
+  let hash_key = function
+    | Int a as item_t ->
+        make_hash item_t @@ Int64.of_int a
+    | String a as item_t ->
+        make_hash item_t @@ XXHash.XXH64.hash a
+    | Bool a as item_t ->
+        make_hash item_t @@ if a then 1L else 0L
+    | Function (_a, _b, _c) ->
+        failwith "Function not yet implemented"
+    | Null ->
+        failwith "Null not yet implemented"
+    | Return _a ->
+        failwith "Return not yet implemented"
+    | Error _a ->
+        failwith "Error not yet implemented"
+    | Array _a ->
+        failwith "Array not yet implemented"
+    | Builtin _a ->
+        failwith "Builtin not yet implemented"
+    | HashKey (_a, _b) ->
+        failwith "HashKey not yet implemented"
 
   let unwrap_error = function
     | Error a ->
@@ -91,6 +167,8 @@ end = struct
         Format.sprintf "[%s]"
           ( Array.fold_left (fun acc next -> acc @ [item_to_string next]) [] arr
           |> String.concat ", " )
+    | HashKey (_, v) ->
+        Int64.to_string v
 
   let is_return a = match a with Return _ -> true | _ -> false
 
