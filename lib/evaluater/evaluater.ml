@@ -219,7 +219,6 @@ and eval_hash_literal env table =
       table []
   in
   (* Empty error list return the hash else return the error *)
-  print_endline (Obj.item_to_string @@ Obj.Hash pairs) ;
   List.iter (fun a -> Format.printf "%s, " @@ Obj.item_to_string a) error_list ;
   let error_list = List.rev error_list in
   match List.nth_opt error_list 0 with None -> Obj.Hash pairs | Some a -> a

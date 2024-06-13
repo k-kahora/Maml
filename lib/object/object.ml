@@ -265,7 +265,7 @@ end = struct
     let puts_string =
       List.fold_left (fun acc nxt -> acc ^ Obj.item_to_string nxt) "" args
     in
-    Obj.String puts_string
+    print_endline puts_string ; Obj.String puts_string
 
   let push args =
     match args with

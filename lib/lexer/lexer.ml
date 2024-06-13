@@ -47,6 +47,10 @@ let eat_whitespace (l : lexer) : lexer =
   in
   looper l
 
+let rec eat_comment (l : lexer) : lexer =
+  (* Eat all space up until a new line *)
+  match l.ch with '\n' | '\x00' -> l | _ -> eat_comment @@ read_char l
+
 (* start at the lexers position *)
 (* loop through until non-char *)
 (* substring from the start to the length of the substring *)
@@ -62,7 +66,7 @@ let read_identifier (l : lexer) : string * lexer =
   (String.sub l.input start (finish - start), lex)
 
 (* given a lexer returen the correct token and advance the lexer *)
-let next_token (l : lexer) : Token.token * lexer =
+let rec next_token (l : lexer) : Token.token * lexer =
   let token l =
     match l.ch with
     | '"' ->
@@ -100,8 +104,12 @@ let next_token (l : lexer) : Token.token * lexer =
           , read_char @@ read_char l )
       | _ ->
           (newToken Token.BANG l.ch, read_char l) )
-    | '/' ->
-        (newToken Token.SLASH l.ch, read_char l)
+    | '/' -> (
+      match peek_char l with
+      | '/' ->
+          next_token @@ eat_comment l
+      | _ ->
+          (newToken Token.SLASH l.ch, read_char l) )
     | '*' ->
         (newToken Token.ASTERISK l.ch, read_char l)
     | '<' -> (

@@ -10,13 +10,15 @@ Noticed a case where if the last of the input is a {keyword|number} my loops do 
 - booleans
 - strings
 - arrays
-- TODO hashes
+- hashes
 - prefix-, infix- and index operators
 - conditionals
 - global and local bindings
 - first-class functions
 - return statements
 - closures
+## Ultimate Goal
+Provide some visualization of the *AST*, Tokenizer, Lexer, and *Evaluater* from the Interprter and *Virtual Machine*, (stack, registers) and *optimizer* from the compiler
 
 ## FIXME PRIORTY Sorted
 - [ ] Evaluater is a mess of recursive functions need more modular formatting
