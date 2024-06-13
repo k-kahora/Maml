@@ -182,6 +182,37 @@ let rec eval_expression (env : Environment.environment) =
           let args = eval_expressions env arguments in
           if List.hd args = Obj.Null then List.hd args
           else apply_function func args )
+  | HashLiteral {token= _; pairs= table} ->
+      print_endline "In hash baby" ;
+      eval_hash_literal env table
+
+and eval_hash_literal env table =
+  let pairs = Hashtbl.create (Hashtbl.length table) in
+  let error_list =
+    Hashtbl.fold
+      (fun keyNode valueNode acc ->
+        let key = eval_expression env keyNode in
+        let acc = if not @@ Obj.is_error key then acc else key :: acc in
+        let acc =
+          if Obj.hashable key then acc
+          else
+            Obj.new_error
+              (Format.sprintf "unusable as a hashkey, %s"
+                 (Obj.object_string key) )
+            :: acc
+        in
+        let value = eval_expression env valueNode in
+        let acc = if not @@ Obj.is_error value then acc else value :: acc in
+        let hash_key = Obj.hash_key key in
+        Hashtbl.add pairs hash_key {Obj.key; value} ;
+        acc )
+      table []
+  in
+  (* Empty error list return the hash else return the error *)
+  print_endline (Obj.item_to_string @@ Obj.Hash pairs) ;
+  List.iter (fun a -> Format.printf "%s, " @@ Obj.item_to_string a) error_list ;
+  let error_list = List.rev error_list in
+  match List.nth_opt error_list 0 with None -> Obj.Hash pairs | Some a -> a
 
 and eval_statement (env : Environment.environment) =
   let open Ast in

@@ -11,6 +11,9 @@ module rec Obj : sig
     | Array'
     | Builtin'
     | HashKey'
+    | Hash'
+
+  and hash_item = {key: item; value: item}
 
   and item =
     | Int of int
@@ -24,8 +27,11 @@ module rec Obj : sig
     | Array of item array
     | Builtin of built_in_func
     | HashKey of item_type * int64
+    | Hash of (Obj.item, hash_item) Hashtbl.t
 
   and built_in_func = Obj.item list -> Obj.item
+
+  val hashable : item -> bool
 
   val unwrap_error : item -> string
 
@@ -39,6 +45,7 @@ module rec Obj : sig
 
   val new_error : string -> item
 
+  (* Maybe try caching the return value to increase preformance so we are not always calling the xx lib *)
   val hash_key : Obj.item -> Obj.item
 
   val is_return : item -> bool
@@ -55,6 +62,9 @@ end = struct
     | Array'
     | Builtin'
     | HashKey'
+    | Hash'
+
+  and hash_item = {key: item; value: item}
 
   and item =
     | Int of int
@@ -67,6 +77,7 @@ end = struct
     | Array of item array
     | Builtin of built_in_func
     | HashKey of item_type * int64
+    | Hash of (Obj.item, hash_item) Hashtbl.t
 
   and built_in_func = Obj.item list -> Obj.item
 
@@ -115,6 +126,26 @@ end = struct
         failwith "Builtin not yet implemented"
     | HashKey (_a, _b) ->
         failwith "HashKey not yet implemented"
+
+  let hashable = function
+    | Int _ ->
+        true
+    | Bool _ ->
+        true
+    | String _ ->
+        true
+    | Null ->
+        false
+    | Return _ ->
+        false
+    | Error _ ->
+        false
+    | Array _ ->
+        false
+    | Builtin _ ->
+        false
+    | HashKey _ ->
+        false
 
   let unwrap_error = function
     | Error a ->
@@ -169,6 +200,14 @@ end = struct
           |> String.concat ", " )
     | HashKey (_, v) ->
         Int64.to_string v
+    | Hash table ->
+        Hashtbl.fold
+          (fun key {key= _; value} acc ->
+            acc
+            ^ Format.sprintf "%s:%s, " (item_to_string key)
+                (item_to_string value) )
+          table "{"
+        ^ "}"
 
   let is_return a = match a with Return _ -> true | _ -> false
 

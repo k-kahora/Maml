@@ -391,6 +391,44 @@ let test_array_literals () =
   | _ ->
       failwith "Object is not a string"
 
+let test_hash_literals () =
+  let input =
+    {|  
+    let two = "two";
+    {
+        "one": 10 - 9,
+        two: 1 + 1,
+        "thr" + "ee": 6 / 2,
+        4: 4,
+        true: 5,
+        false: 6
+    }|}
+  in
+  let expected =
+    [ (Obj.String "one" |> Obj.hash_key, 1)
+    ; (Obj.String "two" |> Obj.hash_key, 2)
+    ; (Obj.String "three" |> Obj.hash_key, 3)
+    ; (Obj.Int 4 |> Obj.hash_key, 4)
+    ; (Obj.Bool true |> Obj.hash_key, 5)
+    ; (Obj.Bool false |> Obj.hash_key, 6) ]
+  in
+  let evaluated = test_eval input in
+  match evaluated with
+  | Obj.Hash evaluated_table ->
+      assert (Hashtbl.length evaluated_table = List.length expected) ;
+      (* Trying out asserts *)
+      List.iter
+        (fun (expected_key, expected_value) ->
+          let {Obj.key= _; Obj.value= actual_value} =
+            Hashtbl.find evaluated_table expected_key
+          in
+          test_int_object expected_value actual_value ;
+          () )
+        expected
+  | a ->
+      failwith
+      @@ Format.sprintf "Object is not a hash it is a %s" (Obj.object_string a)
+
 let () =
   let open Alcotest in
   let _tests = [(("5", 5), ("10", 10))] in
@@ -428,5 +466,7 @@ let () =
       )
     ; ( "testing function application"
       , [test_case "func app test" `Quick test_function_application] )
+    ; ( "testing hash literal evaluation"
+      , [test_case "func literal" `Quick test_hash_literals] )
     ; ( "testing let bindings"
       , [test_case "binding test" `Quick test_let_statements] ) ]
