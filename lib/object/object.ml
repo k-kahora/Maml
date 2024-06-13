@@ -186,8 +186,13 @@ end = struct
         i
     | Bool b ->
         string_of_bool b
-    | Function (_, _, _) ->
-        "fn ("
+    | Function (parmeters, _, _) ->
+        let str =
+          List.fold_left
+            (fun acc nxt -> acc ^ Format.sprintf "%s, " (Ast.expr_str nxt))
+            "fn (" parmeters
+        in
+        str ^ ")"
     | Return it ->
         item_to_string it
     | Null ->
