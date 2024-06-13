@@ -132,10 +132,21 @@ let rec eval_expression (env : Environment.environment) =
       let eval_array_index_expression arr idx =
         if idx < 0 || idx >= Array.length arr then Obj.Null else arr.(idx)
       in
+      let eval_hash_index_expression hash idx =
+        if not @@ Obj.hashable idx then
+          Obj.new_error @@ "unusable as hash key: " ^ Obj.object_string idx
+        else
+          let hash_item = Hashtbl.find_opt hash (Obj.hash_key idx) in
+          Option.fold ~none:Obj.Null
+            ~some:(fun {Obj.key= _; value} -> value)
+            hash_item
+      in
       let eval_index_expression l i =
         match (l, i) with
         | Obj.Array arr, Obj.Int num ->
             eval_array_index_expression arr num
+        | Obj.Hash pairs, _ ->
+            eval_hash_index_expression pairs i
         | _ ->
             new_error
               ( Format.sprintf "index operator not supported: %s"
@@ -183,7 +194,6 @@ let rec eval_expression (env : Environment.environment) =
           if List.hd args = Obj.Null then List.hd args
           else apply_function func args )
   | HashLiteral {token= _; pairs= table} ->
-      print_endline "In hash baby" ;
       eval_hash_literal env table
 
 and eval_hash_literal env table =

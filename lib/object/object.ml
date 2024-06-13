@@ -146,6 +146,8 @@ end = struct
         false
     | HashKey _ ->
         false
+    | Function _ ->
+        false
 
   let unwrap_error = function
     | Error a ->

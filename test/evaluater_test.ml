@@ -169,6 +169,7 @@ let test_error_handling () =
     ; ("5; true + false; 5", "unknown operator: BOOLEAN + BOOLEAN")
     ; ("if (10 > 1) { true + false; }", "unknown operator: BOOLEAN + BOOLEAN")
     ; ("foobar", "identifier not found: foobar")
+    ; ({|{"name": "Monkey"}[fn(x) { x }];|}, "unusable as hash key: FUNCTION")
     ; ("\"Hello\" - \"World\"", "unknown operator: STRING - STRING")
     ; ( "if (10 > 1) {\n\
         \  if (10 > 1) {\n\
@@ -429,6 +430,26 @@ let test_hash_literals () =
       failwith
       @@ Format.sprintf "Object is not a hash it is a %s" (Obj.object_string a)
 
+let test_hash_indexing () =
+  let input =
+    [ ({|{"foo": 5}["foo"]|}, Some 5)
+    ; ({|{"foo": 5}["bar"]|}, None)
+    ; ({|let key = "foo"; {"foo": 5}[key]|}, Some 5)
+    ; ({|{}["foo"]|}, None)
+    ; ({|{5: 5}[5]|}, Some 5)
+    ; ({|{true: 5}[true]|}, Some 5)
+    ; ({|{false: 5}[false]|}, Some 5) ]
+  in
+  List.iter
+    (fun (input, expected) ->
+      let evaluated = test_eval input in
+      match expected with
+      | None ->
+          test_null_object evaluated
+      | Some a ->
+          test_int_object a evaluated )
+    input
+
 let () =
   let open Alcotest in
   let _tests = [(("5", 5), ("10", 10))] in
@@ -467,6 +488,7 @@ let () =
     ; ( "testing function application"
       , [test_case "func app test" `Quick test_function_application] )
     ; ( "testing hash literal evaluation"
-      , [test_case "func literal" `Quick test_hash_literals] )
+      , [ test_case "func literal" `Quick test_hash_literals
+        ; test_case "hash indexing" `Quick test_hash_indexing ] )
     ; ( "testing let bindings"
       , [test_case "binding test" `Quick test_let_statements] ) ]
