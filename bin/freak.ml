@@ -6,9 +6,9 @@ let checksum_from_string buf =
   Md5.digest_string buf |> Md5.to_hex |> print_endline
 
 let evaluate_program input =
-  let l = Lexer.new' input in
-  let p = Parser.new_parser l in
-  let program = Parser.parse_program p in
+  let l = Lex.new' input in
+  let p = Parsing.new_parser l in
+  let program = Parsing.parse_program p in
   (* print_endline (Ast.program_str program) ; *)
   Evaluater.eval env program
 

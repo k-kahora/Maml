@@ -1,5 +1,5 @@
 (tests
  (names utils_test lexer_test parser_test ast_test evaluater_test object_test)
- (libraries alcotest token lexer parser ast evaluater object)
+ (libraries alcotest token lex parse ast evaluater object)
 )
 

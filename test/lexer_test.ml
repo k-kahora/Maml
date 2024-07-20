@@ -1,7 +1,6 @@
-let test_token (l : Lexer.lexer)
-    ((expectedType, expectedLiteral) : Token.token_name * string) : Lexer.lexer
-    =
-  let tok, new_l = Lexer.next_token l in
+let test_token (l : Lex.lexer)
+    ((expectedType, expectedLiteral) : Token.token_name * string) : Lex.lexer =
+  let tok, new_l = Lex.next_token l in
   Alcotest.check
     (Alcotest.pair Alcotest.string Alcotest.string)
     "Token type matches"
@@ -134,7 +133,7 @@ if (5 < 10) {
     ; (Token.RBRACE, "}")
     ; (Token.EOF, "\000") ]
   in
-  let l = Lexer.new' input in
+  let l = Lex.new' input in
   ignore (List.fold_left test_token l tests)
 
 let () =

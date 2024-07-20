@@ -1,9 +1,9 @@
 (* Define a function to simulate evaluation of input *)
-open Lexer
+open Lex
 
 let rec evaluate (l : lexer) : unit =
   let _ = Token.token_to_string_debug Token.EOF in
-  let token, lex = Lexer.next_token l in
+  let token, lex = Lex.next_token l in
   match token.type' with
   | Token.EOF ->
       print_endline "miss"
@@ -30,9 +30,9 @@ let rec repl () =
     print_endline "Goodbye!"
   else
     (* FIXME NOTE This code failwis unless an int is passed *)
-    let l = Lexer.new' input in
-    let p = Parser.new_parser l in
-    let program = Parser.parse_program p in
+    let l = Lex.new' input in
+    let p = Parsing.new_parser l in
+    let program = Parsing.parse_program p in
     (* print_endline (Ast.program_str program) ; *)
     let evaluated = Evaluater.eval env program in
     print_endline @@ Object.Obj.item_to_string evaluated ;

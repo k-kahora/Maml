@@ -8,7 +8,7 @@ let dummy_token =
   {type'= EOF; literal= "fail"}
 
 let set_up_program input =
-  Lexer.new' input |> Parser.new_parser |> Parser.parse_program
+  Lex.new' input |> Parsing.new_parser |> Parsing.parse_program
 
 let test_bool_object expected = function
   | Obj.Bool actual ->
@@ -49,7 +49,7 @@ let test_int_object expected = function
       failwith ("needs to be an int object got" ^ Obj.item_to_string a)
 
 let test_eval (input : string) : Obj.item =
-  Lexer.new' input |> Parser.new_parser |> Parser.parse_program
+  Lex.new' input |> Parsing.new_parser |> Parsing.parse_program
   |> Evaluater.eval (Environment.new_environment ())
 
 let test_eval_bool_exp () =

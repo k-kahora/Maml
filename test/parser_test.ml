@@ -75,9 +75,9 @@ let test_infix_expressions (exp : Ast.expression) (left : generic)
 let bool_tests () =
   let tests = [("true", true); ("false", false)] in
   let helper (input, actual) =
-    let l = Lexer.new' input in
-    let p = Parser.new_parser l in
-    let program = Parser.parse_program p in
+    let l = Lex.new' input in
+    let p = Parsing.new_parser l in
+    let program = Parsing.parse_program p in
     if List.length program.statements <> 1 then failwith "not enough statements" ;
     match List.hd program.statements with
     | Ast.Expressionstatement exp -> (
@@ -128,9 +128,9 @@ let test_operator_precedence_parsing () =
       , "add((a * (b[2])), (b[1]), (2 * ([1, 2][1])))" ) ]
   in
   let helper (input, actual) =
-    let l = Lexer.new' input in
-    let p = Parser.new_parser l in
-    let program = Parser.parse_program p in
+    let l = Lex.new' input in
+    let p = Parsing.new_parser l in
+    let program = Parsing.parse_program p in
     let true_val = Ast.program_str program in
     Alcotest.(check string "Checking large infix expressions" actual true_val)
   in
@@ -152,9 +152,9 @@ let test_parsing_infix_expressions () =
     (* ; ("true == true", Bool true, "==", Bool true) ] *)
   in
   let test_infix_helper (input, left_value, operator, right_value) =
-    let l = Lexer.new' input in
-    let p = Parser.new_parser l in
-    let program = Parser.parse_program p in
+    let l = Lex.new' input in
+    let p = Parsing.new_parser l in
+    let program = Parsing.parse_program p in
     match List.nth_opt program.statements 0 with
     | Some exp -> (
       (* Expression statement matching *)
@@ -183,9 +183,9 @@ let test_prefix_expressions () =
     ; ("-true;", "-", Bool true) ]
   in
   let test_inputs (input, operator, value) =
-    let l = Lexer.new' input in
-    let p = Parser.new_parser l in
-    let program = Parser.parse_program p in
+    let l = Lex.new' input in
+    let p = Parsing.new_parser l in
+    let program = Parsing.parse_program p in
     if List.length program.statements <> 1 then
       failwith
         ( "program.Statements does not contain enought statements got"
@@ -208,9 +208,9 @@ let test_prefix_expressions () =
 
 let test_int_literal () =
   let input = "5;" in
-  let l = Lexer.new' input in
-  let p = Parser.new_parser l in
-  let program = Parser.parse_program p in
+  let l = Lex.new' input in
+  let p = Parsing.new_parser l in
+  let program = Parsing.parse_program p in
   if List.length program.statements <> 1 then
     failwith "should be one int literal" ;
   (* This is a type check *)
@@ -237,9 +237,9 @@ let test_int_literal () =
 
 let test_ident_expression () =
   let input = "foobar;" in
-  let l = Lexer.new' input in
-  let p = Parser.new_parser l in
-  let program = Parser.parse_program p in
+  let l = Lex.new' input in
+  let p = Parsing.new_parser l in
+  let program = Parsing.parse_program p in
   if List.length program.statements <> 1 then
     failwith "should be one expression" ;
   (* This is a type check *)
@@ -284,9 +284,9 @@ let test_return_statement () =
     ; ("return 4565460;", Int 4565460) ]
   in
   let f (input, expectedValue) =
-    let l = Lexer.new' input in
-    let p = Parser.new_parser l in
-    let program = Parser.parse_program p in
+    let l = Lex.new' input in
+    let p = Parsing.new_parser l in
+    let program = Parsing.parse_program p in
     Alcotest.(check int) "length" 1 (List.length program.statements) ;
     test_return_statement (List.nth program.statements 0) expectedValue ;
     ()
@@ -323,9 +323,9 @@ let test_let_statement () =
     ; ("let foobar = y;", "foobar", String "y") ]
   in
   let f (input, expectedIdent, expectedValue) =
-    let l = Lexer.new' input in
-    let p = Parser.new_parser l in
-    let program = Parser.parse_program p in
+    let l = Lex.new' input in
+    let p = Parsing.new_parser l in
+    let program = Parsing.parse_program p in
     Alcotest.(check int) "length" 1 (List.length program.statements) ;
     test_let_statement
       (List.nth program.statements 0)
@@ -361,7 +361,7 @@ let test_if_expression () =
   in
   let input = "if (x < y) {x}" in
   let statements =
-    Lexer.new' input |> Parser.new_parser |> Parser.parse_program
+    Lex.new' input |> Parsing.new_parser |> Parsing.parse_program
     |> fun a -> a.statements
   in
   if List.length statements <> 1 then
@@ -411,7 +411,7 @@ let test_if_else_expression () =
   in
   let input = "if (x < y) {x} else {y}" in
   let statements =
-    Lexer.new' input |> Parser.new_parser |> Parser.parse_program
+    Lex.new' input |> Parsing.new_parser |> Parsing.parse_program
     |> fun a -> a.statements
   in
   if List.length statements <> 1 then
@@ -442,7 +442,7 @@ let test_call_expression_parsing () =
   let open Ast in
   let input = "add(1, 2 * 3, 4 + 5);" in
   let statements =
-    Lexer.new' input |> Parser.new_parser |> Parser.parse_program
+    Lex.new' input |> Parsing.new_parser |> Parsing.parse_program
     |> fun a -> a.statements
   in
   if List.length statements <> 1 then
@@ -476,12 +476,12 @@ let test_call_parameter_parsing () =
     ; ("add(1,2*3,4 + 5)", "add", ["1"; "(2 * 3)"; "(4 + 5)"]) ]
   in
   (* let statements = *)
-  (*   Lexer.new' input |> Parser.new_parser |> Parser.parse_program *)
+  (*   Lex.new' input |> Parsing.new_parser |> Parsing.parse_program *)
   (*   |> fun a -> a.statements *)
   (* in *)
   let f (input, ident, p_list) =
     let statements =
-      Lexer.new' input |> Parser.new_parser |> Parser.parse_program
+      Lex.new' input |> Parsing.new_parser |> Parsing.parse_program
       |> fun a -> a.statements
     in
     let extract_val = function
@@ -520,7 +520,7 @@ let test_func_literal_parsing () =
   let open Ast in
   let input = "fn(x, y) {x + y}" in
   let statements =
-    Lexer.new' input |> Parser.new_parser |> Parser.parse_program
+    Lex.new' input |> Parsing.new_parser |> Parsing.parse_program
     |> fun a -> a.statements
   in
   if List.length statements <> 1 then
@@ -568,12 +568,12 @@ let test_function_parameter_passing () =
     [("fn() {};", []); ("fn(x) {x};", ["x"]); ("fn(x,y,z) {};", ["x"; "y"; "z"])]
   in
   (* let statements = *)
-  (*   Lexer.new' input |> Parser.new_parser |> Parser.parse_program *)
+  (*   Lex.new' input |> Parsing.new_parser |> Parsing.parse_program *)
   (*   |> fun a -> a.statements *)
   (* in *)
   let f (input, p_list) =
     let statements =
-      Lexer.new' input |> Parser.new_parser |> Parser.parse_program
+      Lex.new' input |> Parsing.new_parser |> Parsing.parse_program
       |> fun a -> a.statements
     in
     let stmt = List.nth_opt statements 0 in
@@ -605,7 +605,7 @@ let test_function_parameter_passing () =
 let test_string_literal () =
   let input = "\"hello world\"" in
   let statements =
-    Lexer.new' input |> Parser.new_parser |> Parser.parse_program
+    Lex.new' input |> Parsing.new_parser |> Parsing.parse_program
     |> fun a -> a.statements
   in
   let stmt = List.nth_opt statements 0 in
@@ -628,7 +628,7 @@ let test_string_literal () =
 let test_array_literal () =
   let input = "[1,2 * 2, 3 + 3]" in
   let statements =
-    Lexer.new' input |> Parser.new_parser |> Parser.parse_program
+    Lex.new' input |> Parsing.new_parser |> Parsing.parse_program
     |> fun a -> a.statements
   in
   match List.nth statements 0 with
@@ -648,7 +648,7 @@ let test_array_literal () =
 let test_empty_hash_literal () =
   let input = {|{}|} in
   let statements =
-    Lexer.new' input |> Parser.new_parser |> Parser.parse_program
+    Lex.new' input |> Parsing.new_parser |> Parsing.parse_program
     |> fun a -> a.statements
   in
   match List.nth statements 0 with
@@ -666,7 +666,7 @@ let test_empty_hash_literal () =
 let test_hash_literal () =
   let input = {|{"one": 1, "two": 2, "three": 3}|} in
   let statements =
-    Lexer.new' input |> Parser.new_parser |> Parser.parse_program
+    Lex.new' input |> Parsing.new_parser |> Parsing.parse_program
     |> fun a -> a.statements
   in
   let open Hashtbl in
@@ -694,7 +694,7 @@ let test_hash_literal () =
 let test_hash_infix_literal () =
   let input = {|{"one": 0 + 1, "two": 10 - 8, "three": 15 / 5}|} in
   let statements =
-    Lexer.new' input |> Parser.new_parser |> Parser.parse_program
+    Lex.new' input |> Parsing.new_parser |> Parsing.parse_program
     |> fun a -> a.statements
   in
   let open Hashtbl in
