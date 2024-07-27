@@ -1,0 +1,4 @@
+(library
+ (name compiler )
+ (libraries core code object ast))
+
