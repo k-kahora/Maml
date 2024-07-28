@@ -35,6 +35,19 @@ module Byte = struct
     in
     int_of_hex_helper num []
 
+  let hex_of_int : byte list -> int =
+   fun bytes ->
+    let rec helper bytes acc shift =
+      match bytes with
+      | [] ->
+          acc
+      | b :: tl ->
+          let num = int_of_char b in
+          let acc = acc lor (num lsl shift) in
+          helper tl acc (shift + 8)
+    in
+    helper (List.rev bytes) 0 0
+
   let byte = function OpConstant -> '\x01'
 
   let string_of_byte _b = ""
@@ -55,3 +68,14 @@ let make opcode operands =
   :: List.fold_left
        (fun acc operand -> List.append acc (Byte.int_of_hex operand))
        [] operands
+
+let slice start lst = List.filteri (fun i _ -> i >= start) lst
+
+let read_operands definition ins =
+  List.fold_left
+    (fun (offset, acc) width ->
+      let create_tuple () =
+        (offset + width, Byte.hex_of_int (slice offset ins) :: acc)
+      in
+      match width with 2 -> create_tuple () )
+    (0, []) definition.operand_width
