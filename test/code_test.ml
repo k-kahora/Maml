@@ -45,9 +45,8 @@ let test_instruction_string () =
 |}
   in
   let concatted = List.concat instructions in
-  let actual =
-    List.fold_left (fun acc nxt -> acc ^ Byte.string_of_byte nxt) "" concatted
-  in
+  print_endline (Byte.to_string concatted) ;
+  let actual = to_string concatted in
   Alcotest.(check string) "Opcode strings" expected actual
 
 let () =

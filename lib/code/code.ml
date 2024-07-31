@@ -14,12 +14,18 @@ let lookups = function
   | OpAdd ->
       assert false
 
+let byte_lookup = function
+  | '\x01' ->
+      lookups OpConstant
+  | _ ->
+      failwith "byte lookup failed"
+
 (* Define a GADT to represent lists of chars with a given length *)
 
 (* I want to limit it so that  *)
 
 module Byte = struct
-  let print_byte b = Format.sprintf "%#2X" (int_of_char b)
+  let print_byte b = Format.sprintf "%2X" (int_of_char b)
 
   let to_string b = List.map print_byte b |> List.fold_left ( ^ ) ""
 
@@ -49,8 +55,6 @@ module Byte = struct
     helper (List.rev bytes) 0 0
 
   let byte = function OpConstant -> '\x01'
-
-  let string_of_byte _b = ""
 end
 
 (* let lookup = function *)
@@ -79,3 +83,11 @@ let read_operands definition ins =
       in
       match width with 2 -> create_tuple () )
     (0, []) definition.operand_width
+
+let to_string : byte list -> string =
+ fun instructions ->
+  let _n, operands =
+    read_operands (byte_lookup (List.hd instructions)) (slice 1 instructions)
+  in
+  List.iter (Format.printf "%d, ") operands ;
+  List.fold_left (fun acc nxt -> acc ^ Format.sprintf "%d, " nxt) "" operands
