@@ -1,9 +1,27 @@
 type byte = char
 
 (* first argument is always length*)
+
 type opcode = OpConstant of int | OpAdd of int
 
 let opcode_length = function OpConstant _ -> 2 | OpAdd _ -> 0
+
+let slice start lst = List.filteri (fun i _ -> i >= start) lst
+
+let int_of_hex byte_list =
+  let[@ocaml.tailcall] rec helper acc shift = function
+    | [] ->
+        acc
+    | b :: tl ->
+        let byte = int_of_char b in
+        let acc = byte lor (acc lsl shift) in
+        helper acc (shift + 8) tl
+  in
+  let starting_index =
+    List.find_index (fun a -> a <> '\x00') byte_list |> Option.value ~default:0
+  in
+  let byte_list = slice starting_index byte_list in
+  helper 0 0 byte_list
 
 (** [hex_of_int operand length] [operand] is converted into a big endian encoding of length: [length], if less thant length bytes returned are \x00, if list is greater than length the length will be ignored*)
 let hex_of_int operand length =
@@ -29,7 +47,5 @@ let make op =
       []
 
 let[@ocaml.warning "-27"] string_of_byte_list byte_list = ""
-
-let slice start lst = List.filteri (fun i _ -> i >= start) lst
 
 let[@ocaml.warning "-27"] read_operands op instructions = ([], 0)
