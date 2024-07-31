@@ -4,8 +4,8 @@ type compiler = {instructions: byte list; constants: Object.Obj.item list}
 
 type bytecode = {instructions': byte list; constants': Object.Obj.item list}
 
-let bytecode _compiler = {instructions'= []; constants'= []}
+val new_compiler : compiler
 
-let new_compiler = {instructions= []; constants= []}
+val bytecode : compiler -> bytecode
 
-let compile _compiler _statements = Ok 10
+val compile : compiler -> Ast.statement list -> (int, string) result

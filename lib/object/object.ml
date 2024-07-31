@@ -102,6 +102,8 @@ end = struct
         Builtin'
     | HashKey _ ->
         HashKey'
+    | Hash _ ->
+        Hash'
 
   let make_hash item_type hash = HashKey (item_of_item_type item_type, hash)
 
@@ -126,6 +128,8 @@ end = struct
         failwith "Builtin not yet implemented"
     | HashKey (_a, _b) ->
         failwith "HashKey not yet implemented"
+    | Hash _ ->
+        failwith "Hash not yet implemented"
 
   let hashable = function
     | Int _ ->
@@ -148,6 +152,8 @@ end = struct
         false
     | Function _ ->
         false
+    | Hash _ ->
+        false
 
   let unwrap_error = function
     | Error a ->
@@ -162,6 +168,8 @@ end = struct
         failwith "unwrap return can only unwrap a return object"
 
   let object_string = function
+    | Array _ ->
+        "ARRAY"
     | Int _ ->
         "INTEGER"
     | String _ ->
@@ -178,6 +186,10 @@ end = struct
         "ERROR"
     | Builtin _ ->
         "BUILTIN"
+    | HashKey _ ->
+        "HASHKEY"
+    | Hash _ ->
+        "HASH"
 
   let rec item_to_string = function
     | Int i ->

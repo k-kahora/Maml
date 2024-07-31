@@ -1,93 +1,35 @@
-(* open StdLabels *)
-
 type byte = char
 
-type opcode = OpConstant | OpAdd
+(* first argument is always length*)
+type opcode = OpConstant of int | OpAdd of int
 
-type definition = {name: string; operand_width: int list}
+let opcode_length = function OpConstant _ -> 2 | OpAdd _ -> 0
 
-let ( let* ) = Result.bind
+(** [hex_of_int operand length] [operand] is converted into a big endian encoding of length: [length], if less thant length bytes returned are \x00, if list is greater than length the length will be ignored*)
+let hex_of_int operand length =
+  let rec helper acc = function
+    | 0 ->
+        acc
+    | operand ->
+        let byte = char_of_int (operand land 0xFF) in
+        helper (byte :: acc) (operand lsr 8)
+  in
+  let lst = helper [] operand in
+  let lst_length = List.length lst in
+  if lst_length >= length then lst
+  else List.init (length - lst_length) (fun _ -> '\x00') @ lst
 
-let lookups = function
-  | OpConstant ->
-      {name= "OpConstant"; operand_width= [2]}
-  | OpAdd ->
-      assert false
+(** [make op] converts an opcode into a list of bytes of varying length *)
+let make op =
+  let length = opcode_length op in
+  match op with
+  | OpConstant operand ->
+      '\x01' :: hex_of_int operand length
+  | OpAdd _ ->
+      []
 
-let byte_lookup = function
-  | '\x01' ->
-      lookups OpConstant
-  | _ ->
-      failwith "byte lookup failed"
-
-(* Define a GADT to represent lists of chars with a given length *)
-
-(* I want to limit it so that  *)
-
-module Byte = struct
-  let print_byte b = Format.sprintf "%2X" (int_of_char b)
-
-  let to_string b = List.map print_byte b |> List.fold_left ( ^ ) ""
-
-  let int_of_hex : int -> byte list =
-   fun num ->
-    let rec int_of_hex_helper num10 acc =
-      match num10 with
-      | 0 ->
-          acc
-      | x ->
-          let byte = char_of_int (x land 0xFF) in
-          int_of_hex_helper (num10 lsr 8) (byte :: acc)
-    in
-    int_of_hex_helper num []
-
-  let hex_of_int : byte list -> int =
-   fun bytes ->
-    let rec helper bytes acc shift =
-      match bytes with
-      | [] ->
-          acc
-      | b :: tl ->
-          let num = int_of_char b in
-          let acc = acc lor (num lsl shift) in
-          helper tl acc (shift + 8)
-    in
-    helper (List.rev bytes) 0 0
-
-  let byte = function OpConstant -> '\x01'
-end
-
-(* let lookup = function *)
-(*   | '\x01' -> *)
-(*       OpConstant *)
-(*   | b -> *)
-(*       failwith @@ Format.sprintf "%#2X" (int_of_char b) *)
-
-(* let byte_of_opcode = function OpConstant -> '\x01' *)
-
-let make opcode operands =
-  let code = lookups opcode in
-  let _instruction_length = List.fold_left ( + ) 0 code.operand_width in
-  Byte.byte opcode
-  :: List.fold_left
-       (fun acc operand -> List.append acc (Byte.int_of_hex operand))
-       [] operands
+let[@ocaml.warning "-27"] string_of_byte_list byte_list = ""
 
 let slice start lst = List.filteri (fun i _ -> i >= start) lst
 
-let read_operands definition ins =
-  List.fold_left
-    (fun (offset, acc) width ->
-      let create_tuple () =
-        (offset + width, Byte.hex_of_int (slice offset ins) :: acc)
-      in
-      match width with 2 -> create_tuple () )
-    (0, []) definition.operand_width
-
-let to_string : byte list -> string =
- fun instructions ->
-  let _n, operands =
-    read_operands (byte_lookup (List.hd instructions)) (slice 1 instructions)
-  in
-  List.iter (Format.printf "%d, ") operands ;
-  List.fold_left (fun acc nxt -> acc ^ Format.sprintf "%d, " nxt) "" operands
+let[@ocaml.warning "-27"] read_operands op instructions = ([], 0)

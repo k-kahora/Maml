@@ -1,6 +1,6 @@
 (env
 (dev
-(flags (:standard -w -8-32-37+9 )))) ; Ony keep 9 here
+(flags (:standard -w -32-37+9 )))) ; Ony keep 9 here
 ; I want to remove 8 at some point 
 ;add +A to see all warnings
 ;; 8 is for this type of pattern matching

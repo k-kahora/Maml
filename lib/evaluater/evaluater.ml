@@ -42,55 +42,64 @@ let eval_prefix operator right =
 let eval_infix left operator right =
   let eval_infix_bool_expression left_obj operator right_obj =
     (* this is risky but is handled in the calling function *)
-    let Obj.Bool left, Obj.Bool right = (left_obj, right_obj) in
-    match operator with
-    | "==" ->
-        Obj.Bool (left == right)
-    | "!=" ->
-        Obj.Bool (left != right)
-    | _ ->
-        new_error
-        @@ (Format.sprintf "unknown operator: %s %s %s")
-             (Obj.object_string left_obj)
-             operator
-             (Obj.object_string right_obj)
+    begin
+      let Obj.Bool left, Obj.Bool right = (left_obj, right_obj) in
+      match operator with
+      | "==" ->
+          Obj.Bool (left == right)
+      | "!=" ->
+          Obj.Bool (left != right)
+      | _ ->
+          new_error
+          @@ (Format.sprintf "unknown operator: %s %s %s")
+               (Obj.object_string left_obj)
+               operator
+               (Obj.object_string right_obj)
+    end
+    [@ocaml.warning "-8"]
   in
   let eval_infix_string_expression l o r =
-    let Obj.String left, Obj.String right = (l, r) in
-    match o with
-    | "+" ->
-        Obj.String (left ^ right)
-    | _ ->
-        new_error
-          (Format.sprintf "unknown operator: %s %s %s" (Obj.object_string l)
-             operator (Obj.object_string r) )
+    begin
+      let Obj.String left, Obj.String right = (l, r) in
+      match o with
+      | "+" ->
+          Obj.String (left ^ right)
+      | _ ->
+          new_error
+            (Format.sprintf "unknown operator: %s %s %s" (Obj.object_string l)
+               operator (Obj.object_string r) )
+    end
+    [@ocaml.warning "-8"]
   in
   let eval_infix_expression left operator right =
     (* this is risky but is handled in the calling function *)
-    let Obj.Int left, Obj.Int right = (left, right) in
-    match operator with
-    | "+" ->
-        Obj.Int (left + right)
-    | "-" ->
-        Obj.Int (left - right)
-    | "*" ->
-        Obj.Int (left * right)
-    | "/" ->
-        Obj.Int (left / right)
-    | ">" ->
-        Obj.Bool (left > right)
-    | ">=" ->
-        Obj.Bool (left >= right)
-    | "<" ->
-        Obj.Bool (left < right)
-    | "<=" ->
-        Obj.Bool (left <= right)
-    | "!=" ->
-        Obj.Bool (left <> right)
-    | "==" ->
-        Obj.Bool (left = right)
-    | a ->
-        new_error (Format.sprintf "unknown operator: %s" a)
+    begin
+      let Obj.Int left, Obj.Int right = (left, right) in
+      match operator with
+      | "+" ->
+          Obj.Int (left + right)
+      | "-" ->
+          Obj.Int (left - right)
+      | "*" ->
+          Obj.Int (left * right)
+      | "/" ->
+          Obj.Int (left / right)
+      | ">" ->
+          Obj.Bool (left > right)
+      | ">=" ->
+          Obj.Bool (left >= right)
+      | "<" ->
+          Obj.Bool (left < right)
+      | "<=" ->
+          Obj.Bool (left <= right)
+      | "!=" ->
+          Obj.Bool (left <> right)
+      | "==" ->
+          Obj.Bool (left = right)
+      | a ->
+          new_error (Format.sprintf "unknown operator: %s" a)
+    end
+    [@ocaml.warning "-8"]
   in
   match (left, right) with
   | (Obj.Int _ as l), (Obj.Int _ as r) ->
