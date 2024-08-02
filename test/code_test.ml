@@ -19,14 +19,14 @@ let[@ocaml.warning "-26-27"] test_read_operands () =
   let tests = [(`OpConstant 65535, 2)] in
   let helper (operands, bytes_read) =
     let instruction = make operands in
-    let operands_read, bytes_read = read_operands instruction in
-    List.iter (printf "%d, ") operands_read
+    let operands_read, bytes_read = read_operands `OPCONSTANT instruction in
+    ()
   in
   test_iter helper tests
 
 let test_instruction_string () =
   let instructions =
-    [make @@ `OpConstant 1; make @@ `OpConstant 2; make @@ `OpConstant 65534]
+    [make @@ `OpConstant 258; make @@ `OpConstant 257; make @@ `OpConstant 65534]
     |> List.concat
   in
   let expected =
