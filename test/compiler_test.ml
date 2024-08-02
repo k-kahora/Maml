@@ -29,7 +29,7 @@ let run_compiler_tests tests =
 
 let test_int_arithmetic () =
   let tests =
-    [("1 + 2", [1; 2], [make @@ OpConstant 0; make @@ OpConstant 1])]
+    [("1 + 2", [1; 2], [make @@ `OpConstant 0; make @@ `OpConstant 1])]
   in
   run_compiler_tests tests
 

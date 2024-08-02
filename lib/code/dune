@@ -1,4 +1,4 @@
 (library
  (name code )
- (libraries core))
+ (libraries core alcotest))
 

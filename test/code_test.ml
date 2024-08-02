@@ -6,8 +6,8 @@ let printf = Format.printf
 
 let test_make () =
   let tests =
-    [ (OpConstant 65534, ['\x01'; '\xFF'; '\xFE'])
-    ; (OpConstant 2, ['\x01'; '\x00'; '\x02']) ]
+    [ (`OpConstant 65534, ['\x01'; '\xFF'; '\xFE'])
+    ; (`OpConstant 2, ['\x01'; '\x00'; '\x02']) ]
   in
   test_iter
     (fun (opcode, expected) ->
@@ -16,17 +16,17 @@ let test_make () =
     tests
 
 let[@ocaml.warning "-26-27"] test_read_operands () =
-  let tests = [(OpConstant 65535, 2)] in
+  let tests = [(`OpConstant 65535, 2)] in
   let helper (operands, bytes_read) =
     let instruction = make operands in
-    let operands_read, bytes_read = read_operands operands instruction in
+    let operands_read, bytes_read = read_operands instruction in
     List.iter (printf "%d, ") operands_read
   in
   test_iter helper tests
 
 let test_instruction_string () =
   let instructions =
-    [make @@ OpConstant 1; make @@ OpConstant 2; make @@ OpConstant 65534]
+    [make @@ `OpConstant 1; make @@ `OpConstant 2; make @@ `OpConstant 65534]
     |> List.concat
   in
   let expected =
@@ -36,8 +36,8 @@ let test_instruction_string () =
 0006 OpConstant 65535
     |}
   in
-  Alcotest.(check string)
-    "byte list string" expected
+  Alcotest.(check (result string Code.CodeError.alcotest_error))
+    "byte list string" (Ok expected)
     (string_of_byte_list instructions)
 
 let () =
