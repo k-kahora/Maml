@@ -2,6 +2,8 @@ open Code
 
 let test_iter = List.iter
 
+let printf = Format.printf
+
 let test_make () =
   let tests =
     [ (OpConstant 65534, ['\x01'; '\xFF'; '\xFE'])
@@ -17,8 +19,8 @@ let[@ocaml.warning "-26-27"] test_read_operands () =
   let tests = [(OpConstant 65535, 2)] in
   let helper (operands, bytes_read) =
     let instruction = make operands in
-    let operands_read = read_operands operands instruction in
-    ()
+    let operands_read, bytes_read = read_operands operands instruction in
+    List.iter (printf "%d, ") operands_read
   in
   test_iter helper tests
 

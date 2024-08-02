@@ -2,7 +2,7 @@ type byte = char
 
 (* first argument is always length*)
 
-type opcode = OpConstant of int | OpAdd of int
+type opcode = OpConstant of int option | OpAdd of int option
 
 let opcode_length = function OpConstant _ -> 2 | OpAdd _ -> 0
 
@@ -46,6 +46,17 @@ let make op =
   | OpAdd _ ->
       []
 
-let[@ocaml.warning "-27"] string_of_byte_list byte_list = ""
+let lookup = function
+| '\x01' -> OpConstant 
 
-let[@ocaml.warning "-27"] read_operands op instructions = ([], 0)
+let[@ocaml.warning "-27"] string_of_byte_list byte_list = 
+  let opcod_length  = 
+
+
+let[@ocaml.warning "-27"] read_operands op instructions =
+  let _ = opcode_length op in
+  match instructions with
+  | [] ->
+      failwith "Turn this into a result"
+  | a :: b ->
+      ([int_of_hex b], List.length b)
