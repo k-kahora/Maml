@@ -89,21 +89,21 @@ let[@ocaml.warning "-27"] read_operands op instructions =
   | _ :: b ->
       (int_of_hex b length, length)
 
+(* NOTE I believe I have almost perfected this function  *)
 let[@ocaml.warning "-27"] string_of_byte_list byte_list =
   let format_operands operands = "" in
   print_byte_list byte_list ;
   let[@ocaml.tailcall] rec helper ~lst acc =
     match lst with
     | [] ->
-        acc
+        Ok acc
     | b :: tail ->
         let* {def; length} = lookup b in
         (* Format.printf "Index is %d" idx ; *)
         print_byte_list tail ;
         let operands, bytes_read = read_operands def tail in
-        (* Format.printf "Bytes read: %d\n" bytes_read ; *)
-        let acc = Ok (Result.get_ok acc ^ format_operands operands) in
+        let acc = acc ^ format_operands operands in
         let new_list = slice bytes_read tail in
         helper ~lst:new_list acc
   in
-  helper ~lst:byte_list (Ok "")
+  helper ~lst:byte_list ""
