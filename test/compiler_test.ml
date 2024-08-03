@@ -1,4 +1,7 @@
 open Compiler
+module IntMap = Map.Make (Int)
+
+let ( let* ) = Result.bind
 
 let parse input = Lex.new' input |> Parsing.new_parser |> Parsing.parse_program
 
@@ -15,15 +18,26 @@ let test_instructions expected actual =
 let test_constants _ _ = ()
 
 let[@ocaml.warning "-27"] run_compiler_tests tests =
-  let helper (input, expected_constants, expected_instructions) =
-    (* let program = parse input in *)
+  let craft_compiler input =
+    let program = parse input in
     let compiler = new_compiler in
-    (* let _errors = compile compiler program in *)
-    let bytecode = bytecode compiler in
-    test_instructions expected_instructions bytecode.instructions' ;
-    test_constants expected_constants bytecode.constants'
+    let* compile_result = compile compiler program.statements in
+    Ok compile_result
+    (* FIXME figure out why I need a bytecode DS *)
+    (* let bytecode = bytecode compiler in *)
+    (* bytecode *)
   in
-  test_iter helper tests
+  let helper (input, expected_constants, expected_instructions) =
+    let concatted = List.concat expected_instructions in
+    let expected_compiler =
+      Ok {instructions= concatted; index= 0; constants= IntMap.empty}
+    in
+    let actual = craft_compiler input in
+    (* FIXME currently do not check constants and index *)
+    Alcotest.(check (result alcotest_compiler Code.CodeError.alcotest_error))
+      "Checking compiler" expected_compiler actual
+  in
+  List.iter helper tests
 
 let test_int_arithmetic () =
   let tests =

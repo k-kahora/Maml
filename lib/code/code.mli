@@ -31,4 +31,6 @@ module ByteFmt : sig
   (** [hex_of_int operand length] [operand] is converted into a big endian encoding of length: [length], if less thant length bytes returned are \x00, if list is greater than length the length will be ignored*)
 
   val int_of_hex : byte list -> int -> int
+
+  val pp_byte_list : byte list -> string
 end

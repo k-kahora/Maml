@@ -58,9 +58,9 @@ module ByteFmt = struct
   (* FIXME This a ugly function *)
   let pp_byte by = Format.sprintf "0x%02X," (int_of_char by)
 
-  let print_byte_list byte_list =
+  let pp_byte_list byte_list =
     let print_byte acc nxt = Format.sprintf "%s %s" acc (pp_byte nxt) in
-    print_endline ("[" ^ List.fold_left print_byte "" byte_list ^ "]")
+    "[" ^ List.fold_left print_byte "" byte_list ^ "]"
 end
 
 open ByteFmt
