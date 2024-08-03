@@ -4,6 +4,17 @@ let test_iter = List.iter
 
 let printf = Format.printf
 
+let hexidecimal_tests () =
+  let tests =
+    [(['\x17'; '\xEB'; '\x92'], 2, 6123); (['\x17'; '\xEB'; '\x92'], 3, 1567634)]
+  in
+  List.iter
+    (fun (input, length, expected) ->
+      Alcotest.(check int)
+        "Checking int_of_hex" expected
+        (ByteFmt.int_of_hex input length) )
+    tests
+
 let test_make () =
   let tests =
     [ (`OpConstant 65534, ['\x01'; '\xFF'; '\xFE'])
@@ -26,15 +37,14 @@ let[@ocaml.warning "-26-27"] test_read_operands () =
 
 let test_instruction_string () =
   let instructions =
-    [make @@ `OpConstant 258; make @@ `OpConstant 257; make @@ `OpConstant 65534]
+    [make @@ `OpConstant 1; make @@ `OpConstant 2; make @@ `OpConstant 65535]
     |> List.concat
   in
   let expected =
     {|
 0000 OpConstant 1
 0003 OpConstant 2
-0006 OpConstant 65535
-    |}
+0006 OpConstant 65535|}
   in
   Alcotest.(check (result string Code.CodeError.alcotest_error))
     "byte list string" (Ok expected)
@@ -49,3 +59,10 @@ let () =
     ; ( "testing strings conversion"
       , [ Alcotest.test_case "opconstant string check" `Quick
             test_instruction_string ] ) ]
+
+let x = ['\x01'; '\x00'; '\x03'; '\x01'; '\x00'; '\x03'; '\x01'; '\xFF'; '\xFE']
+
+let () =
+  Alcotest.run "libray testsing"
+    [ ( "Testing Hexidecimal conversions"
+      , [Alcotest.test_case "int_of_hex" `Quick hexidecimal_tests] ) ]
