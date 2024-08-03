@@ -1,8 +1,6 @@
 open Compiler
 
-let parse input =
-  Lex.new' input |> Parsing.new_parser |> Parsing.parse_program
-  |> fun a -> a.statements
+let parse input = Lex.new' input |> Parsing.new_parser |> Parsing.parse_program
 
 open Code
 
@@ -16,11 +14,11 @@ let test_instructions expected actual =
 
 let test_constants _ _ = ()
 
-let run_compiler_tests tests =
+let[@ocaml.warning "-27"] run_compiler_tests tests =
   let helper (input, expected_constants, expected_instructions) =
-    let program = parse input in
+    (* let program = parse input in *)
     let compiler = new_compiler in
-    let _errors = compile compiler program in
+    (* let _errors = compile compiler program in *)
     let bytecode = bytecode compiler in
     test_instructions expected_instructions bytecode.instructions' ;
     test_constants expected_constants bytecode.constants'

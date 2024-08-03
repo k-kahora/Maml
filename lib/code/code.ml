@@ -1,13 +1,22 @@
 type byte = char
 
 module CodeError = struct
-  type error = UnrecognizedByte of byte
+  type error =
+    | UnrecognizedByte of byte
+    | StatementNotImplemented of Ast.statement
+    | ExpressionNotImplementd of Ast.expression
 
   let equal_error e1 e2 = e1 = e2
 
   let pp_error fmt = function
     | UnrecognizedByte b ->
         Format.fprintf fmt "UnrecognizedByte 0x%02X" (int_of_char b)
+    | StatementNotImplemented stmt ->
+        Format.fprintf fmt "StatementNotImplemented %s"
+          (Ast.statement_str_debug stmt)
+    | ExpressionNotImplementd expr ->
+        Format.fprintf fmt "ExpressionNotImplementd %s"
+          (Ast.expression_str_debug expr)
 
   let alcotest_error = Alcotest.testable pp_error equal_error
 end
@@ -33,7 +42,6 @@ module ByteFmt = struct
     (* let byte_list = slice starting_index byte_list in *)
     helper 0 0 byte_list ~count:length
 
-  (** [hex_of_int operand length] [operand] is converted into a big endian encoding of length: [length], if less thant length bytes returned are \x00, if list is greater than length the length will be ignored*)
   let hex_of_int operand length =
     let rec helper acc = function
       | 0 ->

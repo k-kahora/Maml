@@ -37,6 +37,16 @@ and block = {token: Token.token; statements: statement list}
 
 and ident = {token: Token.token (* The ident token *); value: string}
 
+let statement_str_debug = function
+  | Letstatement _ ->
+      "Letstatement"
+  | Returnstatement _ ->
+      "Returnstatement"
+  | Expressionstatement _ ->
+      "Expressionstatement"
+  | BlockStatement _ ->
+      "BlockStatement"
+
 let expression_str_debug e =
   match e with
   | Identifier _ ->
