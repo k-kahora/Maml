@@ -79,7 +79,7 @@ let[@ocaml.warning "-27-9-26"] rec compile cmp nodes =
         let cmp, inst_pos = emit cmp `OPCONSTANT index in
         Ok cmp
     | e ->
-        Error (Code.CodeError.ExpressionNotImplementd e)
+        Error (Code.CodeError.ExpressionNotImplemented e)
   in
   let compile_node cmp node =
     match node with

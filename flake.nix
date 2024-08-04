@@ -57,6 +57,7 @@
             ocamlPackages.xxhash # Brought this in to quickly hash a string
             ocamlPackages.utop
             ocamlPackages.core
+            ocamlPackages.base
             ocamlPackages.core_unix
             ocamlPackages.fmt
             ocamlPackages.dune_3

@@ -4,7 +4,10 @@ module CodeError : sig
   type error =
     | UnrecognizedByte of byte
     | StatementNotImplemented of Ast.statement
-    | ExpressionNotImplementd of Ast.expression
+    | ExpressionNotImplemented of Ast.expression
+    | ObjectNotImplemented of Object.Obj.item
+    | StackOverflow
+    | EmptyStack
 
   val equal_error : error -> error -> bool
 
@@ -34,3 +37,5 @@ module ByteFmt : sig
 
   val pp_byte_list : byte list -> string
 end
+
+val create_opcode : byte -> [> opcode]

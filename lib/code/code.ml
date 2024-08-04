@@ -4,19 +4,31 @@ module CodeError = struct
   type error =
     | UnrecognizedByte of byte
     | StatementNotImplemented of Ast.statement
-    | ExpressionNotImplementd of Ast.expression
+    | ExpressionNotImplemented of Ast.expression
+    | ObjectNotImplemented of Object.Obj.item
+    | StackOverflow
+    | EmptyStack
 
   let equal_error e1 e2 = e1 = e2
 
+  let format_helper = Format.fprintf
+
   let pp_error fmt = function
     | UnrecognizedByte b ->
-        Format.fprintf fmt "UnrecognizedByte 0x%02X" (int_of_char b)
+        format_helper fmt "UnrecognizedByte 0x%02X" (int_of_char b)
     | StatementNotImplemented stmt ->
-        Format.fprintf fmt "StatementNotImplemented %s"
+        format_helper fmt "StatementNotImplemented %s"
           (Ast.statement_str_debug stmt)
-    | ExpressionNotImplementd expr ->
-        Format.fprintf fmt "ExpressionNotImplementd %s"
+    | ObjectNotImplemented obj ->
+        format_helper fmt "StatementNotImplemented %s"
+          (Object.Obj.object_string obj)
+    | ExpressionNotImplemented expr ->
+        format_helper fmt "ExpressionNotImplementd %s"
           (Ast.expression_str_debug expr)
+    | StackOverflow ->
+        format_helper fmt "Stack Overflow"
+    | EmptyStack ->
+        format_helper fmt "Empty Stack"
 
   let alcotest_error = Alcotest.testable pp_error equal_error
 end
@@ -117,3 +129,5 @@ let[@ocaml.warning "-27"] string_of_byte_list byte_list =
         helper ~lst:new_list ~index:(index + bytes_read + 1) acc
   in
   helper ~lst:byte_list ~index:0 ""
+
+let create_opcode opcode = `OpConstant (int_of_hex [opcode] 1)
