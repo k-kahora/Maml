@@ -30,7 +30,7 @@ let[@ocaml.warning "-27"] run_compiler_tests tests =
   let helper (input, expected_constants, expected_instructions) =
     let concatted = List.concat expected_instructions in
     let expected_compiler =
-      Ok {instructions= concatted; index= 0; constants= IntMap.empty}
+      Ok {instructions= concatted; index= 0; constants= expected_constants}
     in
     let actual = craft_compiler input in
     (* FIXME currently do not check constants and index *)
@@ -40,8 +40,11 @@ let[@ocaml.warning "-27"] run_compiler_tests tests =
   List.iter helper tests
 
 let test_int_arithmetic () =
+  let open Object in
   let tests =
-    [("1 + 2", [1; 2], [make @@ `OpConstant 0; make @@ `OpConstant 1])]
+    [ ( "1 + 2" (* FIXME To much room for humean error in this test*)
+      , IntMap.(empty |> add 0 (Obj.Int 1) |> add 1 (Obj.Int 2))
+      , [make @@ `OpConstant 0; make @@ `OpConstant 1] ) ]
   in
   run_compiler_tests tests
 

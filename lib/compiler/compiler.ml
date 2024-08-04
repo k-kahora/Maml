@@ -5,20 +5,39 @@ let obj_map = IntMap.empty
 
 type byte = char
 
+module TestObj = struct
+  let compare o1 o2 =
+    let open Object.Obj in
+    match (o1, o2) with Int a, Int b -> Int.compare a b | _ -> -1
+end
+
 let ( let* ) = Result.bind
 
 type compiler =
   {instructions: byte list; index: int; constants: Obj.item IntMap.t}
 
 let pp_compiler fmt cmp =
-  Format.fprintf fmt "Instructions: %s\nConstants"
+  let pp_map map =
+    IntMap.fold
+      (fun key value acc ->
+        acc ^ Format.sprintf "%d:%s, " key (Obj.item_to_string value) )
+      map "{"
+  in
+  Format.fprintf fmt "Instructions: %s\nConstants: %s}"
     (Code.ByteFmt.pp_byte_list cmp.instructions)
+    (pp_map cmp.constants)
 
 let equal_compiler c1 c2 =
-  List.compare
-    (fun a b -> int_of_char a - int_of_char b)
-    c1.instructions c2.instructions
-  = 0
+  let instructions =
+    List.compare
+      (fun a b -> int_of_char a - int_of_char b)
+      c1.instructions c2.instructions
+    = 0
+  in
+  let constants =
+    IntMap.compare TestObj.compare c1.constants c2.constants = 0
+  in
+  instructions && constants
 
 let alcotest_compiler = Alcotest.testable pp_compiler equal_compiler
 
