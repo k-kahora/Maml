@@ -49,51 +49,50 @@ let bytecode cmp =
 
 let new_compiler = {instructions= []; index= 0; constants= IntMap.empty}
 
-let rec add_constants cmp obj =
+let rec add_constants obj cmp =
   ( { cmp with
       constants= IntMap.add cmp.index obj cmp.constants
     ; index= cmp.index + 1 }
   , cmp.index )
 
-and emit cmp _op operands =
+and emit _op operands cmp =
   let inst = Code.make (`OpConstant operands) in
-  let cmp, pos = add_instructions cmp inst in
+  let cmp, pos = add_instructions inst cmp in
   (cmp, pos)
 
-and add_instructions cmp inst =
+and add_instructions inst cmp =
   let pos_new_inst = List.length cmp.instructions in
   ({cmp with instructions= cmp.instructions @ inst}, pos_new_inst)
 
-let[@ocaml.warning "-27-9-26"] rec compile cmp nodes =
+let[@ocaml.warning "-27-9-26"] rec compile nodes cmp =
   let open Ast in
-  let rec compile_expression cmp expr =
+  let rec compile_expression expr cmp =
     match expr with
     | InfixExpression {left; right} ->
-        let* left_compiled = compile_expression cmp left in
-        let* right_compiled = compile_expression left_compiled right in
+        let* left_compiled = compile_expression left cmp in
+        let* right_compiled = compile_expression right left_compiled in
         Ok right_compiled
     | IntegerLiteral {value} ->
         let integer = Obj.Int value in
-        let cmp, index = add_constants cmp integer in
-        Format.printf "index: %d" index ;
-        let cmp, inst_pos = emit cmp `OPCONSTANT index in
+        let cmp, index = add_constants integer cmp in
+        let cmp, inst_pos = emit `OPCONSTANT index cmp in
         Ok cmp
     | e ->
         Error (Code.CodeError.ExpressionNotImplemented e)
   in
-  let compile_node cmp node =
+  let compile_node node cmp =
     match node with
     | Expressionstatement {expression} ->
-        compile_expression cmp expression
+        compile_expression expression cmp
     | a ->
         Error (Code.CodeError.StatementNotImplemented a)
   in
-  let compile_statements cmp statement_list =
+  let compile_statements statement_list cmp =
     match statement_list with
     | [] ->
         Ok cmp
     | node :: tail ->
-        let* cmp = compile_node cmp node in
-        compile cmp tail
+        let* cmp = compile_node node cmp in
+        compile tail cmp
   in
-  compile_statements cmp nodes
+  compile_statements nodes cmp

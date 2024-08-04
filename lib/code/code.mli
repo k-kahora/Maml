@@ -6,7 +6,9 @@ module CodeError : sig
     | StatementNotImplemented of Ast.statement
     | ExpressionNotImplemented of Ast.expression
     | ObjectNotImplemented of Object.Obj.item
+    | ConstantNotFound of int
     | StackOverflow
+    | CustomError of string
     | EmptyStack
 
   val equal_error : error -> error -> bool
@@ -20,7 +22,11 @@ type opcode = [`OpConstant of int]
 
 type opcode_marker = [`OPCONSTANT]
 
+type definition = {def: opcode_marker; length: int}
+
 val make : opcode -> byte list
+
+val lookup : byte -> (definition, CodeError.error) result
 
 val string_of_byte_list : byte list -> (string, CodeError.error) result
 

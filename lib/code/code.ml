@@ -6,7 +6,9 @@ module CodeError = struct
     | StatementNotImplemented of Ast.statement
     | ExpressionNotImplemented of Ast.expression
     | ObjectNotImplemented of Object.Obj.item
+    | ConstantNotFound of int
     | StackOverflow
+    | CustomError of string
     | EmptyStack
 
   let equal_error e1 e2 = e1 = e2
@@ -29,6 +31,10 @@ module CodeError = struct
         format_helper fmt "Stack Overflow"
     | EmptyStack ->
         format_helper fmt "Empty Stack"
+    | ConstantNotFound index ->
+        format_helper fmt "ConstantNotFound: at index %d" index
+    | CustomError err ->
+        format_helper fmt "CustomError: %s" err
 
   let alcotest_error = Alcotest.testable pp_error equal_error
 end

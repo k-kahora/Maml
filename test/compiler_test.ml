@@ -21,8 +21,7 @@ let[@ocaml.warning "-27"] run_compiler_tests tests =
   let craft_compiler input =
     let program = parse input in
     let compiler = new_compiler in
-    let* compile_result = compile compiler program.statements in
-    Ok compile_result
+    compile program.statements compiler
     (* FIXME figure out why I need a bytecode DS *)
     (* let bytecode = bytecode compiler in *)
     (* bytecode *)

@@ -1,0 +1,4 @@
+(library
+ (name vm )
+ (libraries code compiler ast object))
+
