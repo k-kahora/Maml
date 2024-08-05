@@ -9,6 +9,7 @@ module CodeError : sig
     | ConstantNotFound of int
     | StackOverflow
     | CustomError of string
+    | UnknownOperator of string
     | EmptyStack
 
   val equal_error : error -> error -> bool
@@ -18,9 +19,9 @@ module CodeError : sig
   val alcotest_error : error Alcotest.testable
 end
 
-type opcode = [`OpConstant of int]
+type opcode = [`OpConstant of int | `OpAdd]
 
-type opcode_marker = [`OPCONSTANT]
+type opcode_marker = [`OPCONSTANT | `OPADD]
 
 type definition = {def: opcode_marker; length: int}
 

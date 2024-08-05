@@ -68,10 +68,14 @@ let[@ocaml.warning "-27-9-26"] rec compile nodes cmp =
   let open Ast in
   let rec compile_expression expr cmp =
     match expr with
-    | InfixExpression {left; right} ->
+    | InfixExpression {left; right; operator} -> (
         let* left_compiled = compile_expression left cmp in
         let* right_compiled = compile_expression right left_compiled in
-        Ok right_compiled
+        match operator with
+        | "+" ->
+            Ok right_compiled
+        | a ->
+            Error (Code.CodeError.UnknownOperator a) )
     | IntegerLiteral {value} ->
         let integer = Obj.Int value in
         let cmp, index = add_constants integer cmp in

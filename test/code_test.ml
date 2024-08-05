@@ -37,15 +37,13 @@ let[@ocaml.warning "-26-27"] test_read_operands () =
 
 let test_instruction_string () =
   let instructions =
-    [make @@ `OpConstant 1; make @@ `OpConstant 2; make @@ `OpConstant 65535]
+    [make @@ `OpAdd; make @@ `OpConstant 2; make @@ `OpConstant 65535]
     |> List.concat
   in
-  let expected =
-    {|
-0000 OpConstant 1
-0003 OpConstant 2
-0006 OpConstant 65535|}
-  in
+  let expected = {|
+0000 OpAdd
+0001 OpConstant 2
+0004 OpConstant 65535|} in
   Alcotest.(check (result string Code.CodeError.alcotest_error))
     "byte list string" (Ok expected)
     (string_of_byte_list instructions)

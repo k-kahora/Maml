@@ -9,6 +9,7 @@ module CodeError = struct
     | ConstantNotFound of int
     | StackOverflow
     | CustomError of string
+    | UnknownOperator of string
     | EmptyStack
 
   let equal_error e1 e2 = e1 = e2
@@ -29,6 +30,8 @@ module CodeError = struct
           (Ast.expression_str_debug expr)
     | StackOverflow ->
         format_helper fmt "Stack Overflow"
+    | UnknownOperator operator ->
+        format_helper fmt "UnknownOperator: %s" operator
     | EmptyStack ->
         format_helper fmt "Empty Stack"
     | ConstantNotFound index ->
@@ -87,27 +90,41 @@ let ( let* ) = Result.bind
 
 (* first argument is always length*)
 
-type opcode = [`OpConstant of int]
+type opcode = [`OpConstant of int | `OpAdd]
 
-type opcode_marker = [`OPCONSTANT]
+type opcode_marker = [`OPCONSTANT | `OPADD]
 
 type definition = {def: opcode_marker; length: int}
 
-let opcode_length = function `OPCONSTANT | `OpConstant _ -> 2
+let opcode_length = function
+  | `OPCONSTANT | `OpConstant _ ->
+      2
+  | `OpAdd | `OPADD ->
+      0
 
-let operand_name = function `OPCONSTANT | `OpConstant _ -> "OpConstant"
+let operand_name = function
+  | `OPCONSTANT | `OpConstant _ ->
+      "OpConstant"
+  | `OPADD ->
+      "OpAdd"
 
 let lookup = function
   | '\x01' ->
       let mark = `OPCONSTANT in
       Ok {def= mark; length= opcode_length mark}
+  | '\x02' ->
+      Ok {def= `OPADD; length= 0}
   | a ->
       Error (CodeError.UnrecognizedByte a)
 
 (** [make op] converts an opcode into a list of bytes of varying length *)
 let make op =
   let length = opcode_length op in
-  match op with `OpConstant operand -> '\x01' :: hex_of_int operand length
+  match op with
+  | `OpConstant operand ->
+      '\x01' :: hex_of_int operand length
+  | `OpAdd ->
+      ['\x02']
 
 let[@ocaml.warning "-27"] read_operands op instructions =
   let length = opcode_length op in
@@ -120,7 +137,11 @@ let[@ocaml.warning "-27"] read_operands op instructions =
 (* NOTE I believe I have almost perfected this function  *)
 let[@ocaml.warning "-27"] string_of_byte_list byte_list =
   let format_operands acc index def operands =
-    Format.sprintf "%s\n%04d %s %d" acc index (operand_name def) operands
+    match operands with
+    | 0 ->
+        Format.sprintf "%s\n%04d %s" acc index (operand_name def)
+    | a ->
+        Format.sprintf "%s\n%04d %s %d" acc index (operand_name def) a
   in
   let[@ocaml.tailcall] rec helper ~lst ~index acc =
     match lst with

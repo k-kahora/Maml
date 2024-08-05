@@ -40,9 +40,14 @@ let[@ocaml.tailcall] [@ocaml.warning "-9-11"] rec run vm =
     | _ ->
         Error (Code.CodeError.CustomError "Not enough instructions")
   in
+  let evaluate_opadd () =
+    Error (Code.CodeError.CustomError "OPADD not implemented in VM")
+  in
   let match_opcode instructions = function
     | `OPCONSTANT ->
         evaluate_opconstant instructions
+    | `OPADD ->
+        evaluate_opadd ()
   in
   match vm.instructions with
   | [] ->
