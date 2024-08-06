@@ -2,6 +2,7 @@ open Object
 
 let ( let* ) = Result.bind
 
+
 let stack_size = 2048
 
 type byte = char
@@ -42,7 +43,7 @@ let[@ocaml.tailcall] [@ocaml.warning "-9-11"] rec run vm =
             constant_opt
         in
         let _stack = push constant vm.stack in
-        run {vm with instructions= rest}
+        Ok {vm with instructions= rest}
     | _ ->
         Error (Code.CodeError.CustomError "Not enough instructions")
   in
@@ -52,7 +53,7 @@ let[@ocaml.tailcall] [@ocaml.warning "-9-11"] rec run vm =
     match (left, right) with
     | Obj.Int r, Obj.Int l ->
         let _stack = push (Obj.Int (r + l)) vm.stack in
-        run {vm with instructions= rest}
+        Ok {vm with instructions= rest}
     | l, _ ->
         Error (Code.CodeError.ObjectNotImplemented l)
   in
@@ -67,4 +68,5 @@ let[@ocaml.tailcall] [@ocaml.warning "-9-11"] rec run vm =
       Ok vm
   | instruction :: rest ->
       let* {def} = lookup instruction in
-      match_opcode rest def
+      let* vm = match_opcode rest def in
+      run vm
