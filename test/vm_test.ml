@@ -30,7 +30,8 @@ let run_vm_tests (input, expected) =
 
 let test_int_arithmatic () =
   let tests =
-    [("1", 1); ("2", 2); ("1 + 2", 2)] |> List.map (fun (a, b) -> (a, Ok b))
+    [("1", 1); ("2", 2); ("1 + 2", 3); ("267 + 58 + 2", 327)]
+    |> List.map (fun (a, b) -> (a, Ok b))
   in
   List.iter run_vm_tests tests
 

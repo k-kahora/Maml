@@ -128,11 +128,7 @@ let make op =
 
 let[@ocaml.warning "-27"] read_operands op instructions =
   let length = opcode_length op in
-  match instructions with
-  | [] ->
-      failwith "Turn this into a result"
-  | ls ->
-      (int_of_hex ls length, length)
+  match instructions with [] -> (0, 0) | ls -> (int_of_hex ls length, length)
 
 (* NOTE I believe I have almost perfected this function  *)
 let[@ocaml.warning "-27"] string_of_byte_list byte_list =

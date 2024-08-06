@@ -55,8 +55,8 @@ let rec add_constants obj cmp =
     ; index= cmp.index + 1 }
   , cmp.index )
 
-and emit _op operands cmp =
-  let inst = Code.make (`OpConstant operands) in
+and emit op cmp =
+  let inst = Code.make op in
   let cmp, pos = add_instructions inst cmp in
   (cmp, pos)
 
@@ -73,13 +73,13 @@ let[@ocaml.warning "-27-9-26"] rec compile nodes cmp =
         let* right_compiled = compile_expression right left_compiled in
         match operator with
         | "+" ->
-            Ok right_compiled
+            Ok (emit `OpAdd right_compiled |> fst)
         | a ->
             Error (Code.CodeError.UnknownOperator a) )
     | IntegerLiteral {value} ->
         let integer = Obj.Int value in
         let cmp, index = add_constants integer cmp in
-        let cmp, inst_pos = emit `OPCONSTANT index cmp in
+        let cmp, inst_pos = emit (`OpConstant index) cmp in
         Ok cmp
     | e ->
         Error (Code.CodeError.ExpressionNotImplemented e)

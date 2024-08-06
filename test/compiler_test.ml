@@ -28,7 +28,9 @@ let[@ocaml.warning "-27"] run_compiler_tests tests =
   in
   let helper (input, expected_constants, expected_instructions) =
     let concatted = List.concat expected_instructions in
-    ByteFmt.pp_byte_list concatted |> print_endline ;
+    let _ =
+      Code.string_of_byte_list concatted |> Result.get_ok |> print_endline
+    in
     let expected_compiler =
       Ok {instructions= concatted; index= 0; constants= expected_constants}
     in
@@ -44,7 +46,15 @@ let test_int_arithmetic () =
   let tests =
     [ ( "1 + 2" (* FIXME To much room for humean error in this test*)
       , IntMap.(empty |> add 0 (Obj.Int 1) |> add 1 (Obj.Int 2))
-      , [make @@ `OpConstant 0; make @@ `OpConstant 1; make `OpAdd] ) ]
+      , [make @@ `OpConstant 0; make @@ `OpConstant 1; make @@ `OpAdd] )
+    ; ( "1 + 2 + 3"
+      , IntMap.(
+          empty |> add 0 (Obj.Int 1) |> add 1 (Obj.Int 2) |> add 2 (Obj.Int 3) )
+      , [ make @@ `OpConstant 0
+        ; make @@ `OpConstant 1
+        ; make `OpAdd
+        ; make @@ `OpConstant 2
+        ; make `OpAdd ] ) ]
   in
   run_compiler_tests tests
 
