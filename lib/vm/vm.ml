@@ -2,7 +2,6 @@ open Object
 
 let ( let* ) = Result.bind
 
-
 let stack_size = 2048
 
 type byte = char
@@ -19,6 +18,9 @@ let new_virtual_machine byte_code =
   { constants= byte_code.constants
   ; instructions= byte_code.instructions
   ; stack= Stack.create () }
+
+let[@ocaml.warning "-9"] pop_stack {stack} =
+  Stack.top_opt stack |> Option.to_result ~none:Code.CodeError.EmptyStack
 
 let pop stack =
   Stack.pop_opt stack |> Option.to_result ~none:Code.CodeError.EmptyStack

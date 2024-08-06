@@ -18,9 +18,7 @@ let setup_vm_test input =
   let* comp = Compiler.compile program.statements comp in
   let vm = Vm.new_virtual_machine comp in
   let* res = Vm.run vm in
-  let* stack_elem =
-    Stack.top_opt res.stack |> Option.to_result ~none:Code.CodeError.EmptyStack
-  in
+  let* stack_elem = Vm.pop_stack res in
   test_expected_object stack_elem
 
 let run_vm_tests (input, expected) =

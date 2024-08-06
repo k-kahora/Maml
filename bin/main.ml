@@ -1,6 +1,8 @@
 (* Define a function to simulate evaluation of input *)
 open Lex
 
+let ( let* ) = Result.bind
+
 let rec evaluate (l : lexer) : unit =
   let _ = Token.token_to_string_debug Token.EOF in
   let token, lex = Lex.next_token l in
@@ -30,12 +32,21 @@ let rec repl () =
     print_endline "Goodbye!"
   else
     (* FIXME NOTE This code failwis unless an int is passed *)
-    let l = Lex.new' input in
-    let p = Parsing.new_parser l in
-    let program = Parsing.parse_program p in
-    (* print_endline (Ast.program_str program) ; *)
-    let evaluated = Evaluater.eval env program in
-    print_endline @@ Object.Obj.item_to_string evaluated ;
+    let _error_print a = Code.CodeError.print_error a in
+    Result.fold
+      ~error:(fun a -> Code.CodeError.print_error a)
+      ~ok:(fun a -> Object.Obj.item_to_string a |> print_endline)
+      (operate_machine input) ;
     repl ()
+
+and operate_machine input =
+  let l = Lex.new' input in
+  let p = Parsing.new_parser l in
+  let program = Parsing.parse_program p in
+  let* compiler = Compiler.compile program.statements Compiler.new_compiler in
+  let machine = Vm.new_virtual_machine compiler in
+  let* result = Vm.run machine in
+  let* stack_elem = Vm.pop_stack result in
+  Ok stack_elem
 
 let () = repl ()

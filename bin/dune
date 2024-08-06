@@ -9,4 +9,4 @@
  (public_name Interpreter)
  (name main)
   (modules main)
- (libraries Interpreter lex parsing ast evaluater))
+ (libraries Interpreter lex parsing ast evaluater vm))
