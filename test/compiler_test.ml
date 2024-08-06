@@ -41,20 +41,22 @@ let[@ocaml.warning "-27"] run_compiler_tests tests =
   in
   List.iter helper tests
 
+let map_test_helper obj_list =
+  IntMap.of_list (List.mapi (fun idx obj -> (idx, obj)) obj_list)
+
+let make_test_helper opcode_list =
+  List.map (fun opcode -> make opcode) opcode_list
+
 let test_int_arithmetic () =
   let open Object in
   let tests =
     [ ( "1 + 2" (* FIXME To much room for humean error in this test*)
-      , IntMap.(empty |> add 0 (Obj.Int 1) |> add 1 (Obj.Int 2))
-      , [make @@ `OpConstant 0; make @@ `OpConstant 1; make @@ `OpAdd] )
+      , map_test_helper [Obj.Int 1; Int 2]
+      , make_test_helper [`OpConstant 0; `OpConstant 1; `OpAdd] )
     ; ( "1 + 2 + 3"
-      , IntMap.(
-          empty |> add 0 (Obj.Int 1) |> add 1 (Obj.Int 2) |> add 2 (Obj.Int 3) )
-      , [ make @@ `OpConstant 0
-        ; make @@ `OpConstant 1
-        ; make `OpAdd
-        ; make @@ `OpConstant 2
-        ; make `OpAdd ] ) ]
+      , map_test_helper [Obj.Int 1; Int 2; Int 3]
+      , make_test_helper
+          [`OpConstant 0; `OpConstant 1; `OpAdd; `OpConstant 2; `OpAdd] ) ]
   in
   run_compiler_tests tests
 

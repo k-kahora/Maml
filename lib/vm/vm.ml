@@ -27,6 +27,7 @@ let push item stack =
   stack
 
 (*FIXME any inperformant functions called in here is an issue *)
+(*FIXME right now this function is a mess each sub function has to end in run {vm with instructions=rest} there is a better way*)
 let[@ocaml.tailcall] [@ocaml.warning "-9-11"] rec run vm =
   let open Code in
   let evaluate_opconstant instructions =
