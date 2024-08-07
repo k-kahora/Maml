@@ -31,12 +31,12 @@ let push item stack =
   let () = Stack.push item stack in
   stack
 
-(*FIXME any inperformant functions called in here is an issue *)
-(*FIXME right now this function is a mess each sub function has to end in run {vm with instructions=rest} there is a better way*)
-let[@ocaml.tailcall] [@ocaml.warning "-9-11"] rec run vm =
-  let finish_run vm rest = Ok {vm with instructions= rest} in
-  let open Code in
-  let evaluate_opconstant instructions =
+module VM_Helpers = struct
+  open Code
+
+  let finish_run rest vm = Ok {vm with instructions= rest}
+
+  let evaluate_opconstant instructions vm =
     match instructions with
     | [] ->
         Error (Code.CodeError.CustomError "Instructions Empty")
@@ -51,8 +51,8 @@ let[@ocaml.tailcall] [@ocaml.warning "-9-11"] rec run vm =
         Ok {vm with instructions= rest}
     | _ ->
         Error (Code.CodeError.CustomError "Not enough instructions")
-  in
-  let execute_binary_operation op rest =
+
+  let execute_binary_operation op rest vm =
     let execute_binary_integer_operation left right = function
       | `OPADD ->
           left + right
@@ -72,26 +72,59 @@ let[@ocaml.tailcall] [@ocaml.warning "-9-11"] rec run vm =
         Ok {vm with instructions= rest}
     | l, _ ->
         Error (Code.CodeError.ObjectNotImplemented l)
-  in
-  let evaluate_oppop rest =
+
+  let execute_bool value rest vm =
+    ignore @@ push (Obj.Bool value) vm.stack ;
+    finish_run rest vm
+
+  let execute_comparison op rest vm =
+    let execute_primitive_compare left right = function
+      | `OPEQUAL ->
+          left = right
+      | `OPNOTEQUAL ->
+          left <> right
+      | `OPGREATERTHAN ->
+          left > right
+    in
+    let* right = pop vm.stack in
+    let* left = pop vm.stack in
+    let evaluate_compare l r op =
+      let value = execute_primitive_compare l r op in
+      ignore @@ push (Obj.Bool value) vm.stack ;
+      finish_run rest vm
+    in
+    match (left, right) with
+    | Obj.Int l, Int r ->
+        evaluate_compare l r op
+    | Bool l, Bool r ->
+        evaluate_compare l r op
+    | l, _ ->
+        Error (Code.CodeError.ObjectNotImplemented l)
+
+  let evaluate_oppop rest vm =
     let* a =
       Stack.pop_opt vm.stack |> Option.to_result ~none:Code.CodeError.EmptyStack
     in
-    Ok {vm with last_item_poped= a; instructions= rest}
-  in
+    {vm with last_item_poped= a} |> finish_run rest
+end
+
+(*FIXME any inperformant functions called in here is an issue *)
+(*FIXME right now this function is a mess each sub function has to end in run {vm with instructions=rest} there is a better way*)
+let[@ocaml.tailcall] [@ocaml.warning "-9-11"] rec run vm =
+  let open Code in
   let match_opcode instructions = function
     | `OPCONSTANT ->
-        evaluate_opconstant instructions
+        VM_Helpers.evaluate_opconstant instructions vm
     | (`OPADD | `OPSUB | `OPMUL | `OPDIV) as op ->
-        execute_binary_operation op instructions
+        VM_Helpers.execute_binary_operation op instructions vm
     | `OPTRUE ->
-        ignore @@ push (Obj.Bool true) vm.stack ;
-        finish_run vm instructions
+        VM_Helpers.execute_bool true instructions vm
     | `OPFALSE ->
-        ignore @@ push (Obj.Bool false) vm.stack ;
-        finish_run vm instructions
+        VM_Helpers.execute_bool false instructions vm
     | `OPPOP ->
-        evaluate_oppop instructions
+        VM_Helpers.evaluate_oppop instructions vm
+    | (`OPEQUAL | `OPNOTEQUAL | `OPGREATERTHAN) as op ->
+        VM_Helpers.execute_comparison op instructions vm
     | a ->
         Error (Code.CodeError.OpCodeNotImplemented a)
   in
