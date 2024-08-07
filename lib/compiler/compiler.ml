@@ -69,11 +69,39 @@ let[@ocaml.warning "-27-9-26"] rec compile nodes cmp =
   let rec compile_expression expr cmp =
     match expr with
     | InfixExpression {left; right; operator} -> (
-        let* left_compiled = compile_expression left cmp in
-        let* right_compiled = compile_expression right left_compiled in
+        let lr_compile = function
+          | `Left2Right ->
+              let* left_compiled_cmp = compile_expression left cmp in
+              compile_expression right left_compiled_cmp
+          | `Right2Left ->
+              let* right_compiled_cmp = compile_expression right cmp in
+              compile_expression left right_compiled_cmp
+        in
         match operator with
         | "+" ->
-            Ok (emit `OpAdd right_compiled |> fst)
+            let* cmp = lr_compile `Left2Right in
+            Ok (emit `OpAdd cmp |> fst)
+        | "-" ->
+            let* cmp = lr_compile `Left2Right in
+            Ok (emit `OpSub cmp |> fst)
+        | "*" ->
+            let* cmp = lr_compile `Left2Right in
+            Ok (emit `OpMul cmp |> fst)
+        | "/" ->
+            let* cmp = lr_compile `Left2Right in
+            Ok (emit `OpDiv cmp |> fst)
+        | "==" ->
+            let* cmp = lr_compile `Left2Right in
+            Ok (emit `OpEqual cmp |> fst)
+        | "<" ->
+            let* cmp = lr_compile `Right2Left in
+            Ok (emit `OpGreaterThan cmp |> fst)
+        | ">" ->
+            let* cmp = lr_compile `Left2Right in
+            Ok (emit `OpGreaterThan cmp |> fst)
+        | "!=" ->
+            let* cmp = lr_compile `Left2Right in
+            Ok (emit `OpNotEqual cmp |> fst)
         | a ->
             Error (Code.CodeError.UnknownOperator a) )
     | IntegerLiteral {value} ->
@@ -81,13 +109,18 @@ let[@ocaml.warning "-27-9-26"] rec compile nodes cmp =
         let cmp, index = add_constants integer cmp in
         let cmp, inst_pos = emit (`OpConstant index) cmp in
         Ok cmp
+    | BooleanExpression {value} ->
+        let cmp, _ = if value then emit `OpTrue cmp else emit `OpFalse cmp in
+        Ok cmp
     | e ->
         Error (Code.CodeError.ExpressionNotImplemented e)
   in
   let compile_node node cmp =
     match node with
     | Expressionstatement {expression} ->
-        compile_expression expression cmp
+        let* cmp = compile_expression expression cmp in
+        let cmp, _ = emit `OpPop cmp in
+        Ok cmp
     | a ->
         Error (Code.CodeError.StatementNotImplemented a)
   in

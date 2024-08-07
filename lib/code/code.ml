@@ -1,8 +1,60 @@
 type byte = char
 
+(* FIXME add lessthanorequal opcode *)
+type opcode =
+  [ `OpConstant of int
+  | `OpAdd
+  | `OpSub
+  | `OpMul
+  | `OpDiv
+  | `OpTrue
+  | `OpFalse
+  | `OpEqual
+  | `OpNotEqual
+  | `OpGreaterThan
+  | `OpPop ]
+
+type opcode_marker =
+  [ `OPCONSTANT
+  | `OPADD
+  | `OPPOP
+  | `OPSUB
+  | `OPMUL
+  | `OPDIV
+  | `OPTRUE
+  | `OPFALSE
+  | `OPEQUAL
+  | `OPGREATERTHAN
+  | `OPNOTEQUAL ]
+
+let operand_name = function
+  | `OPCONSTANT | `OpConstant _ ->
+      "OpConstant"
+  | `OPADD | `OpAdd ->
+      "OpAdd"
+  | `OPPOP | `OpPop ->
+      "OpPop"
+  | `OPSUB | `OpSub ->
+      "OpSub"
+  | `OPMUL | `OpMul ->
+      "OpMul"
+  | `OPDIV | `OpDiv ->
+      "OpDiv"
+  | `OPTRUE | `OpTrue ->
+      "OpTrue"
+  | `OPFALSE | `OpFalse ->
+      "OpFalse"
+  | `OpEqual | `OPEQUAL ->
+      "OpEqual"
+  | `OpGreaterThan | `OPGREATERTHAN ->
+      "OpGreaterThan"
+  | `OpNotEqual | `OPNOTEQUAL ->
+      "OpNotEqual"
+
 module CodeError = struct
   type error =
     | UnrecognizedByte of byte
+    | OpCodeNotImplemented of opcode_marker
     | StatementNotImplemented of Ast.statement
     | ExpressionNotImplemented of Ast.expression
     | ObjectNotImplemented of Object.Obj.item
@@ -19,6 +71,8 @@ module CodeError = struct
   let pp_error fmt = function
     | UnrecognizedByte b ->
         format_helper fmt "UnrecognizedByte 0x%02X" (int_of_char b)
+    | OpCodeNotImplemented op ->
+        format_helper fmt "OpCodeNotImplemented: %s" (operand_name op)
     | StatementNotImplemented stmt ->
         format_helper fmt "StatementNotImplemented %s"
           (Ast.statement_str_debug stmt)
@@ -94,23 +148,32 @@ let ( let* ) = Result.bind
 
 (* first argument is always length*)
 
-type opcode = [`OpConstant of int | `OpAdd]
-
-type opcode_marker = [`OPCONSTANT | `OPADD]
-
 type definition = {def: opcode_marker; length: int}
 
 let opcode_length = function
   | `OPCONSTANT | `OpConstant _ ->
       2
-  | `OpAdd | `OPADD ->
+  | `OpAdd
+  | `OPADD
+  | `OpPop
+  | `OPPOP
+  | `OpSub
+  | `OPSUB
+  | `OpMul
+  | `OPMUL
+  | `OpDiv
+  | `OPDIV
+  | `OPTRUE
+  | `OpTrue
+  | `OPFALSE
+  | `OpFalse
+  | `OPEQUAL
+  | `OpEqual
+  | `OPNOTEQUAL
+  | `OpNotEqual
+  | `OPGREATERTHAN
+  | `OpGreaterThan ->
       0
-
-let operand_name = function
-  | `OPCONSTANT | `OpConstant _ ->
-      "OpConstant"
-  | `OPADD ->
-      "OpAdd"
 
 let lookup = function
   | '\x01' ->
@@ -118,6 +181,24 @@ let lookup = function
       Ok {def= mark; length= opcode_length mark}
   | '\x02' ->
       Ok {def= `OPADD; length= 0}
+  | '\x03' ->
+      Ok {def= `OPPOP; length= 0}
+  | '\x04' ->
+      Ok {def= `OPSUB; length= 0}
+  | '\x05' ->
+      Ok {def= `OPDIV; length= 0}
+  | '\x06' ->
+      Ok {def= `OPMUL; length= 0}
+  | '\x07' ->
+      Ok {def= `OPTRUE; length= 0}
+  | '\x08' ->
+      Ok {def= `OPFALSE; length= 0}
+  | '\x09' ->
+      Ok {def= `OPEQUAL; length= 0}
+  | '\x0A' ->
+      Ok {def= `OPNOTEQUAL; length= 0}
+  | '\x0B' ->
+      Ok {def= `OPGREATERTHAN; length= 0}
   | a ->
       Error (CodeError.UnrecognizedByte a)
 
@@ -129,6 +210,24 @@ let make op =
       '\x01' :: hex_of_int operand length
   | `OpAdd ->
       ['\x02']
+  | `OpPop ->
+      ['\x03']
+  | `OpSub ->
+      ['\x04']
+  | `OpDiv ->
+      ['\x05']
+  | `OpMul ->
+      ['\x06']
+  | `OpTrue ->
+      ['\x07']
+  | `OpFalse ->
+      ['\x08']
+  | `OpEqual ->
+      ['\x09']
+  | `OpNotEqual ->
+      ['\x0A']
+  | `OpGreaterThan ->
+      ['\x0B']
 
 let[@ocaml.warning "-27"] read_operands op instructions =
   let length = opcode_length op in

@@ -1,7 +1,9 @@
 ### Writing an interpreter in ~~go~~ ocaml 
 ## TODO
-- [] pass read operands test case
-- [] pass string conversion test case
+- [x] pass read operands test case
+- [x] pass string conversion test case
+- [ ] Convert the interpreter errors(failwith) into results!
+- [ ] figure out a better way to assert the byte value of each opcode, can lead to plenty of annoying, logic errors that are hard to catch
 ## Interesting
 Noticed a case where if the last of the input is a {keyword|number} my loops do a index out of bounds error, however this was never recognized within the tests
 ## Features

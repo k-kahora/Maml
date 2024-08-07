@@ -46,7 +46,7 @@ and operate_machine input =
   let* compiler = Compiler.compile program.statements Compiler.new_compiler in
   let machine = Vm.new_virtual_machine compiler in
   let* result = Vm.run machine in
-  let* stack_elem = Vm.pop_stack result in
+  let stack_elem = result.last_item_poped in
   Ok stack_elem
 
 let () = repl ()

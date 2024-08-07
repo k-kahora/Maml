@@ -7,6 +7,7 @@ type byte = char
 type virtual_machine =
   { constants: Obj.item IntMap.t
   ; instructions: byte list
+  ; last_item_poped: Obj.item
   ; stack: Obj.item Stack.t }
 
 val pop_stack :

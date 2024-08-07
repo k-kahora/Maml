@@ -1,8 +1,35 @@
 type byte = char
 
+type opcode =
+  [ `OpConstant of int
+  | `OpAdd
+  | `OpSub
+  | `OpMul
+  | `OpDiv
+  | `OpTrue
+  | `OpFalse
+  | `OpEqual
+  | `OpNotEqual
+  | `OpGreaterThan
+  | `OpPop ]
+
+type opcode_marker =
+  [ `OPCONSTANT
+  | `OPADD
+  | `OPPOP
+  | `OPSUB
+  | `OPMUL
+  | `OPDIV
+  | `OPTRUE
+  | `OPFALSE
+  | `OPEQUAL
+  | `OPGREATERTHAN
+  | `OPNOTEQUAL ]
+
 module CodeError : sig
   type error =
     | UnrecognizedByte of byte
+    | OpCodeNotImplemented of opcode_marker
     | StatementNotImplemented of Ast.statement
     | ExpressionNotImplemented of Ast.expression
     | ObjectNotImplemented of Object.Obj.item
@@ -20,10 +47,6 @@ module CodeError : sig
 
   val alcotest_error : error Alcotest.testable
 end
-
-type opcode = [`OpConstant of int | `OpAdd]
-
-type opcode_marker = [`OPCONSTANT | `OPADD]
 
 type definition = {def: opcode_marker; length: int}
 

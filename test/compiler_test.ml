@@ -52,15 +52,60 @@ let test_int_arithmetic () =
   let tests =
     [ ( "1 + 2" (* FIXME To much room for humean error in this test*)
       , map_test_helper [Obj.Int 1; Int 2]
-      , make_test_helper [`OpConstant 0; `OpConstant 1; `OpAdd] )
+      , make_test_helper [`OpConstant 0; `OpConstant 1; `OpAdd; `OpPop] )
     ; ( "1 + 2 + 3"
       , map_test_helper [Obj.Int 1; Int 2; Int 3]
       , make_test_helper
-          [`OpConstant 0; `OpConstant 1; `OpAdd; `OpConstant 2; `OpAdd] ) ]
+          [`OpConstant 0; `OpConstant 1; `OpAdd; `OpConstant 2; `OpAdd; `OpPop]
+      )
+    ; ( "1; 2; 3"
+      , map_test_helper [Obj.Int 1; Int 2; Int 3]
+      , make_test_helper
+          [`OpConstant 0; `OpPop; `OpConstant 1; `OpPop; `OpConstant 2; `OpPop]
+      )
+    ; ( "1 - 4"
+      , map_test_helper [Obj.Int 1; Int 4]
+      , make_test_helper [`OpConstant 0; `OpConstant 1; `OpSub; `OpPop] )
+    ; ( "1 * 4"
+      , map_test_helper [Obj.Int 1; Int 4]
+      , make_test_helper [`OpConstant 0; `OpConstant 1; `OpMul; `OpPop] )
+    ; ( "2 / 1"
+      , map_test_helper [Obj.Int 2; Int 1]
+      , make_test_helper [`OpConstant 0; `OpConstant 1; `OpDiv; `OpPop] ) ]
+  in
+  run_compiler_tests tests
+
+let test_bool_expressions () =
+  let open Object.Obj in
+  let tests =
+    [ ("false", map_test_helper [], make_test_helper [`OpFalse; `OpPop])
+    ; ("true", map_test_helper [], make_test_helper [`OpTrue; `OpPop])
+    ; ( "1 == 2"
+      , map_test_helper [Int 1; Int 2]
+      , make_test_helper [`OpConstant 0; `OpConstant 1; `OpEqual; `OpPop] )
+    ; ( "1 > 2"
+      , map_test_helper [Int 1; Int 2]
+      , make_test_helper [`OpConstant 0; `OpConstant 1; `OpGreaterThan; `OpPop]
+      )
+    ; ( "1 < 2"
+      , map_test_helper [Int 2; Int 1]
+      , make_test_helper [`OpConstant 0; `OpConstant 1; `OpGreaterThan; `OpPop]
+      )
+    ; ( "true == false"
+      , map_test_helper []
+      , make_test_helper [`OpTrue; `OpFalse; `OpEqual; `OpPop] )
+    ; ( "1 != 2"
+      , map_test_helper [Int 1; Int 2]
+      , make_test_helper [`OpConstant 0; `OpConstant 1; `OpNotEqual; `OpPop] )
+    ; ( "true != false"
+      , map_test_helper []
+      , make_test_helper [`OpTrue; `OpFalse; `OpNotEqual; `OpPop] ) ]
   in
   run_compiler_tests tests
 
 let () =
   Alcotest.run "OpConstant arithmetic checking"
     [ ( "testing compiler"
-      , [Alcotest.test_case "int arithmetic" `Quick test_int_arithmetic] ) ]
+      , [ Alcotest.test_case "int arithmetic" `Quick test_int_arithmetic
+        ; Alcotest.test_case "bool expressions" `Quick test_bool_expressions ]
+      ) ]
