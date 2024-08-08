@@ -3,6 +3,8 @@ type byte = char
 (* FIXME add lessthanorequal opcode *)
 type opcode =
   [ `Constant of int
+  | `JumpNotTruthy of int
+  | `Jump of int
   | `Add
   | `Sub
   | `Mul
@@ -16,11 +18,15 @@ type opcode =
   | `Bang
   | `Pop ]
 
-type opcode_marker = [`OPCONSTANT]
+type opcode_marker = [`OPCONSTANT | `JUMP | `JUMPNOTTRUTHY]
 
 let operand_name = function
   | `Constant _ | `OPCONSTANT ->
       "Constant"
+  | `JumpNotTruthy _ | `JUMPNOTTRUTHY ->
+      "JumpNotTruthy"
+  | `Jump _ | `JUMP ->
+      "Jump"
   | `Add ->
       "Add"
   | `Pop ->
@@ -150,7 +156,12 @@ let ( let* ) = Result.bind
 type definition = {def: [opcode_marker | opcode]; length: int}
 
 let opcode_length = function
-  | `OPCONSTANT | `Constant _ ->
+  | `OPCONSTANT
+  | `Constant _
+  | `Jump _
+  | `JUMP
+  | `JumpNotTruthy _
+  | `JUMPNOTTRUTHY ->
       2
   | `Pop
   | `Sub
@@ -193,6 +204,10 @@ let lookup_opcode = function
       Ok `Minus
   | '\x0D' ->
       Ok `Bang
+  | '\x0E' ->
+      Ok `JUMP
+  | '\x0F' ->
+      Ok `JUMPNOTTRUTHY
   | a ->
       Error (CodeError.UnrecognizedByte a)
 
@@ -223,6 +238,10 @@ let lookup_byte = function
       '\x0C'
   | `Bang ->
       '\x0D'
+  | `Jump _ | `JUMP ->
+      '\x0E'
+  | `JumpNotTruthy _ | `JUMPNOTTRUTHY ->
+      '\x0F'
 
 let lookup byte =
   let* opcode = lookup_opcode byte in
@@ -234,6 +253,10 @@ let make op =
   let lb = lookup_byte in
   match op with
   | `Constant operand ->
+      lb op :: hex_of_int operand length
+  | `JumpNotTruthy operand ->
+      lb op :: hex_of_int operand length
+  | `Jump operand ->
       lb op :: hex_of_int operand length
   | a ->
       [lb a]
@@ -257,8 +280,8 @@ let[@ocaml.warning "-27"] string_of_byte_list byte_list =
         Ok acc
     | b :: tail as _list ->
         let* {def; length} = lookup b in
-        (* Format.printf "Index is %d" idx ; *)
         let operands, bytes_read = read_operands def tail in
+        Format.printf "Index is %d" operands ;
         let acc = format_operands acc index def operands in
         let new_list = slice bytes_read tail in
         helper ~lst:new_list ~index:(index + bytes_read + 1) acc

@@ -29,7 +29,8 @@ let[@ocaml.warning "-27"] run_compiler_tests tests =
   let helper (input, expected_constants, expected_instructions) =
     let concatted = List.concat expected_instructions in
     let _ =
-      Code.string_of_byte_list concatted |> Result.get_ok |> print_endline
+      Code.string_of_byte_list concatted
+      |> Result.fold ~error:CodeError.print_error ~ok:print_endline
     in
     let expected_compiler =
       Ok {instructions= concatted; index= 0; constants= expected_constants}
@@ -103,9 +104,19 @@ let test_bool_expressions () =
   in
   run_compiler_tests tests
 
+let test_conditionals () =
+  let open Object in
+  let tests =
+    [ ( "if (true) { 10 }; 3333;"
+      , map_test_helper [Obj.Int 10; Int 3333]
+      , make_test_helper
+          [`True; `JumpNotTruthy 7; `Constant 0; `Pop; `Constant 1; `Pop] ) ]
+  in
+  run_compiler_tests tests
+
 let () =
   Alcotest.run "OpConstant arithmetic checking"
     [ ( "testing compiler"
       , [ Alcotest.test_case "int arithmetic" `Quick test_int_arithmetic
-        ; Alcotest.test_case "bool expressions" `Quick test_bool_expressions ]
-      ) ]
+        ; Alcotest.test_case "bool expressions" `Quick test_bool_expressions
+        ; Alcotest.test_case "conditionals" `Quick test_conditionals ] ) ]

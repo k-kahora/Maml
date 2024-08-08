@@ -3,6 +3,8 @@ type byte = char
 (* FIXME add lessthanorequal opcode *)
 type opcode =
   [ `Constant of int
+  | `JumpNotTruthy of int
+  | `Jump of int
   | `Add
   | `Sub
   | `Mul
@@ -16,7 +18,7 @@ type opcode =
   | `Bang
   | `Pop ]
 
-type opcode_marker = [`OPCONSTANT]
+type opcode_marker = [`OPCONSTANT | `JUMP | `JUMPNOTTRUTHY]
 
 module CodeError : sig
   type error =

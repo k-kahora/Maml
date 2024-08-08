@@ -68,6 +68,11 @@ let[@ocaml.warning "-27-9-26"] rec compile nodes cmp =
   let open Ast in
   let rec compile_expression expr cmp =
     match expr with
+    | IfExpression {condition; consquence; altenative} ->
+        let* cmp = compile_expression condition cmp in
+        let cmp, _ = emit (`JumpNotTruthy 9999) cmp in
+        let* cons = compile_node consquence cmp in
+        Ok cons
     | InfixExpression {left; right; operator} -> (
         let lr_compile = function
           | `Left2Right ->
@@ -123,17 +128,19 @@ let[@ocaml.warning "-27-9-26"] rec compile nodes cmp =
         Ok cmp
     | e ->
         Error (Code.CodeError.ExpressionNotImplemented e)
-  in
-  let compile_node node cmp =
+  and compile_node node cmp =
     match node with
     | Expressionstatement {expression} ->
+        print_endline "in expression" ;
         let* cmp = compile_expression expression cmp in
         let cmp, _ = emit `Pop cmp in
         Ok cmp
+    | BlockStatement {statements} ->
+        let* stmts = compile_statements statements cmp in
+        Ok stmts
     | a ->
         Error (Code.CodeError.StatementNotImplemented a)
-  in
-  let compile_statements statement_list cmp =
+  and compile_statements statement_list cmp =
     match statement_list with
     | [] ->
         Ok cmp
