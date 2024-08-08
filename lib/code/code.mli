@@ -1,35 +1,27 @@
 type byte = char
 
+(* FIXME add lessthanorequal opcode *)
 type opcode =
-  [ `OpConstant of int
-  | `OpAdd
-  | `OpSub
-  | `OpMul
-  | `OpDiv
-  | `OpTrue
-  | `OpFalse
-  | `OpEqual
-  | `OpNotEqual
-  | `OpGreaterThan
-  | `OpPop ]
+  [ `Constant of int
+  | `Add
+  | `Sub
+  | `Mul
+  | `Div
+  | `True
+  | `False
+  | `Equal
+  | `NotEqual
+  | `GreaterThan
+  | `Minus
+  | `Bang
+  | `Pop ]
 
-type opcode_marker =
-  [ `OPCONSTANT
-  | `OPADD
-  | `OPPOP
-  | `OPSUB
-  | `OPMUL
-  | `OPDIV
-  | `OPTRUE
-  | `OPFALSE
-  | `OPEQUAL
-  | `OPGREATERTHAN
-  | `OPNOTEQUAL ]
+type opcode_marker = [`OPCONSTANT]
 
 module CodeError : sig
   type error =
     | UnrecognizedByte of byte
-    | OpCodeNotImplemented of opcode_marker
+    | OpCodeNotImplemented of [opcode_marker | opcode]
     | StatementNotImplemented of Ast.statement
     | ExpressionNotImplemented of Ast.expression
     | ObjectNotImplemented of Object.Obj.item
@@ -37,6 +29,7 @@ module CodeError : sig
     | StackOverflow
     | CustomError of string
     | UnknownOperator of string
+    | UnsuportedType of string * Object.Obj.item
     | EmptyStack
 
   val equal_error : error -> error -> bool
@@ -48,7 +41,7 @@ module CodeError : sig
   val alcotest_error : error Alcotest.testable
 end
 
-type definition = {def: opcode_marker; length: int}
+type definition = {def: [opcode_marker | opcode]; length: int}
 
 val make : opcode -> byte list
 

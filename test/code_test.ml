@@ -17,8 +17,8 @@ let hexidecimal_tests () =
 
 let test_make () =
   let tests =
-    [ (`OpConstant 65534, ['\x01'; '\xFF'; '\xFE'])
-    ; (`OpConstant 2, ['\x01'; '\x00'; '\x02']) ]
+    [ (`Constant 65534, ['\x01'; '\xFF'; '\xFE'])
+    ; (`Constant 2, ['\x01'; '\x00'; '\x02']) ]
   in
   test_iter
     (fun (opcode, expected) ->
@@ -27,7 +27,7 @@ let test_make () =
     tests
 
 let[@ocaml.warning "-26-27"] test_read_operands () =
-  let tests = [(`OpConstant 65535, 2)] in
+  let tests = [(`Constant 65535, 2)] in
   let helper (operands, bytes_read) =
     let instruction = make operands in
     let operands_read, bytes_read = read_operands `OPCONSTANT instruction in
@@ -37,13 +37,12 @@ let[@ocaml.warning "-26-27"] test_read_operands () =
 
 let test_instruction_string () =
   let instructions =
-    [make @@ `OpAdd; make @@ `OpConstant 2; make @@ `OpConstant 65535]
-    |> List.concat
+    [make @@ `Add; make @@ `Constant 2; make @@ `Constant 65535] |> List.concat
   in
   let expected = {|
-0000 OpAdd
-0001 OpConstant 2
-0004 OpConstant 65535|} in
+0000 Add
+0001 Constant 2
+0004 Constant 65535|} in
   Alcotest.(check (result string Code.CodeError.alcotest_error))
     "byte list string" (Ok expected)
     (string_of_byte_list instructions)

@@ -2,59 +2,54 @@ type byte = char
 
 (* FIXME add lessthanorequal opcode *)
 type opcode =
-  [ `OpConstant of int
-  | `OpAdd
-  | `OpSub
-  | `OpMul
-  | `OpDiv
-  | `OpTrue
-  | `OpFalse
-  | `OpEqual
-  | `OpNotEqual
-  | `OpGreaterThan
-  | `OpPop ]
+  [ `Constant of int
+  | `Add
+  | `Sub
+  | `Mul
+  | `Div
+  | `True
+  | `False
+  | `Equal
+  | `NotEqual
+  | `GreaterThan
+  | `Minus
+  | `Bang
+  | `Pop ]
 
-type opcode_marker =
-  [ `OPCONSTANT
-  | `OPADD
-  | `OPPOP
-  | `OPSUB
-  | `OPMUL
-  | `OPDIV
-  | `OPTRUE
-  | `OPFALSE
-  | `OPEQUAL
-  | `OPGREATERTHAN
-  | `OPNOTEQUAL ]
+type opcode_marker = [`OPCONSTANT]
 
 let operand_name = function
-  | `OPCONSTANT | `OpConstant _ ->
-      "OpConstant"
-  | `OPADD | `OpAdd ->
-      "OpAdd"
-  | `OPPOP | `OpPop ->
-      "OpPop"
-  | `OPSUB | `OpSub ->
-      "OpSub"
-  | `OPMUL | `OpMul ->
-      "OpMul"
-  | `OPDIV | `OpDiv ->
-      "OpDiv"
-  | `OPTRUE | `OpTrue ->
-      "OpTrue"
-  | `OPFALSE | `OpFalse ->
-      "OpFalse"
-  | `OpEqual | `OPEQUAL ->
-      "OpEqual"
-  | `OpGreaterThan | `OPGREATERTHAN ->
-      "OpGreaterThan"
-  | `OpNotEqual | `OPNOTEQUAL ->
-      "OpNotEqual"
+  | `Constant _ | `OPCONSTANT ->
+      "Constant"
+  | `Add ->
+      "Add"
+  | `Pop ->
+      "Pop"
+  | `Sub ->
+      "Sub"
+  | `Mul ->
+      "Mul"
+  | `Div ->
+      "Div"
+  | `True ->
+      "True"
+  | `False ->
+      "False"
+  | `Equal ->
+      "Equal"
+  | `GreaterThan ->
+      "GreaterThan"
+  | `Minus ->
+      "Minus"
+  | `Bang ->
+      "Bang"
+  | `NotEqual ->
+      "NotEqual"
 
 module CodeError = struct
   type error =
     | UnrecognizedByte of byte
-    | OpCodeNotImplemented of opcode_marker
+    | OpCodeNotImplemented of [opcode_marker | opcode]
     | StatementNotImplemented of Ast.statement
     | ExpressionNotImplemented of Ast.expression
     | ObjectNotImplemented of Object.Obj.item
@@ -62,6 +57,7 @@ module CodeError = struct
     | StackOverflow
     | CustomError of string
     | UnknownOperator of string
+    | UnsuportedType of string * Object.Obj.item
     | EmptyStack
 
   let equal_error e1 e2 = e1 = e2
@@ -86,6 +82,9 @@ module CodeError = struct
         format_helper fmt "Stack Overflow"
     | UnknownOperator operator ->
         format_helper fmt "UnknownOperator: %s" operator
+    | UnsuportedType (for_type, obj) ->
+        format_helper fmt "UnsuportedType: for %s -> %s" for_type
+          (Object.Obj.item_to_string obj)
     | EmptyStack ->
         format_helper fmt "Empty Stack"
     | ConstantNotFound index ->
@@ -148,86 +147,96 @@ let ( let* ) = Result.bind
 
 (* first argument is always length*)
 
-type definition = {def: opcode_marker; length: int}
+type definition = {def: [opcode_marker | opcode]; length: int}
 
 let opcode_length = function
-  | `OPCONSTANT | `OpConstant _ ->
+  | `OPCONSTANT | `Constant _ ->
       2
-  | `OpAdd
-  | `OPADD
-  | `OpPop
-  | `OPPOP
-  | `OpSub
-  | `OPSUB
-  | `OpMul
-  | `OPMUL
-  | `OpDiv
-  | `OPDIV
-  | `OPTRUE
-  | `OpTrue
-  | `OPFALSE
-  | `OpFalse
-  | `OPEQUAL
-  | `OpEqual
-  | `OPNOTEQUAL
-  | `OpNotEqual
-  | `OPGREATERTHAN
-  | `OpGreaterThan ->
+  | `Pop
+  | `Sub
+  | `Add
+  | `Mul
+  | `Div
+  | `True
+  | `False
+  | `Equal
+  | `NotEqual
+  | `Minus
+  | `Bang
+  | `GreaterThan ->
       0
 
-let lookup = function
+let lookup_opcode = function
   | '\x01' ->
-      let mark = `OPCONSTANT in
-      Ok {def= mark; length= opcode_length mark}
+      Ok `OPCONSTANT
   | '\x02' ->
-      Ok {def= `OPADD; length= 0}
+      Ok `Pop
   | '\x03' ->
-      Ok {def= `OPPOP; length= 0}
+      Ok `Sub
   | '\x04' ->
-      Ok {def= `OPSUB; length= 0}
+      Ok `Add
   | '\x05' ->
-      Ok {def= `OPDIV; length= 0}
+      Ok `Mul
   | '\x06' ->
-      Ok {def= `OPMUL; length= 0}
+      Ok `Div
   | '\x07' ->
-      Ok {def= `OPTRUE; length= 0}
+      Ok `True
   | '\x08' ->
-      Ok {def= `OPFALSE; length= 0}
+      Ok `False
   | '\x09' ->
-      Ok {def= `OPEQUAL; length= 0}
+      Ok `Equal
   | '\x0A' ->
-      Ok {def= `OPNOTEQUAL; length= 0}
+      Ok `NotEqual
   | '\x0B' ->
-      Ok {def= `OPGREATERTHAN; length= 0}
+      Ok `GreaterThan
+  | '\x0C' ->
+      Ok `Minus
+  | '\x0D' ->
+      Ok `Bang
   | a ->
       Error (CodeError.UnrecognizedByte a)
+
+let lookup_byte = function
+  | `OPCONSTANT | `Constant _ ->
+      '\x01'
+  | `Pop ->
+      '\x02'
+  | `Sub ->
+      '\x03'
+  | `Add ->
+      '\x04'
+  | `Mul ->
+      '\x05'
+  | `Div ->
+      '\x06'
+  | `True ->
+      '\x07'
+  | `False ->
+      '\x08'
+  | `Equal ->
+      '\x09'
+  | `NotEqual ->
+      '\x0A'
+  | `GreaterThan ->
+      '\x0B'
+  | `Minus ->
+      '\x0C'
+  | `Bang ->
+      '\x0D'
+
+let lookup byte =
+  let* opcode = lookup_opcode byte in
+  Ok {def= opcode; length= opcode_length opcode}
 
 (** [make op] converts an opcode into a list of bytes of varying length *)
 let make op =
   let length = opcode_length op in
+  let lb = lookup_byte in
   match op with
-  | `OpConstant operand ->
-      '\x01' :: hex_of_int operand length
-  | `OpAdd ->
-      ['\x02']
-  | `OpPop ->
-      ['\x03']
-  | `OpSub ->
-      ['\x04']
-  | `OpDiv ->
-      ['\x05']
-  | `OpMul ->
-      ['\x06']
-  | `OpTrue ->
-      ['\x07']
-  | `OpFalse ->
-      ['\x08']
-  | `OpEqual ->
-      ['\x09']
-  | `OpNotEqual ->
-      ['\x0A']
-  | `OpGreaterThan ->
-      ['\x0B']
+  | `Constant operand ->
+      lb op :: hex_of_int operand length
+  | a ->
+      [lb a]
 
 let[@ocaml.warning "-27"] read_operands op instructions =
   let length = opcode_length op in
@@ -256,4 +265,4 @@ let[@ocaml.warning "-27"] string_of_byte_list byte_list =
   in
   helper ~lst:byte_list ~index:0 ""
 
-let create_opcode opcode = `OpConstant (int_of_hex [opcode] 1)
+let create_opcode opcode = `Constant (int_of_hex [opcode] 1)

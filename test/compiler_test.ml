@@ -52,54 +52,54 @@ let test_int_arithmetic () =
   let tests =
     [ ( "1 + 2" (* FIXME To much room for humean error in this test*)
       , map_test_helper [Obj.Int 1; Int 2]
-      , make_test_helper [`OpConstant 0; `OpConstant 1; `OpAdd; `OpPop] )
+      , make_test_helper [`Constant 0; `Constant 1; `Add; `Pop] )
     ; ( "1 + 2 + 3"
       , map_test_helper [Obj.Int 1; Int 2; Int 3]
       , make_test_helper
-          [`OpConstant 0; `OpConstant 1; `OpAdd; `OpConstant 2; `OpAdd; `OpPop]
-      )
+          [`Constant 0; `Constant 1; `Add; `Constant 2; `Add; `Pop] )
     ; ( "1; 2; 3"
       , map_test_helper [Obj.Int 1; Int 2; Int 3]
       , make_test_helper
-          [`OpConstant 0; `OpPop; `OpConstant 1; `OpPop; `OpConstant 2; `OpPop]
-      )
+          [`Constant 0; `Pop; `Constant 1; `Pop; `Constant 2; `Pop] )
     ; ( "1 - 4"
       , map_test_helper [Obj.Int 1; Int 4]
-      , make_test_helper [`OpConstant 0; `OpConstant 1; `OpSub; `OpPop] )
+      , make_test_helper [`Constant 0; `Constant 1; `Sub; `Pop] )
     ; ( "1 * 4"
       , map_test_helper [Obj.Int 1; Int 4]
-      , make_test_helper [`OpConstant 0; `OpConstant 1; `OpMul; `OpPop] )
+      , make_test_helper [`Constant 0; `Constant 1; `Mul; `Pop] )
     ; ( "2 / 1"
       , map_test_helper [Obj.Int 2; Int 1]
-      , make_test_helper [`OpConstant 0; `OpConstant 1; `OpDiv; `OpPop] ) ]
+      , make_test_helper [`Constant 0; `Constant 1; `Div; `Pop] )
+    ; ( "-1"
+      , map_test_helper [Obj.Int 1]
+      , make_test_helper [`Constant 0; `Minus; `Pop] ) ]
   in
   run_compiler_tests tests
 
 let test_bool_expressions () =
   let open Object.Obj in
   let tests =
-    [ ("false", map_test_helper [], make_test_helper [`OpFalse; `OpPop])
-    ; ("true", map_test_helper [], make_test_helper [`OpTrue; `OpPop])
+    [ ("false", map_test_helper [], make_test_helper [`False; `Pop])
+    ; ("true", map_test_helper [], make_test_helper [`True; `Pop])
     ; ( "1 == 2"
       , map_test_helper [Int 1; Int 2]
-      , make_test_helper [`OpConstant 0; `OpConstant 1; `OpEqual; `OpPop] )
+      , make_test_helper [`Constant 0; `Constant 1; `Equal; `Pop] )
     ; ( "1 > 2"
       , map_test_helper [Int 1; Int 2]
-      , make_test_helper [`OpConstant 0; `OpConstant 1; `OpGreaterThan; `OpPop]
-      )
+      , make_test_helper [`Constant 0; `Constant 1; `GreaterThan; `Pop] )
     ; ( "1 < 2"
       , map_test_helper [Int 2; Int 1]
-      , make_test_helper [`OpConstant 0; `OpConstant 1; `OpGreaterThan; `OpPop]
-      )
+      , make_test_helper [`Constant 0; `Constant 1; `GreaterThan; `Pop] )
     ; ( "true == false"
       , map_test_helper []
-      , make_test_helper [`OpTrue; `OpFalse; `OpEqual; `OpPop] )
+      , make_test_helper [`True; `False; `Equal; `Pop] )
     ; ( "1 != 2"
       , map_test_helper [Int 1; Int 2]
-      , make_test_helper [`OpConstant 0; `OpConstant 1; `OpNotEqual; `OpPop] )
+      , make_test_helper [`Constant 0; `Constant 1; `NotEqual; `Pop] )
     ; ( "true != false"
       , map_test_helper []
-      , make_test_helper [`OpTrue; `OpFalse; `OpNotEqual; `OpPop] ) ]
+      , make_test_helper [`True; `False; `NotEqual; `Pop] )
+    ; ("!false", map_test_helper [], make_test_helper [`False; `Bang; `Pop]) ]
   in
   run_compiler_tests tests
 

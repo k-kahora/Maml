@@ -54,13 +54,13 @@ module VM_Helpers = struct
 
   let execute_binary_operation op rest vm =
     let execute_binary_integer_operation left right = function
-      | `OPADD ->
+      | `Add ->
           left + right
-      | `OPSUB ->
+      | `Sub ->
           left - right
-      | `OPMUL ->
+      | `Mul ->
           left * right
-      | `OPDIV ->
+      | `Div ->
           left / right
     in
     let* right = pop vm.stack in
@@ -79,11 +79,11 @@ module VM_Helpers = struct
 
   let execute_comparison op rest vm =
     let execute_primitive_compare left right = function
-      | `OPEQUAL ->
+      | `Equal ->
           left = right
-      | `OPNOTEQUAL ->
+      | `NotEqual ->
           left <> right
-      | `OPGREATERTHAN ->
+      | `GreaterThan ->
           left > right
     in
     let* right = pop vm.stack in
@@ -106,6 +106,30 @@ module VM_Helpers = struct
       Stack.pop_opt vm.stack |> Option.to_result ~none:Code.CodeError.EmptyStack
     in
     {vm with last_item_poped= a} |> finish_run rest
+
+  let execute_minus rest vm =
+    let* operand = pop vm.stack in
+    let* operand =
+      match operand with
+      | Obj.Int i ->
+          Ok (Obj.Int (i * -1))
+      | a ->
+          Error (CodeError.UnsuportedType ("negation", a))
+    in
+    ignore @@ push operand vm.stack ;
+    finish_run rest vm
+
+  let execute_bang rest vm =
+    let* operand = pop vm.stack in
+    let* operand =
+      match operand with
+      | Obj.Bool b ->
+          Ok (Obj.Bool (not b))
+      | _ ->
+          Ok (Obj.Bool false)
+    in
+    ignore @@ push operand vm.stack ;
+    finish_run rest vm
 end
 
 (*FIXME any inperformant functions called in here is an issue *)
@@ -113,18 +137,22 @@ end
 let[@ocaml.tailcall] [@ocaml.warning "-9-11"] rec run vm =
   let open Code in
   let match_opcode instructions = function
-    | `OPCONSTANT ->
+    | `Constant _ | `OPCONSTANT ->
         VM_Helpers.evaluate_opconstant instructions vm
-    | (`OPADD | `OPSUB | `OPMUL | `OPDIV) as op ->
+    | (`Add | `Sub | `Mul | `Div) as op ->
         VM_Helpers.execute_binary_operation op instructions vm
-    | `OPTRUE ->
+    | `True ->
         VM_Helpers.execute_bool true instructions vm
-    | `OPFALSE ->
+    | `False ->
         VM_Helpers.execute_bool false instructions vm
-    | `OPPOP ->
+    | `Pop ->
         VM_Helpers.evaluate_oppop instructions vm
-    | (`OPEQUAL | `OPNOTEQUAL | `OPGREATERTHAN) as op ->
+    | (`Equal | `NotEqual | `GreaterThan) as op ->
         VM_Helpers.execute_comparison op instructions vm
+    | `Bang ->
+        VM_Helpers.execute_bang instructions vm
+    | `Minus ->
+        VM_Helpers.execute_minus instructions vm
     | a ->
         Error (Code.CodeError.OpCodeNotImplemented a)
   in
