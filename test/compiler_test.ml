@@ -33,7 +33,10 @@ let[@ocaml.warning "-27"] run_compiler_tests tests =
       |> Result.fold ~error:CodeError.print_error ~ok:print_endline
     in
     let expected_compiler =
-      Ok {instructions= concatted; index= 0; constants= expected_constants}
+      Ok
+        { Compiler.new_compiler with
+          instructions= concatted
+        ; constants= expected_constants }
     in
     let actual = craft_compiler input in
     (* FIXME currently do not check constants and index *)

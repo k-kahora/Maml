@@ -13,8 +13,14 @@ end
 
 let ( let* ) = Result.bind
 
+type emitted_instruction = {opcode: Code.opcode; position: int}
+
 type compiler =
-  {instructions: byte list; index: int; constants: Obj.item IntMap.t}
+  { instructions: byte list
+  ; index: int
+  ; constants: Obj.item IntMap.t
+  ; last_instruction: emitted_instruction
+  ; previous_instruction: emitted_instruction }
 
 let pp_compiler fmt cmp =
   let pp_map map =
@@ -47,7 +53,12 @@ type bytecode =
 let bytecode cmp =
   {instructions'= cmp.instructions; index'= cmp.index; constants'= cmp.constants}
 
-let new_compiler = {instructions= []; index= 0; constants= IntMap.empty}
+let new_compiler =
+  { instructions= []
+  ; index= 0
+  ; constants= IntMap.empty
+  ; previous_instruction= {opcode= `Pop; position= 0}
+  ; last_instruction= {opcode= `Pop; position= 0} }
 
 let rec add_constants obj cmp =
   ( { cmp with
@@ -58,11 +69,17 @@ let rec add_constants obj cmp =
 and emit op cmp =
   let inst = Code.make op in
   let cmp, pos = add_instructions inst cmp in
+  let last = {opcode= op; position= pos} in
+  let cmp =
+    {cmp with previous_instruction= cmp.last_instruction; last_instruction= last}
+  in
   (cmp, pos)
 
 and add_instructions inst cmp =
   let pos_new_inst = List.length cmp.instructions in
   ({cmp with instructions= cmp.instructions @ inst}, pos_new_inst)
+
+let remove_pop cmp = failwith "remove_pop not implemented"
 
 let[@ocaml.warning "-27-9-26"] rec compile nodes cmp =
   let open Ast in
@@ -71,6 +88,9 @@ let[@ocaml.warning "-27-9-26"] rec compile nodes cmp =
     | IfExpression {condition; consquence; altenative} ->
         let* cmp = compile_expression condition cmp in
         let cmp, _ = emit (`JumpNotTruthy 9999) cmp in
+        let cmp =
+          if cmp.last_instruction.opcode = `Pop then remove_pop cmp else cmp
+        in
         let* cons = compile_node consquence cmp in
         Ok cons
     | InfixExpression {left; right; operator} -> (
