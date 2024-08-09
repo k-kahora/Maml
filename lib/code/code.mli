@@ -18,7 +18,7 @@ type opcode =
   | `Bang
   | `Pop ]
 
-type opcode_marker = [`OPCONSTANT | `JUMP | `JUMPNOTTRUTHY]
+type opcode_marker = [`CONSTANT | `JUMP | `JUMPNOTTRUTHY]
 
 module CodeError : sig
   type error =
@@ -46,6 +46,9 @@ end
 type definition = {def: [opcode_marker | opcode]; length: int}
 
 val make : opcode -> byte list
+
+val marker_to_opcode :
+  int -> [opcode_marker | opcode] -> (opcode, CodeError.error) result
 
 val lookup : byte -> (definition, CodeError.error) result
 

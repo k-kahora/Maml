@@ -137,7 +137,7 @@ end
 let[@ocaml.tailcall] [@ocaml.warning "-9-11"] rec run vm =
   let open Code in
   let match_opcode instructions = function
-    | `Constant _ | `OPCONSTANT ->
+    | `Constant _ | `CONSTANT ->
         VM_Helpers.evaluate_opconstant instructions vm
     | (`Add | `Sub | `Mul | `Div) as op ->
         VM_Helpers.execute_binary_operation op instructions vm

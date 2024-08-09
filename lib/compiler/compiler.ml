@@ -79,20 +79,64 @@ and add_instructions inst cmp =
   let pos_new_inst = List.length cmp.instructions in
   ({cmp with instructions= cmp.instructions @ inst}, pos_new_inst)
 
-let remove_pop cmp = failwith "remove_pop not implemented"
+let replace_instruction pos new_instruction cmp =
+  let f pos l1 l2 =
+    let count = ref (-1) in
+    let end_pos = List.length l1 + pos in
+    List.mapi
+      (fun idx item ->
+        if idx >= pos && idx < end_pos then
+          let _ = count := !count + 1 in
+          List.nth l1 !count
+        else item )
+      l2
+  in
+  let patched_instructions = f pos new_instruction cmp.instructions in
+  {cmp with instructions= patched_instructions}
+
+(**  [change_operand op_pos operand cmp] Assumes you only replace operands of the same type and same length *)
+let[@ocaml.warning "-9"] change_operand op_pos operand cmp =
+  let* {def} = List.nth cmp.instructions op_pos |> Code.lookup in
+  let* marker = Code.marker_to_opcode operand def in
+  let new_instruction = Code.make marker in
+  Ok (replace_instruction op_pos new_instruction cmp)
+
+(** [remove_pop cmp] this needs to be called when compiling if expressions because when a if expression is compilled the consequence is considered a expressions and an additonal pop is pushed onto the stack*)
+let remove_pop cmp =
+  let[@ocaml.tailcall] rec pop_last = function
+    | [] ->
+        []
+    | [_] ->
+        []
+    | hd :: tl ->
+        hd :: pop_last tl
+  in
+  { cmp with
+    instructions= pop_last cmp.instructions
+  ; last_instruction= cmp.previous_instruction }
 
 let[@ocaml.warning "-27-9-26"] rec compile nodes cmp =
   let open Ast in
   let rec compile_expression expr cmp =
     match expr with
+    (* NOTE IfExpressions need to be back patched *)
     | IfExpression {condition; consquence; altenative} ->
+        (* NOTE Compile the condition *)
         let* cmp = compile_expression condition cmp in
-        let cmp, _ = emit (`JumpNotTruthy 9999) cmp in
+        (* NOTE Emit the jump instruction with garbage *)
+        let cmp, jump_not_truth_pos = emit (`JumpNotTruthy 9999) cmp in
+        (* NOTE Compile the consequence every time*)
+        let* cmp = compile_node consquence cmp in
+        (* NOTE Remove the duplicated pop*)
         let cmp =
           if cmp.last_instruction.opcode = `Pop then remove_pop cmp else cmp
         in
-        let* cons = compile_node consquence cmp in
-        Ok cons
+        (* NOTE Get the position after the consquence*)
+        let after_consequence_pos = List.length cmp.instructions in
+        let* cmp =
+          change_operand jump_not_truth_pos after_consequence_pos cmp
+        in
+        Ok cmp
     | InfixExpression {left; right; operator} -> (
         let lr_compile = function
           | `Left2Right ->
@@ -151,7 +195,6 @@ let[@ocaml.warning "-27-9-26"] rec compile nodes cmp =
   and compile_node node cmp =
     match node with
     | Expressionstatement {expression} ->
-        print_endline "in expression" ;
         let* cmp = compile_expression expression cmp in
         let cmp, _ = emit `Pop cmp in
         Ok cmp

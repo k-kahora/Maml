@@ -30,7 +30,7 @@ let[@ocaml.warning "-26-27"] test_read_operands () =
   let tests = [(`Constant 65535, 2)] in
   let helper (operands, bytes_read) =
     let instruction = make operands in
-    let operands_read, bytes_read = read_operands `OPCONSTANT instruction in
+    let operands_read, bytes_read = read_operands `CONSTANT instruction in
     ()
   in
   test_iter helper tests

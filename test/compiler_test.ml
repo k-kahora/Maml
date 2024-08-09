@@ -28,10 +28,6 @@ let[@ocaml.warning "-27"] run_compiler_tests tests =
   in
   let helper (input, expected_constants, expected_instructions) =
     let concatted = List.concat expected_instructions in
-    let _ =
-      Code.string_of_byte_list concatted
-      |> Result.fold ~error:CodeError.print_error ~ok:print_endline
-    in
     let expected_compiler =
       Ok
         { Compiler.new_compiler with
@@ -39,6 +35,10 @@ let[@ocaml.warning "-27"] run_compiler_tests tests =
         ; constants= expected_constants }
     in
     let actual = craft_compiler input in
+    let _ =
+      Code.string_of_byte_list (Result.get_ok actual |> fun a -> a.instructions)
+      |> Result.fold ~error:CodeError.print_error ~ok:print_endline
+    in
     (* FIXME currently do not check constants and index *)
     Alcotest.(check (result alcotest_compiler Code.CodeError.alcotest_error))
       "Checking compiler" expected_compiler actual
@@ -110,7 +110,7 @@ let test_bool_expressions () =
 let test_conditionals () =
   let open Object in
   let tests =
-    [ ( "if (true) { 10 }; 3333;"
+    [ ( "if (false) { 10; 20; 30; 40 }; 3333;"
       , map_test_helper [Obj.Int 10; Int 3333]
       , make_test_helper
           [`True; `JumpNotTruthy 7; `Constant 0; `Pop; `Constant 1; `Pop] ) ]

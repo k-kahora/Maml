@@ -18,10 +18,10 @@ type opcode =
   | `Bang
   | `Pop ]
 
-type opcode_marker = [`OPCONSTANT | `JUMP | `JUMPNOTTRUTHY]
+type opcode_marker = [`CONSTANT | `JUMP | `JUMPNOTTRUTHY]
 
 let operand_name = function
-  | `Constant _ | `OPCONSTANT ->
+  | `Constant _ | `CONSTANT ->
       "Constant"
   | `JumpNotTruthy _ | `JUMPNOTTRUTHY ->
       "JumpNotTruthy"
@@ -156,7 +156,7 @@ let ( let* ) = Result.bind
 type definition = {def: [opcode_marker | opcode]; length: int}
 
 let opcode_length = function
-  | `OPCONSTANT
+  | `CONSTANT
   | `Constant _
   | `Jump _
   | `JUMP
@@ -177,9 +177,19 @@ let opcode_length = function
   | `GreaterThan ->
       0
 
+let marker_to_opcode operand = function
+  | `CONSTANT ->
+      Ok (`Constant operand)
+  | `JUMP ->
+      Ok (`Jump operand)
+  | `JUMPNOTTRUTHY ->
+      Ok (`JumpNotTruthy operand)
+  | a ->
+      Error (CodeError.OpCodeNotImplemented a)
+
 let lookup_opcode = function
   | '\x01' ->
-      Ok `OPCONSTANT
+      Ok `CONSTANT
   | '\x02' ->
       Ok `Pop
   | '\x03' ->
@@ -212,7 +222,7 @@ let lookup_opcode = function
       Error (CodeError.UnrecognizedByte a)
 
 let lookup_byte = function
-  | `OPCONSTANT | `Constant _ ->
+  | `CONSTANT | `Constant _ ->
       '\x01'
   | `Pop ->
       '\x02'
@@ -281,7 +291,6 @@ let[@ocaml.warning "-27"] string_of_byte_list byte_list =
     | b :: tail as _list ->
         let* {def; length} = lookup b in
         let operands, bytes_read = read_operands def tail in
-        Format.printf "Index is %d" operands ;
         let acc = format_operands acc index def operands in
         let new_list = slice bytes_read tail in
         helper ~lst:new_list ~index:(index + bytes_read + 1) acc
