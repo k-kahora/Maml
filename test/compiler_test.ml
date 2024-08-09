@@ -35,6 +35,12 @@ let[@ocaml.warning "-27"] run_compiler_tests tests =
         ; constants= expected_constants }
     in
     let actual = craft_compiler input in
+    print_endline "expected" ;
+    let _ =
+      Code.string_of_byte_list concatted
+      |> Result.fold ~error:CodeError.print_error ~ok:print_endline
+    in
+    print_endline "actual" ;
     let _ =
       Code.string_of_byte_list (Result.get_ok actual |> fun a -> a.instructions)
       |> Result.fold ~error:CodeError.print_error ~ok:print_endline
@@ -110,10 +116,21 @@ let test_bool_expressions () =
 let test_conditionals () =
   let open Object in
   let tests =
-    [ ( "if (false) { 10; 20; 30; 40 }; 3333;"
+    [ ( "if (true) { 10 }; 3333;"
       , map_test_helper [Obj.Int 10; Int 3333]
       , make_test_helper
-          [`True; `JumpNotTruthy 7; `Constant 0; `Pop; `Constant 1; `Pop] ) ]
+          [`True; `JumpNotTruthy 7; `Constant 0; `Pop; `Constant 1; `Pop] )
+    ; ( "if (true) { 10 } else { 20 }; 3333;"
+      , map_test_helper [Obj.Int 10; Int 20; Int 3333]
+      , make_test_helper
+          [ `True
+          ; `JumpNotTruthy 10
+          ; `Constant 0
+          ; `Jump 13
+          ; `Constant 1
+          ; `Pop
+          ; `Constant 2
+          ; `Pop ] ) ]
   in
   run_compiler_tests tests
 

@@ -120,6 +120,7 @@ let[@ocaml.warning "-27-9-26"] rec compile nodes cmp =
   let rec compile_expression expr cmp =
     match expr with
     (* NOTE IfExpressions need to be back patched *)
+    (* FIXME Cleant this up needs serious work  *)
     | IfExpression {condition; consquence; altenative} ->
         (* NOTE Compile the condition *)
         let* cmp = compile_expression condition cmp in
@@ -132,11 +133,25 @@ let[@ocaml.warning "-27-9-26"] rec compile nodes cmp =
           if cmp.last_instruction.opcode = `Pop then remove_pop cmp else cmp
         in
         (* NOTE Get the position after the consquence*)
-        let after_consequence_pos = List.length cmp.instructions in
-        let* cmp =
-          change_operand jump_not_truth_pos after_consequence_pos cmp
-        in
-        Ok cmp
+        if Option.is_none altenative then
+          let after_consequence_pos = List.length cmp.instructions in
+          let* cmp =
+            change_operand jump_not_truth_pos after_consequence_pos cmp
+          in
+          Ok cmp
+        else
+          let cmp, jump_pos = emit (`Jump 9999) cmp in
+          let after_consequence_pos = List.length cmp.instructions in
+          let* cmp =
+            change_operand jump_not_truth_pos after_consequence_pos cmp
+          in
+          let* cmp = compile_node (Option.get altenative) cmp in
+          let cmp =
+            if cmp.last_instruction.opcode = `Pop then remove_pop cmp else cmp
+          in
+          let after_alternative = List.length cmp.instructions in
+          let* cmp = change_operand jump_pos after_alternative cmp in
+          Ok cmp
     | InfixExpression {left; right; operator} -> (
         let lr_compile = function
           | `Left2Right ->
