@@ -32,14 +32,13 @@ let rec repl () =
     print_endline "Goodbye!"
   else
     (* FIXME NOTE This code failwis unless an int is passed *)
-    let _error_print a = Code.CodeError.print_error a in
     Result.fold
       ~error:(fun a -> Code.CodeError.print_error a)
       ~ok:(fun a -> Object.Obj.item_to_string a |> print_endline)
       (operate_machine input) ;
-    repl ()
+  repl ()
 
-and operate_machine input =
+and[@ocaml.warning "-27-26"] operate_machine input =
   let l = Lex.new' input in
   let p = Parsing.new_parser l in
   let program = Parsing.parse_program p in

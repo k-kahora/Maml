@@ -46,7 +46,6 @@ let deincrement ps =
   ps.ip <- x - 1
 
 let push item ps =
-  print_int ps.ip ;
   ps.stack.(ps.ip) <- Some item ;
   increment ps
 

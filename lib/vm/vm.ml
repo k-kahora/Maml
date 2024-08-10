@@ -167,9 +167,9 @@ let[@ocaml.tailcall] [@ocaml.warning "-9-11"] run vm =
     | a ->
         Error (Code.CodeError.OpCodeNotImplemented a)
   in
-  Array.iter
-    (fun a -> print_endline (Option.get a |> ByteFmt.pp_byte))
-    vm.instructions.stack ;
+  (* Array.iter *)
+  (*   (fun a -> print_endline (Option.get a |> ByteFmt.pp_byte)) *)
+  (*   vm.instructions.stack ; *)
   (* Perf issuse what happens here is the loop will continue even if the ip is done pointing at what it needs to  *)
   let x =
     Array.fold_left

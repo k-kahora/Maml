@@ -10,11 +10,11 @@ let compare_test_type t1 t2 = t1 = t2
 
 let pp_test_type fmt test_type =
   let format_helper = Format.fprintf in
-  match test_type with
-  | Int a ->
-      format_helper fmt "%d" a
-  | Bool a ->
-      format_helper fmt "%b" a
+  Option.fold ~none:(format_helper fmt "None")
+    ~some:(function
+      | Int a -> format_helper fmt "%d" a | Bool a -> format_helper fmt "%b" a
+      )
+    test_type
 
 let alcotest_test_type = Alcotest.testable pp_test_type compare_test_type
 
@@ -42,7 +42,7 @@ let setup_vm_test input =
   test_expected_object stack_elem
 
 let run_vm_tests (input, expected) =
-  let result = setup_vm_test input in
+  let result = setup_vm_test input |> Result.map (fun a -> Some a) in
   Alcotest.(check (result alcotest_test_type Code.CodeError.alcotest_error))
     "Checking result " expected result
 
@@ -73,7 +73,7 @@ let test_bool_expressions () =
     ; ("!!true", true)
     ; ("!!false", false)
     ; ("!!5", true) ]
-    |> List.map (fun (a, b) -> (a, Ok (Bool b)))
+    |> List.map (fun (a, b) -> (a, Ok (Some (Bool b))))
   in
   List.iter run_vm_tests tests
 
@@ -92,20 +92,23 @@ let test_int_arithmatic () =
     ; ("-10", -10)
     ; ("-50 + 100 + -50", 0)
     ; ("(5 + 10 * 2 + 15 / 3) * 2 + -10", 50) ]
-    |> List.map (fun (a, b) -> (a, Ok (Int b)))
+    |> List.map (fun (a, b) -> (a, Ok (Some (Int b))))
   in
   List.iter run_vm_tests tests
 
 let test_conditionals () =
+  let option_mapper opt = Option.map (fun a -> Int a) opt in
   let tests =
-    [ ("if (true) { 10 }", 10)
-    ; ("if (true) { 10 } else { 40 }", 10)
-    ; ("if (false) { 10 } else { 20 } ", 20)
-    ; ("if (1) { 10 }", 10)
-    ; ("if (1 < 2) { 10 }", 10)
-    ; ("if (1 < 2) { 10 } else { 20 }", 10)
-    ; ("if (1 > 2) { 10 } else { 20 }", 20) ]
-    |> List.map (fun (a, b) -> (a, Ok (Int b)))
+    [ ("if (true) { 10 }", Some 10)
+    ; ("if (true) { 10 } else { 40 }", Some 10)
+    ; ("if (false) { 10 } else { 20 } ", Some 20)
+    ; ("if (1) { 10 }", Some 10)
+    ; ("if (1 < 2) { 10 }", Some 10)
+    ; ("if (1 < 2) { 10 } else { 20 }", Some 10)
+    ; ("if (1 > 2) { 10 } else { 20 }", Some 20)
+    ; ("if ( 1 > 2) { 10 }", None)
+    ; ("if (false) { 10 }", None) ]
+    |> List.map (fun (a, b) -> (a, Ok (option_mapper b)))
   in
   List.iter run_vm_tests tests
 

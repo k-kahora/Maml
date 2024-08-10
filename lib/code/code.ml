@@ -92,7 +92,7 @@ module CodeError = struct
         format_helper fmt "UnsuportedType: for %s -> %s" for_type
           (Object.Obj.item_to_string obj)
     | EmptyStack ->
-        format_helper fmt "Empty Stack"
+        format_helper fmt "EmptyStackError"
     | ConstantNotFound index ->
         format_helper fmt "ConstantNotFound: at index %d" index
     | CustomError err ->
