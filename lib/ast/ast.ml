@@ -92,12 +92,13 @@ let rec expression_str (e : expression) : string =
   | BooleanExpression {token; _} ->
       token.literal
   | IfExpression {condition; consquence; altenative; _} -> (
-      "if" ^ expression_str condition ^ " "
+      "if (" ^ expression_str condition ^ ") { "
       ^ statement_str_helper consquence
+      ^ " }"
       ^
       match altenative with
       | Some alt ->
-          "else" ^ statement_str_helper alt
+          " else { " ^ statement_str_helper alt ^ " } "
       | None ->
           "" )
   | FunctionLiteral {token; parameters; body} ->

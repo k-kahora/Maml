@@ -164,6 +164,8 @@ let[@ocaml.tailcall] [@ocaml.warning "-9-11"] run vm =
         VM_Helpers.evaluate_jump vm
     | `JumpNotTruthy _ | `JUMPNOTTRUTHY ->
         VM_Helpers.evaluate_jump_not_truthy vm
+    | `Null ->
+        push Obj.Null vm ; VM_Helpers.finish_run vm
     | a ->
         Error (Code.CodeError.OpCodeNotImplemented a)
   in

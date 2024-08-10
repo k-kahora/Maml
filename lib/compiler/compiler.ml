@@ -115,6 +115,8 @@ let remove_pop cmp =
     instructions= pop_last cmp.instructions
   ; last_instruction= cmp.previous_instruction }
 
+let last_instruction_pop cmp = cmp.last_instruction.opcode = `Pop
+
 let[@ocaml.warning "-27-9-26"] rec compile nodes cmp =
   let open Ast in
   let rec compile_expression expr cmp =
@@ -129,29 +131,26 @@ let[@ocaml.warning "-27-9-26"] rec compile nodes cmp =
         (* NOTE Compile the consequence every time*)
         let* cmp = compile_node consquence cmp in
         (* NOTE Remove the duplicated pop*)
-        let cmp =
-          if cmp.last_instruction.opcode = `Pop then remove_pop cmp else cmp
-        in
+        let cmp = if last_instruction_pop cmp then remove_pop cmp else cmp in
         (* NOTE Get the position after the consquence*)
-        if Option.is_none altenative then
-          let after_consequence_pos = List.length cmp.instructions in
-          let* cmp =
-            change_operand jump_not_truth_pos after_consequence_pos cmp
-          in
-          Ok cmp
-        else
-          let cmp, jump_pos = emit (`Jump 9999) cmp in
-          let after_consequence_pos = List.length cmp.instructions in
-          let* cmp =
-            change_operand jump_not_truth_pos after_consequence_pos cmp
-          in
-          let* cmp = compile_node (Option.get altenative) cmp in
-          let cmp =
-            if cmp.last_instruction.opcode = `Pop then remove_pop cmp else cmp
-          in
-          let after_alternative = List.length cmp.instructions in
-          let* cmp = change_operand jump_pos after_alternative cmp in
-          Ok cmp
+        let cmp, jump_pos = emit (`Jump 9999) cmp in
+        let after_consequence_pos = List.length cmp.instructions in
+        let* cmp =
+          change_operand jump_not_truth_pos after_consequence_pos cmp
+        in
+        let* cmp =
+          if Option.is_none altenative then
+            let cmp, _ = emit `Null cmp in
+            Ok cmp
+          else
+            let* cmp = compile_node (Option.get altenative) cmp in
+            let cmp =
+              if last_instruction_pop cmp then remove_pop cmp else cmp
+            in
+            Ok cmp
+        in
+        let after_alternative = List.length cmp.instructions in
+        change_operand jump_pos after_alternative cmp
     | InfixExpression {left; right; operator} -> (
         let lr_compile = function
           | `Left2Right ->
@@ -209,15 +208,15 @@ let[@ocaml.warning "-27-9-26"] rec compile nodes cmp =
         Error (Code.CodeError.ExpressionNotImplemented e)
   and compile_node node cmp =
     match node with
-    | Expressionstatement {expression} ->
-        let* cmp = compile_expression expression cmp in
+    | Expressionstatement exp ->
+        let* cmp = compile_expression exp.expression cmp in
         let cmp, _ = emit `Pop cmp in
         Ok cmp
-    | BlockStatement {statements} ->
-        let* stmts = compile_statements statements cmp in
+    | BlockStatement blck ->
+        let* stmts = compile_statements blck.statements cmp in
         Ok stmts
     | a ->
-        Error (Code.CodeError.StatementNotImplemented a)
+        Error (Code.CodeError.StatementNotImplemented node)
   and compile_statements statement_list cmp =
     match statement_list with
     | [] ->

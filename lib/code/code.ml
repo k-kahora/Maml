@@ -7,6 +7,7 @@ type opcode =
   | `Jump of int
   | `Add
   | `Sub
+  | `Null
   | `Mul
   | `Div
   | `True
@@ -47,6 +48,8 @@ let operand_name = function
       "GreaterThan"
   | `Minus ->
       "Minus"
+  | `Null ->
+      "Null"
   | `Bang ->
       "Bang"
   | `NotEqual ->
@@ -79,7 +82,7 @@ module CodeError = struct
         format_helper fmt "StatementNotImplemented %s"
           (Ast.statement_str_debug stmt)
     | ObjectNotImplemented obj ->
-        format_helper fmt "StatementNotImplemented %s"
+        format_helper fmt "ObjectNotImplemented %s"
           (Object.Obj.object_string obj)
     | ExpressionNotImplemented expr ->
         format_helper fmt "ExpressionNotImplementd %s"
@@ -174,6 +177,7 @@ let opcode_length = function
   | `NotEqual
   | `Minus
   | `Bang
+  | `Null
   | `GreaterThan ->
       0
 
@@ -218,6 +222,8 @@ let lookup_opcode = function
       Ok `JUMP
   | '\x0F' ->
       Ok `JUMPNOTTRUTHY
+  | '\x10' ->
+      Ok `Null
   | a ->
       Error (CodeError.UnrecognizedByte a)
 
@@ -252,6 +258,8 @@ let lookup_byte = function
       '\x0E'
   | `JumpNotTruthy _ | `JUMPNOTTRUTHY ->
       '\x0F'
+  | `Null ->
+      '\x10'
 
 let lookup byte =
   let* opcode = lookup_opcode byte in

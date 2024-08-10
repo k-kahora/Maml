@@ -7,6 +7,7 @@ type opcode =
   | `Jump of int
   | `Add
   | `Sub
+  | `Null
   | `Mul
   | `Div
   | `True
