@@ -10,7 +10,7 @@ let compare_test_type t1 t2 = t1 = t2
 
 let pp_test_type fmt test_type =
   let format_helper = Format.fprintf in
-  Option.fold ~none:(format_helper fmt "None")
+  Option.fold ~none:(format_helper fmt "")
     ~some:(function
       | Int a -> format_helper fmt "%d" a | Bool a -> format_helper fmt "%b" a
       )
@@ -77,7 +77,8 @@ let test_bool_expressions () =
     ; ("!5", false)
     ; ("!!true", true)
     ; ("!!false", false)
-    ; ("!!5", true) ]
+    ; ("!!5", true)
+    ; ("!(if (false) {5;})", true) ]
     |> List.map (fun (a, b) -> (a, Ok (Some (Bool b))))
   in
   List.iter run_vm_tests tests
@@ -111,7 +112,9 @@ let test_conditionals () =
     ; ("if (1 < 2) { 10 }", Some 10)
     ; ("if (1 < 2) { 10 } else { 20 }", Some 10)
     ; ("if (1 > 2) { 10 } else { 20 }", Some 20)
-    ; ("if ( 1 > 2) { 10 }", None) (* ("if (false) { 10 }", None) *) ]
+    ; ("if ( 1 > 2) { 10 }", None)
+    ; ("if ( 1 > 2) { 10 }", None)
+    ; ("if ((if (false) { 10 })) { 10 } else { 20 }", Some 20) ]
     |> List.map (fun (a, b) -> (a, Ok (option_mapper b)))
   in
   List.iter run_vm_tests tests

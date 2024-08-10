@@ -114,6 +114,8 @@ module VM_Helpers = struct
       match operand with
       | Obj.Bool b ->
           Ok (Obj.Bool (not b))
+      | Obj.Null ->
+          Ok (Obj.Bool true)
       | _ ->
           Ok (Obj.Bool false)
     in
@@ -127,7 +129,7 @@ module VM_Helpers = struct
     vm.instructions.ip <- jump_pos ;
     finish_run vm
 
-  let truthy = function Obj.Bool b -> b | _ -> true
+  let truthy = function Obj.Bool b -> b | Obj.Null -> false | _ -> true
 
   let evaluate_jump_not_truthy vm =
     let* b1 = Program_stack.read_then_increment vm.instructions in
