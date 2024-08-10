@@ -119,17 +119,23 @@ module VM_Helpers = struct
     in
     push operand vm ; finish_run vm
 
-  (* let evaluate_jump rest vm = *)
-  (*   let jump_pos = List.length vm.instructions - ByteFmt.int_of_hex rest 2 in *)
-  (*   finish_run rest vm *)
+  (* NOTE YOu were tired and keep typing stack instead of instruction ip, SWITCH stack back to a stack and not your custom BS *)
+  let evaluate_jump vm =
+    let* b1 = Program_stack.read_then_increment vm.instructions in
+    let* b2 = Program_stack.read_then_increment vm.instructions in
+    let jump_pos = ByteFmt.int_of_hex [b1; b2] 2 in
+    vm.instructions.ip <- jump_pos ;
+    finish_run vm
 
   let truthy = function Obj.Bool b -> b | _ -> true
 
-  (*   let evaluate_jump_not_truthy rest vm = *)
-  (*     let pos = ByteFmt.int_of_hex rest 2 in *)
-  (*     let* condition = pop vm in *)
-  (*     if not (truthy condition) then vm.stack.ip <- pos - 1 ; *)
-  (*     finish_run rest vm *)
+  let evaluate_jump_not_truthy vm =
+    let* b1 = Program_stack.read_then_increment vm.instructions in
+    let* b2 = Program_stack.read_then_increment vm.instructions in
+    let pos = ByteFmt.int_of_hex [b1; b2] 2 in
+    let* condition = pop vm in
+    if not (truthy condition) then vm.instructions.ip <- pos ;
+    finish_run vm
 end
 
 (*FIXME any inperformant functions called in here is an issue *)
@@ -154,24 +160,23 @@ let[@ocaml.tailcall] [@ocaml.warning "-9-11"] run vm =
     | `Minus ->
         VM_Helpers.execute_minus vm
     (* NOTE Jumps will be difficult as I am dealing with an actual stack and not a list with a program counter *)
-    (* | `Jump _ | `JUMP -> *)
-    (*     VM_Helpers.evaluate_jump rest vm *)
-    (* | `JumpNotTruthy _ | `JUMPNOTTRUTHY -> *)
-    (*     VM_Helpers.evaluate_jump_not_truthy rest vm *)
+    | `Jump _ | `JUMP ->
+        VM_Helpers.evaluate_jump vm
+    | `JumpNotTruthy _ | `JUMPNOTTRUTHY ->
+        VM_Helpers.evaluate_jump_not_truthy vm
     | a ->
         Error (Code.CodeError.OpCodeNotImplemented a)
   in
   Array.iter
     (fun a -> print_endline (Option.get a |> ByteFmt.pp_byte))
     vm.instructions.stack ;
+  (* Perf issuse what happens here is the loop will continue even if the ip is done pointing at what it needs to  *)
   let x =
     Array.fold_left
       (fun vm _ ->
         let* vm = vm in
-        Format.printf "\nIndex: %d" vm.instructions.ip ;
         match Program_stack.read_then_increment vm.instructions with
         | Ok hd ->
-            Format.printf "\nByte: %s" (ByteFmt.pp_byte hd) ;
             let* {def} = lookup hd in
             match_opcode vm def
         | Error _ ->
