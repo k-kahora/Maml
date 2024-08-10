@@ -92,10 +92,25 @@ let test_int_arithmatic () =
   in
   List.iter run_vm_tests tests
 
+let test_conditionals () =
+  let tests =
+    [ ("if (true) { 10 }", 10)
+    ; ("if (true) { 10 } else { 20 }", 10)
+    ; ("if (false) { 10 } else { 20 } ", 20)
+    ; ("if (1) { 10 }", 10)
+    ; ("if (1 < 2) { 10 }", 10)
+    ; ("if (1 < 2) { 10 } else { 20 }", 10)
+    ; ("if (1 > 2) { 10 } else { 20 }", 20) ]
+    |> List.map (fun (a, b) -> (a, Ok (Int b)))
+  in
+  List.iter run_vm_tests tests
+
 let () =
   Alcotest.run "Virtual Machine Tests"
     [ ( "Arithmatic"
       , [Alcotest.test_case "int arithmetic" `Quick test_int_arithmatic] )
     ; ( "Booleans"
       , [ Alcotest.test_case "boolean expressions vm" `Quick
-            test_bool_expressions ] ) ]
+            test_bool_expressions ] )
+    ; ( "conditionals"
+      , [Alcotest.test_case "test conditionals" `Quick test_conditionals] ) ]

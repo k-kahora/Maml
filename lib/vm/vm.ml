@@ -12,24 +12,24 @@ type virtual_machine =
   { constants: Obj.item IntMap.t
   ; instructions: byte list
   ; last_item_poped: Obj.item
-  ; stack: Obj.item Stack.t }
+  ; stack: Obj.item Program_stack.program_stack }
 
 let new_virtual_machine byte_code =
   let open Compiler in
   { constants= byte_code.constants
   ; instructions= byte_code.instructions
   ; last_item_poped= Obj.Null
-  ; stack= Stack.create () }
+  ; stack= Program_stack.make_stack stack_size }
 
-let[@ocaml.warning "-9"] pop_stack {stack} =
-  Stack.top_opt stack |> Option.to_result ~none:Code.CodeError.EmptyStack
+(* Program_stack.pop *)
 
-let pop stack =
-  Stack.pop_opt stack |> Option.to_result ~none:Code.CodeError.EmptyStack
+let pop vm =
+  let* item = Program_stack.pop vm.stack in
+  Option.fold ~none:(Error (Code.CodeError.CustomError "Poped a None Value"))
+    ~some:(fun a -> Ok a)
+    item
 
-let push item stack =
-  let () = Stack.push item stack in
-  stack
+let push item vm = Program_stack.push item vm.stack
 
 module VM_Helpers = struct
   open Code
@@ -47,7 +47,7 @@ module VM_Helpers = struct
           Option.to_result ~none:(Code.CodeError.ConstantNotFound constIndex)
             constant_opt
         in
-        let _stack = push constant vm.stack in
+        push constant vm ;
         Ok {vm with instructions= rest}
     | _ ->
         Error (Code.CodeError.CustomError "Not enough instructions")
@@ -63,18 +63,17 @@ module VM_Helpers = struct
       | `Div ->
           left / right
     in
-    let* right = pop vm.stack in
-    let* left = pop vm.stack in
+    let* right = pop vm in
+    let* left = pop vm in
     match (left, right) with
     | Obj.Int l, Obj.Int r ->
-        ignore
-        @@ push (Obj.Int (execute_binary_integer_operation l r op)) vm.stack ;
+        push (Obj.Int (execute_binary_integer_operation l r op)) vm ;
         Ok {vm with instructions= rest}
     | l, _ ->
         Error (Code.CodeError.ObjectNotImplemented l)
 
   let execute_bool value rest vm =
-    ignore @@ push (Obj.Bool value) vm.stack ;
+    ignore @@ push (Obj.Bool value) vm ;
     finish_run rest vm
 
   let execute_comparison op rest vm =
@@ -86,11 +85,11 @@ module VM_Helpers = struct
       | `GreaterThan ->
           left > right
     in
-    let* right = pop vm.stack in
-    let* left = pop vm.stack in
+    let* right = pop vm in
+    let* left = pop vm in
     let evaluate_compare l r op =
       let value = execute_primitive_compare l r op in
-      ignore @@ push (Obj.Bool value) vm.stack ;
+      ignore @@ push (Obj.Bool value) vm ;
       finish_run rest vm
     in
     match (left, right) with
@@ -102,13 +101,11 @@ module VM_Helpers = struct
         Error (Code.CodeError.ObjectNotImplemented l)
 
   let evaluate_oppop rest vm =
-    let* a =
-      Stack.pop_opt vm.stack |> Option.to_result ~none:Code.CodeError.EmptyStack
-    in
+    let* a = pop vm in
     {vm with last_item_poped= a} |> finish_run rest
 
   let execute_minus rest vm =
-    let* operand = pop vm.stack in
+    let* operand = pop vm in
     let* operand =
       match operand with
       | Obj.Int i ->
@@ -116,11 +113,10 @@ module VM_Helpers = struct
       | a ->
           Error (CodeError.UnsuportedType ("negation", a))
     in
-    ignore @@ push operand vm.stack ;
-    finish_run rest vm
+    push operand vm ; finish_run rest vm
 
   let execute_bang rest vm =
-    let* operand = pop vm.stack in
+    let* operand = pop vm in
     let* operand =
       match operand with
       | Obj.Bool b ->
@@ -128,8 +124,7 @@ module VM_Helpers = struct
       | _ ->
           Ok (Obj.Bool false)
     in
-    ignore @@ push operand vm.stack ;
-    finish_run rest vm
+    push operand vm ; finish_run rest vm
 end
 
 (*FIXME any inperformant functions called in here is an issue *)
@@ -153,6 +148,9 @@ let[@ocaml.tailcall] [@ocaml.warning "-9-11"] rec run vm =
         VM_Helpers.execute_bang instructions vm
     | `Minus ->
         VM_Helpers.execute_minus instructions vm
+    (* NOTE Jumps will be difficult as I am dealing with an actual stack and not a list with a program counter *)
+    (* | `Jump _ | `JUMP -> *)
+    (*     VM_Helpers.evalute_jump instructions vm *)
     | a ->
         Error (Code.CodeError.OpCodeNotImplemented a)
   in
