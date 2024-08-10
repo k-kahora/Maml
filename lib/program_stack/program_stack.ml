@@ -1,5 +1,7 @@
 open Code
 
+let ( let* ) = Result.bind
+
 type 'a program_stack = {mutable ip: int; stack: 'a option array}
 
 let program_stack_eq stack1 stack2 =
@@ -18,6 +20,22 @@ let pp_program_stack fmt ps =
 let alc_program_stack = Alcotest.testable pp_program_stack program_stack_eq
 
 let make_stack size = {ip= 0; stack= Array.make size None}
+
+let stack_of_list list =
+  let arr = Array.of_list list |> Array.map (fun a -> Some a) in
+  {ip= 0; stack= arr}
+
+let head ps =
+  if ps.ip >= Array.length ps.stack then
+    Error (Code.CodeError.CustomError "index out of bounds")
+  else
+    ps.stack.(ps.ip)
+    |> Option.to_result ~none:(Code.CodeError.CustomError "empty item")
+
+let read_then_increment ps =
+  let hd = head ps in
+  ps.ip <- ps.ip + 1 ;
+  hd
 
 let increment ps =
   let x = ps.ip in
@@ -39,5 +57,3 @@ let pop ps =
     let poped = ps.stack.(ps.ip) in
     ps.stack.(ps.ip) <- None ;
     Ok poped )
-
-let head ps = if ps.ip <= 0 then None else ps.stack.(ps.ip)

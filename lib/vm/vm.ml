@@ -10,14 +10,14 @@ module IntMap = Map.Make (Int)
 
 type virtual_machine =
   { constants: Obj.item IntMap.t
-  ; instructions: byte list
+  ; instructions: byte Program_stack.program_stack
   ; last_item_poped: Obj.item
   ; stack: Obj.item Program_stack.program_stack }
 
 let new_virtual_machine byte_code =
   let open Compiler in
   { constants= byte_code.constants
-  ; instructions= byte_code.instructions
+  ; instructions= Program_stack.stack_of_list byte_code.instructions
   ; last_item_poped= Obj.Null
   ; stack= Program_stack.make_stack stack_size }
 
@@ -34,25 +34,20 @@ let push item vm = Program_stack.push item vm.stack
 module VM_Helpers = struct
   open Code
 
-  let finish_run rest vm = Ok {vm with instructions= rest}
+  let finish_run vm = Ok vm
 
-  let evaluate_opconstant instructions vm =
-    match instructions with
-    | [] ->
-        Error (Code.CodeError.CustomError "Instructions Empty")
-    | b1 :: b2 :: rest ->
-        let constIndex = ByteFmt.int_of_hex [b1; b2] 2 in
-        let constant_opt = IntMap.find_opt constIndex vm.constants in
-        let* constant =
-          Option.to_result ~none:(Code.CodeError.ConstantNotFound constIndex)
-            constant_opt
-        in
-        push constant vm ;
-        Ok {vm with instructions= rest}
-    | _ ->
-        Error (Code.CodeError.CustomError "Not enough instructions")
+  let evaluate_opconstant vm =
+    let* b1 = Program_stack.read_then_increment vm.instructions in
+    let* b2 = Program_stack.read_then_increment vm.instructions in
+    let constIndex = ByteFmt.int_of_hex [b1; b2] 2 in
+    let constant_opt = IntMap.find_opt constIndex vm.constants in
+    let* constant =
+      Option.to_result ~none:(Code.CodeError.ConstantNotFound constIndex)
+        constant_opt
+    in
+    push constant vm ; finish_run vm
 
-  let execute_binary_operation op rest vm =
+  let execute_binary_operation op vm =
     let execute_binary_integer_operation left right = function
       | `Add ->
           left + right
@@ -68,15 +63,13 @@ module VM_Helpers = struct
     match (left, right) with
     | Obj.Int l, Obj.Int r ->
         push (Obj.Int (execute_binary_integer_operation l r op)) vm ;
-        Ok {vm with instructions= rest}
+        finish_run vm
     | l, _ ->
         Error (Code.CodeError.ObjectNotImplemented l)
 
-  let execute_bool value rest vm =
-    ignore @@ push (Obj.Bool value) vm ;
-    finish_run rest vm
+  let execute_bool value vm = push (Obj.Bool value) vm ; finish_run vm
 
-  let execute_comparison op rest vm =
+  let execute_comparison op vm =
     let execute_primitive_compare left right = function
       | `Equal ->
           left = right
@@ -90,7 +83,7 @@ module VM_Helpers = struct
     let evaluate_compare l r op =
       let value = execute_primitive_compare l r op in
       ignore @@ push (Obj.Bool value) vm ;
-      finish_run rest vm
+      finish_run vm
     in
     match (left, right) with
     | Obj.Int l, Int r ->
@@ -100,11 +93,11 @@ module VM_Helpers = struct
     | l, _ ->
         Error (Code.CodeError.ObjectNotImplemented l)
 
-  let evaluate_oppop rest vm =
+  let evaluate_oppop vm =
     let* a = pop vm in
-    {vm with last_item_poped= a} |> finish_run rest
+    {vm with last_item_poped= a} |> finish_run
 
-  let execute_minus rest vm =
+  let execute_minus vm =
     let* operand = pop vm in
     let* operand =
       match operand with
@@ -113,9 +106,9 @@ module VM_Helpers = struct
       | a ->
           Error (CodeError.UnsuportedType ("negation", a))
     in
-    push operand vm ; finish_run rest vm
+    push operand vm ; finish_run vm
 
-  let execute_bang rest vm =
+  let execute_bang vm =
     let* operand = pop vm in
     let* operand =
       match operand with
@@ -124,40 +117,73 @@ module VM_Helpers = struct
       | _ ->
           Ok (Obj.Bool false)
     in
-    push operand vm ; finish_run rest vm
+    push operand vm ; finish_run vm
+
+  (* let evaluate_jump rest vm = *)
+  (*   let jump_pos = List.length vm.instructions - ByteFmt.int_of_hex rest 2 in *)
+  (*   finish_run rest vm *)
+
+  let truthy = function Obj.Bool b -> b | _ -> true
+
+  (*   let evaluate_jump_not_truthy rest vm = *)
+  (*     let pos = ByteFmt.int_of_hex rest 2 in *)
+  (*     let* condition = pop vm in *)
+  (*     if not (truthy condition) then vm.stack.ip <- pos - 1 ; *)
+  (*     finish_run rest vm *)
 end
 
 (*FIXME any inperformant functions called in here is an issue *)
 (*FIXME right now this function is a mess each sub function has to end in run {vm with instructions=rest} there is a better way*)
-let[@ocaml.tailcall] [@ocaml.warning "-9-11"] rec run vm =
+let[@ocaml.tailcall] [@ocaml.warning "-9-11"] run vm =
   let open Code in
-  let match_opcode instructions = function
+  let match_opcode vm = function
     | `Constant _ | `CONSTANT ->
-        VM_Helpers.evaluate_opconstant instructions vm
+        VM_Helpers.evaluate_opconstant vm
     | (`Add | `Sub | `Mul | `Div) as op ->
-        VM_Helpers.execute_binary_operation op instructions vm
+        VM_Helpers.execute_binary_operation op vm
     | `True ->
-        VM_Helpers.execute_bool true instructions vm
+        VM_Helpers.execute_bool true vm
     | `False ->
-        VM_Helpers.execute_bool false instructions vm
+        VM_Helpers.execute_bool false vm
     | `Pop ->
-        VM_Helpers.evaluate_oppop instructions vm
+        VM_Helpers.evaluate_oppop vm
     | (`Equal | `NotEqual | `GreaterThan) as op ->
-        VM_Helpers.execute_comparison op instructions vm
+        VM_Helpers.execute_comparison op vm
     | `Bang ->
-        VM_Helpers.execute_bang instructions vm
+        VM_Helpers.execute_bang vm
     | `Minus ->
-        VM_Helpers.execute_minus instructions vm
+        VM_Helpers.execute_minus vm
     (* NOTE Jumps will be difficult as I am dealing with an actual stack and not a list with a program counter *)
     (* | `Jump _ | `JUMP -> *)
-    (*     VM_Helpers.evalute_jump instructions vm *)
+    (*     VM_Helpers.evaluate_jump rest vm *)
+    (* | `JumpNotTruthy _ | `JUMPNOTTRUTHY -> *)
+    (*     VM_Helpers.evaluate_jump_not_truthy rest vm *)
     | a ->
         Error (Code.CodeError.OpCodeNotImplemented a)
   in
-  match vm.instructions with
-  | [] ->
-      Ok vm
-  | instruction :: rest ->
-      let* {def} = lookup instruction in
-      let* vm = match_opcode rest def in
-      run vm
+  Array.iter
+    (fun a -> print_endline (Option.get a |> ByteFmt.pp_byte))
+    vm.instructions.stack ;
+  let x =
+    Array.fold_left
+      (fun vm _ ->
+        let* vm = vm in
+        Format.printf "\nIndex: %d" vm.instructions.ip ;
+        match Program_stack.read_then_increment vm.instructions with
+        | Ok hd ->
+            Format.printf "\nByte: %s" (ByteFmt.pp_byte hd) ;
+            let* {def} = lookup hd in
+            match_opcode vm def
+        | Error _ ->
+            Ok vm )
+      (Ok vm) vm.instructions.stack
+  in
+  x
+
+(* match vm.instructions.stack with *)
+(* | [| |] -> *)
+(*     Ok vm *)
+(* | instruction :: rest -> *)
+(*     let* {def} = lookup instruction in *)
+(*     let* vm = match_opcode rest def in *)
+(*     run vm *)

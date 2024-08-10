@@ -32,6 +32,10 @@ let setup_vm_test input =
   let program = parse input in
   let comp = Compiler.new_compiler in
   let* comp = Compiler.compile program.statements comp in
+  let _ =
+    Code.string_of_byte_list comp.instructions
+    |> Result.fold ~error:Code.CodeError.print_error ~ok:print_endline
+  in
   let vm = Vm.new_virtual_machine comp in
   let* res = Vm.run vm in
   let stack_elem = res.last_item_poped in

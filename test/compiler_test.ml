@@ -36,15 +36,15 @@ let[@ocaml.warning "-27"] run_compiler_tests tests =
     in
     let actual = craft_compiler input in
     print_endline "expected" ;
-    let _ =
-      Code.string_of_byte_list concatted
-      |> Result.fold ~error:CodeError.print_error ~ok:print_endline
-    in
-    print_endline "actual" ;
-    let _ =
-      Code.string_of_byte_list (Result.get_ok actual |> fun a -> a.instructions)
-      |> Result.fold ~error:CodeError.print_error ~ok:print_endline
-    in
+    (* let _ = *)
+    (*   Code.string_of_byte_list concatted *)
+    (*   |> Result.fold ~error:CodeError.print_error ~ok:print_endline *)
+    (* in *)
+    (* print_endline "actual" ; *)
+    (* let _ = *)
+    (*   Code.string_of_byte_list (Result.get_ok actual |> fun a -> a.instructions) *)
+    (*   |> Result.fold ~error:CodeError.print_error ~ok:print_endline *)
+    (* in *)
     (* FIXME currently do not check constants and index *)
     Alcotest.(check (result alcotest_compiler Code.CodeError.alcotest_error))
       "Checking compiler" expected_compiler actual

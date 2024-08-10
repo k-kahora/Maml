@@ -6,7 +6,7 @@ type byte = char
 
 type virtual_machine =
   { constants: Obj.item IntMap.t
-  ; instructions: byte list
+  ; instructions: byte Program_stack.program_stack
   ; last_item_poped: Obj.item
   ; stack: Obj.item Program_stack.program_stack }
 

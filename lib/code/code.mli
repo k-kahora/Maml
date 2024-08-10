@@ -66,6 +66,8 @@ module ByteFmt : sig
   val int_of_hex : byte list -> int -> int
 
   val pp_byte_list : byte list -> string
+
+  val pp_byte : byte -> string
 end
 
 val create_opcode : byte -> [> opcode]
