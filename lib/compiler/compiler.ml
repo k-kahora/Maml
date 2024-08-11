@@ -20,6 +20,7 @@ type compiler =
   ; index: int
   ; constants: Obj.item IntMap.t
   ; last_instruction: emitted_instruction
+  ; symbol_table: Symbol_table.symbol_table
   ; previous_instruction: emitted_instruction }
 
 let pp_compiler fmt cmp =
@@ -47,18 +48,20 @@ let equal_compiler c1 c2 =
 
 let alcotest_compiler = Alcotest.testable pp_compiler equal_compiler
 
-type bytecode =
-  {instructions': byte list; index': int; constants': Obj.item IntMap.t}
-
-let bytecode cmp =
-  {instructions'= cmp.instructions; index'= cmp.index; constants'= cmp.constants}
-
 let new_compiler =
   { instructions= []
   ; index= 0
   ; constants= IntMap.empty
+  ; symbol_table= Symbol_table.new_symbol_table ()
   ; previous_instruction= {opcode= `Pop; position= 0}
   ; last_instruction= {opcode= `Pop; position= 0} }
+
+let new_with_state symbol_table constants =
+  let n_cmp = new_compiler in
+  {n_cmp with symbol_table; constants}
+
+let empty_symbol_table_and_constants () =
+  (Symbol_table.new_symbol_table (), IntMap.empty)
 
 let rec add_constants obj cmp =
   ( { cmp with
@@ -204,6 +207,11 @@ let[@ocaml.warning "-27-9-26"] rec compile nodes cmp =
     | BooleanExpression {value} ->
         let cmp, _ = if value then emit `True cmp else emit `False cmp in
         Ok cmp
+    | Identifier {value} ->
+        (* NOTE Compilet time error *)
+        let* symbol = Symbol_table.resolve value cmp.symbol_table in
+        let cmp, _ = emit (`GetGlobal symbol.index) cmp in
+        Ok cmp
     | e ->
         Error (Code.CodeError.ExpressionNotImplemented e)
   and compile_node node cmp =
@@ -215,6 +223,17 @@ let[@ocaml.warning "-27-9-26"] rec compile nodes cmp =
     | BlockStatement blck ->
         let* stmts = compile_statements blck.statements cmp in
         Ok stmts
+    | Letstatement {name; value} ->
+        let* cmp = compile_expression value cmp in
+        let* id =
+          Ast.get_ident name
+          |> Option.to_result
+               ~none:
+                 (Code.CodeError.CustomError "expression is not an identifier ")
+        in
+        let st, symbol = Symbol_table.define id cmp.symbol_table in
+        let cmp, _ = emit (`SetGlobal symbol.index) cmp in
+        Ok {cmp with symbol_table= st}
     | a ->
         Error (Code.CodeError.StatementNotImplemented node)
   and compile_statements statement_list cmp =

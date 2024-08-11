@@ -36,15 +36,15 @@ let[@ocaml.warning "-27"] run_compiler_tests tests =
     in
     let actual = craft_compiler input in
     print_endline "expected" ;
-    let _ =
-      Code.string_of_byte_list concatted
-      |> Result.fold ~error:CodeError.print_error ~ok:print_endline
-    in
-    print_endline "actual" ;
-    let _ =
-      Code.string_of_byte_list (Result.get_ok actual |> fun a -> a.instructions)
-      |> Result.fold ~error:CodeError.print_error ~ok:print_endline
-    in
+    (* let _ = *)
+    (*   Code.string_of_byte_list concatted *)
+    (*   |> Result.fold ~error:CodeError.print_error ~ok:print_endline *)
+    (* in *)
+    (* print_endline "actual" ; *)
+    (* let _ = *)
+    (*   Code.string_of_byte_list (Result.get_ok actual |> fun a -> a.instructions) *)
+    (*   |> Result.fold ~error:CodeError.print_error ~ok:print_endline *)
+    (* in *)
     (* FIXME currently do not check constants and index *)
     Alcotest.(check (result alcotest_compiler Code.CodeError.alcotest_error))
       "Checking compiler" expected_compiler actual
@@ -113,6 +113,31 @@ let test_bool_expressions () =
   in
   run_compiler_tests tests
 
+let test_global_let_statement () =
+  let open Object in
+  let tests =
+    [ ( {|let one = 1; let two = 2|}
+      , map_test_helper [Obj.Int 1; Int 2]
+      , make_test_helper [`Constant 0; `SetGlobal 0; `Constant 1; `SetGlobal 1]
+      )
+    ; ( "let one = 1; one"
+      , map_test_helper [Obj.Int 1]
+      , make_test_helper [`Constant 0; `SetGlobal 0; `GetGlobal 0; `Pop] )
+    ; ( {|let one = 1; one;|}
+      , map_test_helper [Obj.Int 1]
+      , make_test_helper [`Constant 0; `SetGlobal 0; `GetGlobal 0; `Pop] )
+    ; ( {| let one = 1; let two = one; two; |}
+      , map_test_helper [Obj.Int 1]
+      , make_test_helper
+          [ `Constant 0
+          ; `SetGlobal 0
+          ; `GetGlobal 0
+          ; `SetGlobal 1
+          ; `GetGlobal 1
+          ; `Pop ] ) ]
+  in
+  run_compiler_tests tests
+
 let test_conditionals () =
   let open Object in
   let tests =
@@ -157,4 +182,6 @@ let () =
     [ ( "testing compiler"
       , [ Alcotest.test_case "int arithmetic" `Quick test_int_arithmetic
         ; Alcotest.test_case "bool expressions" `Quick test_bool_expressions
-        ; Alcotest.test_case "conditionals" `Quick test_conditionals ] ) ]
+        ; Alcotest.test_case "conditionals" `Quick test_conditionals ] )
+    ; ( "let bindings"
+      , [Alcotest.test_case "bindings" `Quick test_global_let_statement] ) ]

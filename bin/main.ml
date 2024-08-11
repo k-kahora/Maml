@@ -20,7 +20,12 @@ let rec evaluate (l : lexer) : unit =
 
 let env = Object.Environment.new_environment ()
 
-let rec repl () =
+let symbol_table, constants = Compiler.empty_symbol_table_and_constants ()
+
+let globals = Vm.empty_globals ()
+
+let rec repl state =
+  let symbol_table, constants, globals = state in
   print_string "==> " ;
   (* Print prompt *)
   flush stdout ;
@@ -32,20 +37,27 @@ let rec repl () =
     print_endline "Goodbye!"
   else
     (* FIXME NOTE This code failwis unless an int is passed *)
+    let result = operate_machine (symbol_table, constants, globals) input in
     Result.fold
-      ~error:(fun a -> Code.CodeError.print_error a)
-      ~ok:(fun a -> Object.Obj.item_to_string a |> print_endline)
-      (operate_machine input) ;
-  repl ()
+      ~error:(fun err ->
+        Code.CodeError.print_error err ;
+        repl state )
+      ~ok:(fun (item, state) ->
+        Object.Obj.item_to_string item |> print_endline ;
+        repl state )
+      result
 
-and[@ocaml.warning "-27-26"] operate_machine input =
+and[@ocaml.warning "-27-26"] operate_machine state input =
+  let symbol_table, constants, globals = state in
   let l = Lex.new' input in
   let p = Parsing.new_parser l in
   let program = Parsing.parse_program p in
-  let* compiler = Compiler.compile program.statements Compiler.new_compiler in
-  let machine = Vm.new_virtual_machine compiler in
-  let* result = Vm.run machine in
-  let stack_elem = result.last_item_poped in
-  Ok stack_elem
+  let fresh_compiler = Compiler.new_with_state symbol_table constants in
+  let* compiler = Compiler.compile program.statements fresh_compiler in
+  let machine = Vm.new_with_global_store compiler globals in
+  let* vm = Vm.run machine in
+  let stack_elem = vm.last_item_poped in
+  let state = (compiler.symbol_table, compiler.constants, vm.globals) in
+  Ok (stack_elem, state)
 
-let () = repl ()
+let () = repl (symbol_table, constants, globals)

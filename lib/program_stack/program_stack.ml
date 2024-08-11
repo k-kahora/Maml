@@ -21,16 +21,18 @@ let alc_program_stack = Alcotest.testable pp_program_stack program_stack_eq
 
 let make_stack size = {ip= 0; stack= Array.make size None}
 
+let check_bounds index ps =
+  if index < Array.length ps.stack && index >= 0 then Ok ()
+  else Error (Code.CodeError.CustomError "index out of bounds")
+
 let stack_of_list list =
   let arr = Array.of_list list |> Array.map (fun a -> Some a) in
   {ip= 0; stack= arr}
 
 let head ps =
-  if ps.ip >= Array.length ps.stack then
-    Error (Code.CodeError.CustomError "index out of bounds")
-  else
-    ps.stack.(ps.ip)
-    |> Option.to_result ~none:(Code.CodeError.CustomError "empty item")
+  let* _ = check_bounds ps.ip ps in
+  ps.stack.(ps.ip)
+  |> Option.to_result ~none:(Code.CodeError.CustomError "empty item")
 
 let read_then_increment ps =
   let hd = head ps in
@@ -48,6 +50,15 @@ let deincrement ps =
 let push item ps =
   ps.stack.(ps.ip) <- Some item ;
   increment ps
+
+let get index ps =
+  let* _ = check_bounds index ps in
+  ps.stack.(index)
+  |> Option.to_result ~none:(Code.CodeError.CustomError "empty item")
+
+let set index item ps =
+  let* _ = check_bounds index ps in
+  Ok (ps.stack.(index) <- Some item)
 
 let pop ps =
   if ps.ip <= 0 then Error CodeError.EmptyStack

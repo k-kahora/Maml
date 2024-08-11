@@ -37,6 +37,8 @@ and block = {token: Token.token; statements: statement list}
 
 and ident = {token: Token.token (* The ident token *); value: string}
 
+let get_ident = function Identifier id -> Some id.value | _ -> None
+
 let statement_str_debug = function
   | Letstatement _ ->
       "Letstatement"

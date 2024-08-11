@@ -5,6 +5,8 @@ type opcode =
   [ `Constant of int
   | `JumpNotTruthy of int
   | `Jump of int
+  | `GetGlobal of int
+  | `SetGlobal of int
   | `Add
   | `Sub
   | `Null
@@ -14,12 +16,14 @@ type opcode =
   | `False
   | `Equal
   | `NotEqual
+  | `NotEqual
   | `GreaterThan
   | `Minus
   | `Bang
   | `Pop ]
 
-type opcode_marker = [`CONSTANT | `JUMP | `JUMPNOTTRUTHY]
+type opcode_marker =
+  [`CONSTANT | `JUMP | `JUMPNOTTRUTHY | `GETGLOBAL | `SETGLOBAL]
 
 module CodeError : sig
   type error =
@@ -33,6 +37,7 @@ module CodeError : sig
     | CustomError of string
     | UnknownOperator of string
     | UnsuportedType of string * Object.Obj.item
+    | SymbolNotFound of string * string
     | EmptyStack
 
   val equal_error : error -> error -> bool
@@ -47,6 +52,7 @@ end
 type definition = {def: [opcode_marker | opcode]; length: int}
 
 val make : opcode -> byte list
+(** [make opcode] FIXME This function is prone to silent bugs, when a new opcode with operands is added there is no compiler warning to add it to this function  *)
 
 val marker_to_opcode :
   int -> [opcode_marker | opcode] -> (opcode, CodeError.error) result

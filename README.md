@@ -6,6 +6,7 @@
 - [ ] figure out a better way to assert the byte value of each opcode, can lead to plenty of annoying, logic errors that are hard to catch
 - [ ] Make a way for errors to say exactly where they are calling from
 - [ ] In Vm.ml make sure that the VM.stack is a Ocaml stack and not a Program_stack.stack
+- [ ] create a ocaml function that uses Merlin to convert a static type into the mli file, essential hit a keybinding on a function to auto add it to the mli file
 ## Interesting
 Noticed a case where if the last of the input is a {keyword|number} my loops do a index out of bounds error, however this was never recognized within the tests
 ## Features

@@ -7,10 +7,18 @@ type byte = char
 type virtual_machine =
   { constants: Obj.item IntMap.t
   ; instructions: byte Program_stack.program_stack
+  ; globals: Obj.item Program_stack.program_stack
   ; last_item_poped: Obj.item
   ; stack: Obj.item Program_stack.program_stack }
 
 val new_virtual_machine : Compiler.compiler -> virtual_machine
+
+val new_with_global_store :
+     Compiler.compiler
+  -> Object.Obj.item Program_stack.program_stack
+  -> virtual_machine
+
+val empty_globals : unit -> 'a Program_stack.program_stack
 
 val run : virtual_machine -> (virtual_machine, Code.CodeError.error) result
 

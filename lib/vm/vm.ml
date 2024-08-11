@@ -4,6 +4,9 @@ let ( let* ) = Result.bind
 
 let stack_size = 2048
 
+let global_size = 65536
+(* all operands are 2 bytes wide or 16 bits so FFFF is the max  amount of globals allowed `SetGlobal 65536*)
+
 type byte = char
 
 module IntMap = Map.Make (Int)
@@ -11,6 +14,7 @@ module IntMap = Map.Make (Int)
 type virtual_machine =
   { constants: Obj.item IntMap.t
   ; instructions: byte Program_stack.program_stack
+  ; globals: Obj.item Program_stack.program_stack
   ; last_item_poped: Obj.item
   ; stack: Obj.item Program_stack.program_stack }
 
@@ -18,8 +22,15 @@ let new_virtual_machine byte_code =
   let open Compiler in
   { constants= byte_code.constants
   ; instructions= Program_stack.stack_of_list byte_code.instructions
+  ; globals= Program_stack.make_stack global_size
   ; last_item_poped= Obj.Null
   ; stack= Program_stack.make_stack stack_size }
+
+let empty_globals () = Program_stack.make_stack global_size
+
+let new_with_global_store compiler globals =
+  let vm = new_virtual_machine compiler in
+  {vm with globals}
 
 (* Program_stack.pop *)
 
@@ -138,6 +149,21 @@ module VM_Helpers = struct
     let* condition = pop vm in
     if not (truthy condition) then vm.instructions.ip <- pos ;
     finish_run vm
+
+  let evaluate_get_global vm =
+    let* b1 = Program_stack.read_then_increment vm.instructions in
+    let* b2 = Program_stack.read_then_increment vm.instructions in
+    let global_index = ByteFmt.int_of_hex [b1; b2] 2 in
+    let* item = Program_stack.get global_index vm.globals in
+    push item vm ; finish_run vm
+
+  let evaluate_set_global vm =
+    let* b1 = Program_stack.read_then_increment vm.instructions in
+    let* b2 = Program_stack.read_then_increment vm.instructions in
+    let global_index = ByteFmt.int_of_hex [b1; b2] 2 in
+    let* poped = pop vm in
+    let* _ = Program_stack.set global_index poped vm.globals in
+    finish_run vm
 end
 
 (*FIXME any inperformant functions called in here is an issue *)
@@ -168,6 +194,10 @@ let[@ocaml.tailcall] [@ocaml.warning "-9-11"] run vm =
         VM_Helpers.evaluate_jump_not_truthy vm
     | `Null ->
         push Obj.Null vm ; VM_Helpers.finish_run vm
+    | `SetGlobal _ | `SETGLOBAL ->
+        VM_Helpers.evaluate_set_global vm
+    | `GetGlobal _ | `GETGLOBAL ->
+        VM_Helpers.evaluate_get_global vm
     | a ->
         Error (Code.CodeError.OpCodeNotImplemented a)
   in

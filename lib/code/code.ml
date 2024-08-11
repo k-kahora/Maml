@@ -5,6 +5,8 @@ type opcode =
   [ `Constant of int
   | `JumpNotTruthy of int
   | `Jump of int
+  | `GetGlobal of int
+  | `SetGlobal of int
   | `Add
   | `Sub
   | `Null
@@ -14,12 +16,14 @@ type opcode =
   | `False
   | `Equal
   | `NotEqual
+  | `NotEqual
   | `GreaterThan
   | `Minus
   | `Bang
   | `Pop ]
 
-type opcode_marker = [`CONSTANT | `JUMP | `JUMPNOTTRUTHY]
+type opcode_marker =
+  [`CONSTANT | `JUMP | `JUMPNOTTRUTHY | `GETGLOBAL | `SETGLOBAL]
 
 let operand_name = function
   | `Constant _ | `CONSTANT ->
@@ -28,6 +32,10 @@ let operand_name = function
       "JumpNotTruthy"
   | `Jump _ | `JUMP ->
       "Jump"
+  | `GetGlobal _ | `GETGLOBAL ->
+      "GetGlobal"
+  | `SetGlobal _ | `SETGLOBAL ->
+      "SetGlobal"
   | `Add ->
       "Add"
   | `Pop ->
@@ -67,6 +75,7 @@ module CodeError = struct
     | CustomError of string
     | UnknownOperator of string
     | UnsuportedType of string * Object.Obj.item
+    | SymbolNotFound of string * string
     | EmptyStack
 
   let equal_error e1 e2 = e1 = e2
@@ -98,6 +107,9 @@ module CodeError = struct
         format_helper fmt "EmptyStackError"
     | ConstantNotFound index ->
         format_helper fmt "ConstantNotFound: at index %d" index
+    | SymbolNotFound (caller, symbol) ->
+        format_helper fmt "SymbolNotFound: Symbol -> %s; Called From %s" symbol
+          caller
     | CustomError err ->
         format_helper fmt "CustomError: %s" err
 
@@ -164,6 +176,10 @@ let opcode_length = function
   | `Jump _
   | `JUMP
   | `JumpNotTruthy _
+  | `SETGLOBAL
+  | `SetGlobal _
+  | `GETGLOBAL
+  | `GetGlobal _
   | `JUMPNOTTRUTHY ->
       2
   | `Pop
@@ -224,6 +240,10 @@ let lookup_opcode = function
       Ok `JUMPNOTTRUTHY
   | '\x10' ->
       Ok `Null
+  | '\x11' ->
+      Ok `SETGLOBAL
+  | '\x12' ->
+      Ok `GETGLOBAL
   | a ->
       Error (CodeError.UnrecognizedByte a)
 
@@ -260,6 +280,10 @@ let lookup_byte = function
       '\x0F'
   | `Null ->
       '\x10'
+  | `SetGlobal _ | `SETGLOBAL ->
+      '\x11'
+  | `GetGlobal _ | `GETGLOBAL ->
+      '\x12'
 
 let lookup byte =
   let* opcode = lookup_opcode byte in
@@ -269,13 +293,18 @@ let lookup byte =
 let make op =
   let length = opcode_length op in
   let lb = lookup_byte in
+  let convert op operand length = lb op :: hex_of_int operand length in
   match op with
   | `Constant operand ->
-      lb op :: hex_of_int operand length
+      convert op operand length
   | `JumpNotTruthy operand ->
-      lb op :: hex_of_int operand length
+      convert op operand length
   | `Jump operand ->
-      lb op :: hex_of_int operand length
+      convert op operand length
+  | `SetGlobal operand ->
+      convert op operand length
+  | `GetGlobal operand ->
+      convert op operand length
   | a ->
       [lb a]
 
