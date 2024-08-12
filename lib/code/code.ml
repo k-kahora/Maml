@@ -7,6 +7,7 @@ type opcode =
   | `Jump of int
   | `GetGlobal of int
   | `SetGlobal of int
+  | `Array of int
   | `Add
   | `Sub
   | `Null
@@ -23,7 +24,7 @@ type opcode =
   | `Pop ]
 
 type opcode_marker =
-  [`CONSTANT | `JUMP | `JUMPNOTTRUTHY | `GETGLOBAL | `SETGLOBAL]
+  [`CONSTANT | `JUMP | `JUMPNOTTRUTHY | `GETGLOBAL | `SETGLOBAL | `ARRAY]
 
 let operand_name = function
   | `Constant _ | `CONSTANT ->
@@ -36,6 +37,8 @@ let operand_name = function
       "GetGlobal"
   | `SetGlobal _ | `SETGLOBAL ->
       "SetGlobal"
+  | `Array _ | `ARRAY ->
+      "Array"
   | `Add ->
       "Add"
   | `Pop ->
@@ -63,6 +66,16 @@ let operand_name = function
   | `NotEqual ->
       "NotEqual"
 
+let infix_operand_string = function
+  | `Add ->
+      "+"
+  | `Sub ->
+      "-"
+  | `Mul ->
+      "*"
+  | `Div ->
+      "/"
+
 module CodeError = struct
   type error =
     | UnrecognizedByte of byte
@@ -75,6 +88,7 @@ module CodeError = struct
     | CustomError of string
     | UnknownOperator of string
     | UnsuportedType of string * Object.Obj.item
+    | UnsuportedOperator of Object.Obj.item * string
     | SymbolNotFound of string * string
     | EmptyStack
 
@@ -107,6 +121,10 @@ module CodeError = struct
         format_helper fmt "EmptyStackError"
     | ConstantNotFound index ->
         format_helper fmt "ConstantNotFound: at index %d" index
+    | UnsuportedOperator (obj, op) ->
+        format_helper fmt "UnsuportedOperator: %s do not support %s"
+          (Object.Obj.object_string obj)
+          op
     | SymbolNotFound (caller, symbol) ->
         format_helper fmt "SymbolNotFound: Symbol -> %s; Called From %s" symbol
           caller
@@ -180,7 +198,9 @@ let opcode_length = function
   | `SetGlobal _
   | `GETGLOBAL
   | `GetGlobal _
-  | `JUMPNOTTRUTHY ->
+  | `JUMPNOTTRUTHY
+  | `Array _
+  | `ARRAY ->
       2
   | `Pop
   | `Sub
@@ -204,6 +224,8 @@ let marker_to_opcode operand = function
       Ok (`Jump operand)
   | `JUMPNOTTRUTHY ->
       Ok (`JumpNotTruthy operand)
+  | `ARRAY ->
+      Ok (`Array operand)
   | a ->
       Error (CodeError.OpCodeNotImplemented a)
 
@@ -244,6 +266,8 @@ let lookup_opcode = function
       Ok `SETGLOBAL
   | '\x12' ->
       Ok `GETGLOBAL
+  | '\x13' ->
+      Ok `ARRAY
   | a ->
       Error (CodeError.UnrecognizedByte a)
 
@@ -284,6 +308,8 @@ let lookup_byte = function
       '\x11'
   | `GetGlobal _ | `GETGLOBAL ->
       '\x12'
+  | `Array _ | `ARRAY ->
+      '\x13'
 
 let lookup byte =
   let* opcode = lookup_opcode byte in
@@ -304,6 +330,8 @@ let make op =
   | `SetGlobal operand ->
       convert op operand length
   | `GetGlobal operand ->
+      convert op operand length
+  | `Array operand ->
       convert op operand length
   | a ->
       [lb a]

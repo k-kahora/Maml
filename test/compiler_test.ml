@@ -177,6 +177,43 @@ let test_conditionals () =
   in
   run_compiler_tests tests
 
+let test_string_expression () =
+  let open Object in
+  let tests =
+    [ ( {|"monkey"|}
+      , map_test_helper [Obj.String "monkey"]
+      , make_test_helper [`Constant 0; `Pop] )
+    ; ( {|"mon" + "key"|}
+      , map_test_helper [Obj.String "mon"; String "key"]
+      , make_test_helper [`Constant 0; `Constant 1; `Add; `Pop] ) ]
+  in
+  run_compiler_tests tests
+
+let test_array_expression () =
+  let open Object in
+  let tests =
+    [ ("[]", map_test_helper [], make_test_helper [`Array 0; `Pop])
+    ; ( "[1,2,3]"
+      , map_test_helper [Obj.Int 1; Int 2; Int 3]
+      , make_test_helper [`Constant 0; `Constant 1; `Constant 2; `Array 3; `Pop]
+      )
+    ; ( "[1 + 2, 3 - 4, 5 * 6]"
+      , map_test_helper [Obj.Int 1; Int 2; Int 3; Int 4; Int 5; Int 6]
+      , make_test_helper
+          [ `Constant 0
+          ; `Constant 1
+          ; `Add
+          ; `Constant 2
+          ; `Constant 3
+          ; `Sub
+          ; `Constant 4
+          ; `Constant 5
+          ; `Mul
+          ; `Array 3
+          ; `Pop ] ) ]
+  in
+  run_compiler_tests tests
+
 let () =
   Alcotest.run "OpConstant arithmetic checking"
     [ ( "testing compiler"
@@ -184,4 +221,8 @@ let () =
         ; Alcotest.test_case "bool expressions" `Quick test_bool_expressions
         ; Alcotest.test_case "conditionals" `Quick test_conditionals ] )
     ; ( "let bindings"
-      , [Alcotest.test_case "bindings" `Quick test_global_let_statement] ) ]
+      , [Alcotest.test_case "bindings" `Quick test_global_let_statement] )
+    ; ( "string compilation"
+      , [Alcotest.test_case "string work" `Quick test_string_expression] )
+    ; ( "array comp"
+      , [Alcotest.test_case "array work" `Quick test_array_expression] ) ]

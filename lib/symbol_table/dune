@@ -1,0 +1,4 @@
+(library
+ (name symbol_table )
+ (libraries core code object ast))
+

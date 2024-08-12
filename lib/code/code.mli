@@ -7,6 +7,7 @@ type opcode =
   | `Jump of int
   | `GetGlobal of int
   | `SetGlobal of int
+  | `Array of int
   | `Add
   | `Sub
   | `Null
@@ -22,8 +23,10 @@ type opcode =
   | `Bang
   | `Pop ]
 
+val infix_operand_string : [< `Add | `Div | `Mul | `Sub] -> string
+
 type opcode_marker =
-  [`CONSTANT | `JUMP | `JUMPNOTTRUTHY | `GETGLOBAL | `SETGLOBAL]
+  [`CONSTANT | `JUMP | `JUMPNOTTRUTHY | `GETGLOBAL | `SETGLOBAL | `ARRAY]
 
 module CodeError : sig
   type error =
@@ -37,6 +40,7 @@ module CodeError : sig
     | CustomError of string
     | UnknownOperator of string
     | UnsuportedType of string * Object.Obj.item
+    | UnsuportedOperator of Object.Obj.item * string
     | SymbolNotFound of string * string
     | EmptyStack
 

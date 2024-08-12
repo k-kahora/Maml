@@ -8,7 +8,13 @@ type byte = char
 module TestObj = struct
   let compare o1 o2 =
     let open Object.Obj in
-    match (o1, o2) with Int a, Int b -> Int.compare a b | _ -> -1
+    match (o1, o2) with
+    | Int a, Int b ->
+        Int.compare a b
+    | String a, String b ->
+        String.compare a b
+    | _ ->
+        -1
 end
 
 let ( let* ) = Result.bind
@@ -211,6 +217,21 @@ let[@ocaml.warning "-27-9-26"] rec compile nodes cmp =
         (* NOTE Compilet time error *)
         let* symbol = Symbol_table.resolve value cmp.symbol_table in
         let cmp, _ = emit (`GetGlobal symbol.index) cmp in
+        Ok cmp
+    | StringLiteral {value} ->
+        let string = Obj.String value in
+        let cmp, index = add_constants string cmp in
+        let cmp, _ = emit (`Constant index) cmp in
+        Ok cmp
+    | ArrayLiteral {elements} ->
+        let* cmp =
+          List.fold_left
+            (fun acc nxt ->
+              let* cmp = acc in
+              compile_expression nxt cmp )
+            (Ok cmp) elements
+        in
+        let cmp, _ = emit (`Array (List.length elements)) cmp in
         Ok cmp
     | e ->
         Error (Code.CodeError.ExpressionNotImplemented e)

@@ -4,7 +4,7 @@ let parse input = Lex.new' input |> Parsing.new_parser |> Parsing.parse_program
 
 let ( let* ) = Result.bind
 
-type vm_test_type = Int of int | Bool of bool
+type vm_test_type = Int of int | Bool of bool | String of string
 
 let compare_test_type t1 t2 = t1 = t2
 
@@ -12,8 +12,12 @@ let pp_test_type fmt test_type =
   let format_helper = Format.fprintf in
   Option.fold ~none:(format_helper fmt "")
     ~some:(function
-      | Int a -> format_helper fmt "%d" a | Bool a -> format_helper fmt "%b" a
-      )
+      | Int a ->
+          format_helper fmt "%d" a
+      | Bool a ->
+          format_helper fmt "%b" a
+      | String a ->
+          format_helper fmt "%s" a )
     test_type
 
 let alcotest_test_type = Alcotest.testable pp_test_type compare_test_type
@@ -24,6 +28,8 @@ let test_expected_object actual =
       Ok (Some (Int value2))
   | Obj.Bool value2 ->
       Ok (Some (Bool value2))
+  | Obj.String value2 ->
+      Ok (Some (String value2))
   | Obj.Null ->
       Ok None
   | obj ->
@@ -129,6 +135,16 @@ let test_global_let_stmt () =
   in
   List.iter run_vm_tests tests
 
+let test_string_expressions () =
+  let tests =
+    [ ({|"monkey"|}, "monkey")
+    ; ({|"monkey"|}, "monkey")
+    ; ({| "mon" + "key" |}, "monkey")
+    ; ({| "mon" + "key" + "banana" |}, "monkeybanana") ]
+    |> List.map (fun (a, b) -> (a, Ok (Some (String b))))
+  in
+  List.iter run_vm_tests tests
+
 let () =
   Alcotest.run "Virtual Machine Tests"
     [ ( "Arithmatic"
@@ -139,4 +155,7 @@ let () =
     ; ( "conditionals"
       , [Alcotest.test_case "test conditionals" `Quick test_conditionals] )
     ; ( "global let statements"
-      , [Alcotest.test_case "let statements" `Quick test_global_let_stmt] ) ]
+      , [Alcotest.test_case "let statements" `Quick test_global_let_stmt] )
+    ; ( "strings"
+      , [Alcotest.test_case "string monkey tests" `Quick test_string_expressions]
+      ) ]

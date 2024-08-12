@@ -59,6 +59,14 @@ module VM_Helpers = struct
     push constant vm ; finish_run vm
 
   let execute_binary_operation op vm =
+    let execute_binary_string_operation left right = function
+      | `Add ->
+          Ok (left ^ right)
+      | a ->
+          Error
+            (CodeError.UnsuportedOperator
+               (Obj.String "dummy", Code.infix_operand_string a) )
+    in
     let execute_binary_integer_operation left right = function
       | `Add ->
           left + right
@@ -74,6 +82,10 @@ module VM_Helpers = struct
     match (left, right) with
     | Obj.Int l, Obj.Int r ->
         push (Obj.Int (execute_binary_integer_operation l r op)) vm ;
+        finish_run vm
+    | Obj.String l, Obj.String r ->
+        let* result = execute_binary_string_operation l r op in
+        push (Obj.String result) vm ;
         finish_run vm
     | l, _ ->
         Error (Code.CodeError.ObjectNotImplemented l)
@@ -123,6 +135,8 @@ module VM_Helpers = struct
     let* operand = pop vm in
     let* operand =
       match operand with
+      | Obj.Int i ->
+          Ok (Obj.Bool (i == 0))
       | Obj.Bool b ->
           Ok (Obj.Bool (not b))
       | Obj.Null ->
@@ -140,7 +154,15 @@ module VM_Helpers = struct
     vm.instructions.ip <- jump_pos ;
     finish_run vm
 
-  let truthy = function Obj.Bool b -> b | Obj.Null -> false | _ -> true
+  let truthy = function
+    | Obj.Bool b ->
+        b
+    | Obj.Int i ->
+        i <> 0
+    | Obj.Null ->
+        false
+    | _ ->
+        true
 
   let evaluate_jump_not_truthy vm =
     let* b1 = Program_stack.read_then_increment vm.instructions in
