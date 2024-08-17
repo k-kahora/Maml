@@ -4,7 +4,11 @@ let parse input = Lex.new' input |> Parsing.new_parser |> Parsing.parse_program
 
 let ( let* ) = Result.bind
 
-type vm_test_type = Int of int | Bool of bool | String of string
+type vm_test_type =
+  | Int of int
+  | Bool of bool
+  | String of string
+  | Array of Obj.item array
 
 let compare_test_type t1 t2 = t1 = t2
 
@@ -17,7 +21,21 @@ let pp_test_type fmt test_type =
       | Bool a ->
           format_helper fmt "%b" a
       | String a ->
-          format_helper fmt "%s" a )
+          format_helper fmt "%s" a
+      | Array arr -> (
+        match arr with
+        | [||] ->
+            format_helper fmt "[]"
+        | _ ->
+            let str =
+              Array.fold_left
+                (fun acc element ->
+                  acc
+                  ^ Format.sprintf "%s, " (Object.Obj.item_to_string element) )
+                "[ " arr
+            in
+            let str = String.sub str 0 (String.length str - 2) ^ "]" in
+            format_helper fmt "%s" str ) )
     test_type
 
 let alcotest_test_type = Alcotest.testable pp_test_type compare_test_type
@@ -30,6 +48,8 @@ let test_expected_object actual =
       Ok (Some (Bool value2))
   | Obj.String value2 ->
       Ok (Some (String value2))
+  | Obj.Array value2 ->
+      Ok (Some (Array value2))
   | Obj.Null ->
       Ok None
   | obj ->
@@ -145,6 +165,15 @@ let test_string_expressions () =
   in
   List.iter run_vm_tests tests
 
+let test_array_literals () =
+  let tests =
+    [ ("[]", [||])
+    ; ("[1,2,3]", [|Obj.Int 1; Int 2; Int 3|])
+    ; ("[1 + 2, 3 * 4, 5 + 6]", [|Obj.Int 3; Int 12; Int 11|]) ]
+    |> List.map (fun (a, b) -> (a, Ok (Some (Array b))))
+  in
+  List.iter run_vm_tests tests
+
 let () =
   Alcotest.run "Virtual Machine Tests"
     [ ( "Arithmatic"
@@ -158,4 +187,7 @@ let () =
       , [Alcotest.test_case "let statements" `Quick test_global_let_stmt] )
     ; ( "strings"
       , [Alcotest.test_case "string monkey tests" `Quick test_string_expressions]
-      ) ]
+      )
+    ; ( "arrays"
+      , [Alcotest.test_case "array monkey tests" `Quick test_array_literals] )
+    ]

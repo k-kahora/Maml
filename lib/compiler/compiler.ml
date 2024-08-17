@@ -233,6 +233,25 @@ let[@ocaml.warning "-27-9-26"] rec compile nodes cmp =
         in
         let cmp, _ = emit (`Array (List.length elements)) cmp in
         Ok cmp
+    | HashLiteral {pairs} ->
+        let list = Hashtbl.to_seq pairs |> List.of_seq in
+        let list =
+          List.sort
+            (fun (a, _) (b, _) ->
+              String.compare (Ast.expression_str a) (Ast.expression_str b) )
+            list
+        in
+        let* cmp =
+          List.fold_left
+            (fun acc (key, value) ->
+              let* cmp = acc in
+              let* cmp = compile_expression key cmp in
+              compile_expression value cmp )
+            (Ok cmp) list
+        in
+        let hash_length_2 = Hashtbl.length pairs * 2 in
+        let cmp, _ = emit (`Hash hash_length_2) cmp in
+        Ok cmp
     | e ->
         Error (Code.CodeError.ExpressionNotImplemented e)
   and compile_node node cmp =

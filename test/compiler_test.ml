@@ -113,6 +113,37 @@ let test_bool_expressions () =
   in
   run_compiler_tests tests
 
+let test_hash_expressions () =
+  let open Object.Obj in
+  let tests =
+    [ ("{}", map_test_helper [], make_test_helper [`Hash 0; `Pop])
+    ; ( "{1: 2, 3: 4, 5: 6}"
+      , map_test_helper [Int 1; Int 2; Int 3; Int 4; Int 5; Int 6]
+      , make_test_helper
+          [ `Constant 0
+          ; `Constant 1
+          ; `Constant 2
+          ; `Constant 3
+          ; `Constant 4
+          ; `Constant 5
+          ; `Hash 6
+          ; `Pop ] )
+    ; ( "{1: 2 + 3, 4: 5 * 6}"
+      , map_test_helper [Int 1; Int 2; Int 3; Int 4; Int 5; Int 6]
+      , make_test_helper
+          [ `Constant 0
+          ; `Constant 1
+          ; `Constant 2
+          ; `Add
+          ; `Constant 3
+          ; `Constant 4
+          ; `Constant 5
+          ; `Mul
+          ; `Hash 4
+          ; `Pop ] ) ]
+  in
+  run_compiler_tests tests
+
 let test_global_let_statement () =
   let open Object in
   let tests =
@@ -225,4 +256,6 @@ let () =
     ; ( "string compilation"
       , [Alcotest.test_case "string work" `Quick test_string_expression] )
     ; ( "array comp"
-      , [Alcotest.test_case "array work" `Quick test_array_expression] ) ]
+      , [Alcotest.test_case "array work" `Quick test_array_expression] )
+    ; ( "hash compilation"
+      , [Alcotest.test_case "hash work" `Quick test_hash_expressions] ) ]

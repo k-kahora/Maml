@@ -8,6 +8,7 @@ type opcode =
   | `GetGlobal of int
   | `SetGlobal of int
   | `Array of int
+  | `Hash of int
   | `Add
   | `Sub
   | `Null
@@ -24,7 +25,7 @@ type opcode =
   | `Pop ]
 
 type opcode_marker =
-  [`CONSTANT | `JUMP | `JUMPNOTTRUTHY | `GETGLOBAL | `SETGLOBAL | `ARRAY]
+  [`CONSTANT | `JUMP | `JUMPNOTTRUTHY | `GETGLOBAL | `SETGLOBAL | `ARRAY | `HASH]
 
 let operand_name = function
   | `Constant _ | `CONSTANT ->
@@ -39,6 +40,8 @@ let operand_name = function
       "SetGlobal"
   | `Array _ | `ARRAY ->
       "Array"
+  | `Hash _ | `HASH ->
+      "Hash"
   | `Add ->
       "Add"
   | `Pop ->
@@ -199,6 +202,8 @@ let opcode_length = function
   | `GETGLOBAL
   | `GetGlobal _
   | `JUMPNOTTRUTHY
+  | `Hash _
+  | `HASH
   | `Array _
   | `ARRAY ->
       2
@@ -226,6 +231,8 @@ let marker_to_opcode operand = function
       Ok (`JumpNotTruthy operand)
   | `ARRAY ->
       Ok (`Array operand)
+  | `HASH ->
+      Ok (`Hash operand)
   | a ->
       Error (CodeError.OpCodeNotImplemented a)
 
@@ -268,6 +275,8 @@ let lookup_opcode = function
       Ok `GETGLOBAL
   | '\x13' ->
       Ok `ARRAY
+  | '\x14' ->
+      Ok `HASH
   | a ->
       Error (CodeError.UnrecognizedByte a)
 
@@ -310,6 +319,8 @@ let lookup_byte = function
       '\x12'
   | `Array _ | `ARRAY ->
       '\x13'
+  | `Hash _ | `HASH ->
+      '\x14'
 
 let lookup byte =
   let* opcode = lookup_opcode byte in
@@ -332,6 +343,8 @@ let make op =
   | `GetGlobal operand ->
       convert op operand length
   | `Array operand ->
+      convert op operand length
+  | `Hash operand ->
       convert op operand length
   | a ->
       [lb a]

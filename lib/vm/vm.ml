@@ -186,6 +186,28 @@ module VM_Helpers = struct
     let* poped = pop vm in
     let* _ = Program_stack.set global_index poped vm.globals in
     finish_run vm
+
+  let evaluate_array vm =
+    let reverse_array arr =
+      let len = Array.length arr in
+      Array.init len (fun i -> arr.(len - i - 1))
+    in
+    let* b1 = Program_stack.read_then_increment vm.instructions in
+    let* b2 = Program_stack.read_then_increment vm.instructions in
+    let arr_length = ByteFmt.int_of_hex [b1; b2] 2 in
+    let t_arr = Array.init arr_length (fun _ -> pop vm) in
+    let error = Array.find_opt Result.is_error t_arr in
+    (* get_ok will never error because we checked for errors above *)
+    let* item_array =
+      match error with
+      | None ->
+          Ok (Array.map Result.get_ok t_arr)
+      | Some err ->
+          Error (Result.get_error err)
+    in
+    let item_array = reverse_array item_array in
+    push (Obj.Array item_array) vm ;
+    finish_run vm
 end
 
 (*FIXME any inperformant functions called in here is an issue *)
@@ -220,6 +242,8 @@ let[@ocaml.tailcall] [@ocaml.warning "-9-11"] run vm =
         VM_Helpers.evaluate_set_global vm
     | `GetGlobal _ | `GETGLOBAL ->
         VM_Helpers.evaluate_get_global vm
+    | `Array _ | `ARRAY ->
+        VM_Helpers.evaluate_array vm
     | a ->
         Error (Code.CodeError.OpCodeNotImplemented a)
   in
