@@ -11,7 +11,18 @@ type vm_test_type =
   | Array of Obj.item array
   | Hash of (Obj.item, Obj.hash_item) Hashtbl.t
 
-let compare_test_type t1 t2 = t1 = t2
+let compare_hash_tables h1 h2 =
+  let f h = Hashtbl.to_seq_keys h |> List.of_seq in
+  let h1_keys, h2_keys = (f h1, f h2) in
+  let h1_values, h2_values = (f h1, f h2) in
+  h1_keys = h2_keys && h1_values = h2_values
+
+let compare_test_type t1 t2 =
+  match (t1, t2) with
+  | Some (Hash h1), Some (Hash h2) ->
+      compare_hash_tables h1 h2
+  | _ ->
+      t1 = t2
 
 let pp_test_type fmt test_type =
   let format_helper = Format.fprintf in
@@ -38,7 +49,8 @@ let pp_test_type fmt test_type =
             let str = String.sub str 0 (String.length str - 2) ^ "]" in
             format_helper fmt "%s" str )
       | Hash hash ->
-          let str_helper _ {Obj.value; key} str =
+          let str_helper _hash_code {Obj.value; key} str =
+            (* Format.printf "hash_code: %s" (Obj.item_to_string hash_code) ; *)
             let value = Obj.item_to_string value in
             let key = Obj.item_to_string key in
             str ^ key ^ ": " ^ value ^ ", "
@@ -195,8 +207,10 @@ let make_hash lst =
 
 let test_hash_literals () =
   let tests =
-    [ ("{1: 2, 2: 3}", make_hash [(Int 1, Int 2); (Int 2, Int 3)])
-    ; ("{}", make_hash [])
+    [ ("{}", make_hash [])
+    ; ( {|{1: 2, 2: 3, "ape": false  }|}
+      , make_hash [(Int 1, Int 2); (Int 2, Int 3); (String "ape", Bool false)]
+      )
     ; ( "{1 + 1: 2 * 2, 3 + 3: 4 * 4}"
       , make_hash [(Int 2, Int 4); (Int 6, Int 16)] ) ]
     |> List.map (fun (a, b) -> (a, Ok (Some (Hash b))))
