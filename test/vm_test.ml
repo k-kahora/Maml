@@ -217,6 +217,23 @@ let test_hash_literals () =
   in
   List.iter run_vm_tests tests
 
+let test_hash_literals () =
+  let option_mapper (a, b) = (a, Ok (Option.map (fun d -> Int d) b)) in
+  let tests =
+    [ ("[1, 2, 3][1]", Some 2)
+    ; ("[1, 2, 3][0 + 2]", Some 3)
+    ; ("[[1, 1, 1]][0][0]", Some 1)
+    ; ("[][0]", None)
+    ; ("[1, 2, 3][99]", None)
+    ; ("[1][-1]", None)
+    ; ("{1: 1, 2: 2}[1]", Some 1)
+    ; ("{1: 1, 2: 2}[2]", Some 2)
+    ; ("{1: 1}[0]", None)
+    ; ("{}[0]", None) ]
+    |> List.map option_mapper
+  in
+  List.iter run_vm_tests tests
+
 let () =
   Alcotest.run "Virtual Machine Tests"
     [ ( "Arithmatic"

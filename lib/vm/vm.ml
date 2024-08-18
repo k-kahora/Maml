@@ -241,6 +241,31 @@ module VM_Helpers = struct
     let item_array = reverse_array item_array in
     push (Obj.Array item_array) vm ;
     finish_run vm
+
+  let evaluate_index vm =
+    let execute_vm_expression left index vm =
+      match (left, index) with
+      | Obj.Array array, Obj.Int index ->
+          if index >= 0 && index < Array.length array then
+            Ok (push array.(index) vm)
+          else Ok (push Obj.Null vm)
+      | Obj.Hash hash, _ ->
+          if not (Obj.hashable index) then
+            Error (CodeError.CustomError "Index is not hashable")
+          else
+            let item =
+              Hashtbl.find_opt hash (Obj.hash_key index)
+              |> Option.fold ~none:Obj.Null ~some:(fun a -> a.Obj.value)
+            in
+            push item vm ; Ok ()
+      (* FIXME make a better error here *)
+      | _ ->
+          Error (CodeError.CustomError "Index operator not supported")
+    in
+    let* index = pop vm in
+    let* left = pop vm in
+    let* _ = execute_vm_expression left index vm in
+    finish_run vm
 end
 
 (*FIXME any inperformant functions called in here is an issue *)
@@ -264,6 +289,8 @@ let[@ocaml.tailcall] [@ocaml.warning "-9-11"] run vm =
         VM_Helpers.execute_bang vm
     | `Minus ->
         VM_Helpers.execute_minus vm
+    | `Index ->
+        VM_Helpers.evaluate_index vm
     (* NOTE Jumps will be difficult as I am dealing with an actual stack and not a list with a program counter *)
     | `Jump _ | `JUMP ->
         VM_Helpers.evaluate_jump vm

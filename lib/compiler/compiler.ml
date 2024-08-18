@@ -252,6 +252,11 @@ let[@ocaml.warning "-27-9-26"] rec compile nodes cmp =
         let hash_length_2 = Hashtbl.length pairs * 2 in
         let cmp, _ = emit (`Hash hash_length_2) cmp in
         Ok cmp
+    | IndexExpression {left; index} ->
+        let* cmp = compile_expression left cmp in
+        let* cmp = compile_expression index cmp in
+        let cmp = emit `Index cmp |> fst in
+        Ok cmp
     | e ->
         Error (Code.CodeError.ExpressionNotImplemented e)
   and compile_node node cmp =

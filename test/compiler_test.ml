@@ -208,6 +208,46 @@ let test_conditionals () =
   in
   run_compiler_tests tests
 
+let test_index_expression () =
+  let open Object in
+  let tests =
+    [ ( "[1, 2, 3][1 + 1]"
+      , map_test_helper [Obj.Int 1; Int 2; Int 3; Int 1; Int 1]
+      , make_test_helper
+          [ `Constant 0
+          ; `Constant 1
+          ; `Constant 2
+          ; `Array 3
+          ; `Constant 3
+          ; `Constant 4
+          ; `Add
+          ; `Index
+          ; `Pop ] )
+    ; ( "{1: 2}[2 - 1]"
+      , map_test_helper [Obj.Int 1; Int 2; Int 2; Int 1]
+      , make_test_helper
+          [ `Constant 0
+          ; `Constant 1
+          ; `Hash 2
+          ; `Constant 2
+          ; `Constant 3
+          ; `Sub
+          ; `Index
+          ; `Pop ] )
+    ; ( "if (true) { 10 }; 3333;"
+      , map_test_helper [Obj.Int 10; Int 3333]
+      , make_test_helper
+          [ `True
+          ; `JumpNotTruthy 10
+          ; `Constant 0
+          ; `Jump 11
+          ; `Null
+          ; `Pop
+          ; `Constant 1
+          ; `Pop ] ) ]
+  in
+  run_compiler_tests tests
+
 let test_string_expression () =
   let open Object in
   let tests =
@@ -258,4 +298,6 @@ let () =
     ; ( "array comp"
       , [Alcotest.test_case "array work" `Quick test_array_expression] )
     ; ( "hash compilation"
-      , [Alcotest.test_case "hash work" `Quick test_hash_expressions] ) ]
+      , [Alcotest.test_case "hash work" `Quick test_hash_expressions] )
+    ; ( "index compilation"
+      , [Alcotest.test_case "index work" `Quick test_index_expression] ) ]

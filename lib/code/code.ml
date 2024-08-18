@@ -22,6 +22,7 @@ type opcode =
   | `GreaterThan
   | `Minus
   | `Bang
+  | `Index
   | `Pop ]
 
 type opcode_marker =
@@ -68,6 +69,8 @@ let operand_name = function
       "Bang"
   | `NotEqual ->
       "NotEqual"
+  | `Index ->
+      "Index"
 
 let infix_operand_string = function
   | `Add ->
@@ -219,6 +222,7 @@ let opcode_length = function
   | `Minus
   | `Bang
   | `Null
+  | `Index
   | `GreaterThan ->
       0
 
@@ -277,6 +281,8 @@ let lookup_opcode = function
       Ok `ARRAY
   | '\x14' ->
       Ok `HASH
+  | '\x15' ->
+      Ok `Index
   | a ->
       Error (CodeError.UnrecognizedByte a)
 
@@ -313,6 +319,8 @@ let lookup_byte = function
       '\x0F'
   | `Null ->
       '\x10'
+  | `Index ->
+      '\x15'
   | `SetGlobal _ | `SETGLOBAL ->
       '\x11'
   | `GetGlobal _ | `GETGLOBAL ->

@@ -22,6 +22,7 @@ type opcode =
   | `GreaterThan
   | `Minus
   | `Bang
+  | `Index
   | `Pop ]
 
 val infix_operand_string : [< `Add | `Div | `Mul | `Sub] -> string
