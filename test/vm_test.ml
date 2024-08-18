@@ -9,6 +9,7 @@ type vm_test_type =
   | Bool of bool
   | String of string
   | Array of Obj.item array
+  | Hash of (Obj.item, Obj.hash_item) Hashtbl.t
 
 let compare_test_type t1 t2 = t1 = t2
 
@@ -35,23 +36,33 @@ let pp_test_type fmt test_type =
                 "[ " arr
             in
             let str = String.sub str 0 (String.length str - 2) ^ "]" in
-            format_helper fmt "%s" str ) )
+            format_helper fmt "%s" str )
+      | Hash hash ->
+          let str_helper _ {Obj.value; key} str =
+            let value = Obj.item_to_string value in
+            let key = Obj.item_to_string key in
+            str ^ key ^ ": " ^ value ^ ", "
+          in
+          let str = Hashtbl.fold str_helper hash "{" in
+          format_helper fmt "%s" @@ str ^ "}" )
     test_type
 
 let alcotest_test_type = Alcotest.testable pp_test_type compare_test_type
 
 let test_expected_object actual =
   match actual with
-  | Obj.Int value2 ->
-      Ok (Some (Int value2))
-  | Obj.Bool value2 ->
-      Ok (Some (Bool value2))
-  | Obj.String value2 ->
-      Ok (Some (String value2))
-  | Obj.Array value2 ->
-      Ok (Some (Array value2))
+  | Obj.Int value ->
+      Ok (Some (Int value))
+  | Obj.Bool value ->
+      Ok (Some (Bool value))
+  | Obj.String value ->
+      Ok (Some (String value))
+  | Obj.Array value ->
+      Ok (Some (Array value))
   | Obj.Null ->
       Ok None
+  | Obj.Hash value ->
+      Ok (Some (Hash value))
   | obj ->
       Error (Code.CodeError.ObjectNotImplemented obj)
 
@@ -174,6 +185,24 @@ let test_array_literals () =
   in
   List.iter run_vm_tests tests
 
+let make_hash lst =
+  let helper hash (key, value) =
+    let hash_item = {Obj.key; value} in
+    Hashtbl.add hash (Obj.hash_key key) hash_item ;
+    hash
+  in
+  List.fold_left helper (Hashtbl.create 65535) lst
+
+let test_hash_literals () =
+  let tests =
+    [ ("{1: 2, 2: 3}", make_hash [(Int 1, Int 2); (Int 2, Int 3)])
+    ; ("{}", make_hash [])
+    ; ( "{1 + 1: 2 * 2, 3 + 3: 4 * 4}"
+      , make_hash [(Int 2, Int 4); (Int 6, Int 16)] ) ]
+    |> List.map (fun (a, b) -> (a, Ok (Some (Hash b))))
+  in
+  List.iter run_vm_tests tests
+
 let () =
   Alcotest.run "Virtual Machine Tests"
     [ ( "Arithmatic"
@@ -190,4 +219,5 @@ let () =
       )
     ; ( "arrays"
       , [Alcotest.test_case "array monkey tests" `Quick test_array_literals] )
-    ]
+    ; ( "hash tables"
+      , [Alcotest.test_case "hash table tests" `Quick test_hash_literals] ) ]

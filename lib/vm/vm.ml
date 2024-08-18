@@ -187,6 +187,39 @@ module VM_Helpers = struct
     let* _ = Program_stack.set global_index poped vm.globals in
     finish_run vm
 
+  let evaluate_hash vm =
+    let build_hash start_index end_index vm =
+      let slice =
+        Array.sub vm.stack.stack start_index (end_index - start_index)
+        |> Array.to_list
+      in
+      let rec looper acc arr =
+        match arr with
+        | [] ->
+            acc
+        | [Some _]
+        | [None]
+        | None :: None :: _
+        | None :: _ :: _
+        | _ :: None :: _ ->
+            Error
+              (CodeError.CustomError
+                 "Hash shold have even num of keys and values" )
+        | Some key :: Some value :: rest ->
+            let* hash_tbl = acc in
+            let item = {Obj.key; value} in
+            Hashtbl.add hash_tbl (Obj.hash_key key) item ;
+            looper (Ok hash_tbl) rest
+      in
+      let* hash = looper (Ok (Hashtbl.create (List.length slice))) slice in
+      Ok (Obj.Hash hash)
+    in
+    let* b1 = Program_stack.read_then_increment vm.instructions in
+    let* b2 = Program_stack.read_then_increment vm.instructions in
+    let num_elements = ByteFmt.int_of_hex [b1; b2] 2 in
+    let* hash = build_hash (vm.stack.ip - num_elements) vm.stack.ip vm in
+    push hash vm ; finish_run vm
+
   let evaluate_array vm =
     let reverse_array arr =
       let len = Array.length arr in
@@ -244,6 +277,8 @@ let[@ocaml.tailcall] [@ocaml.warning "-9-11"] run vm =
         VM_Helpers.evaluate_get_global vm
     | `Array _ | `ARRAY ->
         VM_Helpers.evaluate_array vm
+    | `Hash _ | `HASH ->
+        VM_Helpers.evaluate_hash vm
     | a ->
         Error (Code.CodeError.OpCodeNotImplemented a)
   in
