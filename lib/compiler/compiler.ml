@@ -46,36 +46,21 @@ let null_scope =
   ; instructions= [] }
 
 type compiler =
-  { index: int
+  { scope_index: int
+  ; index: int
   ; constants: Obj.item IntMap.t
-  ; scopes: compilation_scope Program_stack.program_stack
+  ; scopes: compilation_scope array
   ; symbol_table: Symbol_table.symbol_table }
 
-let set_head item cmp =
-  Format.printf "index: %d" cmp.scopes.ip ;
-  Program_stack.set cmp.scopes.ip item cmp.scopes
-  |> Result.value ~default:(failwith "wrong")
-(* |> Result.value ~default:(failwith "head comp error") *)
+let set_current_scope item cmp = cmp.scopes.(cmp.scope_index) <- item
 
-let set_current_scope item cmp =
-  Program_stack.set cmp.scopes.ip item cmp.scopes
-  |> Result.value ~default:(failwith "set comp error")
-
-let get_current_scope cmp =
-  let res =
-    Program_stack.get cmp.scopes.ip cmp.scopes
-    |> Result.value
-         ~default:(failwith (Format.sprintf "idnex: %d\n\n" cmp.scopes.ip))
-  in
-  (* (Format.sprintf "%s\n\n" (string_of_scope res)) *)
-  res
+let get_current_scope cmp = cmp.scopes.(cmp.scope_index)
 
 let set_current_instruction instructions cmp =
-  let dummy_scope = get_current_scope cmp in
-  Program_stack.set cmp.scopes.ip {dummy_scope with instructions} cmp.scopes
-  |> Result.value ~default:(failwith "set current instructions")
+  let scope = get_current_scope cmp in
+  cmp.scopes.(cmp.scope_index) <- {scope with instructions}
 
-let current_instructions cmp = get_current_scope cmp |> fun a -> a.instructions
+let current_instructions cmp = cmp.scopes.(cmp.scope_index).instructions
 
 let set_last_instruction opcode position cmp =
   let cur_scope = get_current_scope cmp in
@@ -114,16 +99,11 @@ let equal_compiler c1 c2 =
 let alcotest_compiler = Alcotest.testable pp_compiler equal_compiler
 
 let new_compiler =
-  let scopes = Program_stack.make_stack 65535 in
-  Program_stack.push null_scope scopes ;
-  scopes.ip <- scopes.ip - 1 ;
-  let res =
-    { index= 0
-    ; constants= IntMap.empty
-    ; symbol_table= Symbol_table.new_symbol_table ()
-    ; scopes }
-  in
-  print_endline "wow" ; print_int res.scopes.ip ; res
+  { scope_index= 0
+  ; index= 0
+  ; constants= IntMap.empty
+  ; symbol_table= Symbol_table.new_symbol_table ()
+  ; scopes= Array.init 65535 (fun _ -> null_scope) }
 
 let new_with_state symbol_table constants =
   let n_cmp = new_compiler in
@@ -150,7 +130,7 @@ and add_instructions inst cmp =
   let new_instructions = cur_instructions @ inst in
   let cur_scope = get_current_scope cmp in
   let scope = {cur_scope with instructions= new_instructions} in
-  let _ = set_head scope cmp in
+  let _ = set_current_scope scope cmp in
   (cmp, pos_new_inst)
 
 let replace_instruction pos new_instruction cmp =

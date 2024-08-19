@@ -1,4 +1,4 @@
 (library
  (name compiler )
- (libraries core code object ast program_stack symbol_table ))
+ (libraries core code object ast  symbol_table ))
 

@@ -25,10 +25,8 @@ let fresh_compiler instructions constants =
     ; last_instruction= null_emitted
     ; instructions }
   in
-  let scopes = Program_stack.make_stack 65535 in
-  Program_stack.push main_scope scopes ;
-  scopes.ip <- scopes.ip - 1 ;
-  {cmp with scopes; constants}
+  cmp.scopes.(cmp.scope_index) <- main_scope ;
+  {cmp with constants}
 
 let[@ocaml.warning "-27"] run_compiler_tests tests =
   let craft_compiler input =

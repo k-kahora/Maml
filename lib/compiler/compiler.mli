@@ -12,9 +12,10 @@ type compilation_scope =
   ; previous_instruction: emitted_instruction }
 
 type compiler =
-  { index: int
+  { scope_index: int
+  ; index: int
   ; constants: Obj.item IntMap.t
-  ; scopes: compilation_scope Program_stack.program_stack
+  ; scopes: compilation_scope array
   ; symbol_table: Symbol_table.symbol_table }
 
 val current_instructions : compiler -> byte list
