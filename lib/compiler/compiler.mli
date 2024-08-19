@@ -18,6 +18,12 @@ type compiler =
   ; scopes: compilation_scope array
   ; symbol_table: Symbol_table.symbol_table }
 
+val enter_scope : compiler -> compiler
+
+val leave_scope : compiler -> compiler * byte list
+
+val constant_string : Object.Obj.item IntMap.t -> string
+
 val current_instructions : compiler -> byte list
 
 val new_compiler : compiler

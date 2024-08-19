@@ -45,6 +45,7 @@ let null_scope =
   ; last_instruction= null_emitted
   ; instructions= [] }
 
+(* If not needed switch scopes from array to list *)
 type compiler =
   { scope_index: int
   ; index: int
@@ -62,6 +63,13 @@ let set_current_instruction instructions cmp =
 
 let current_instructions cmp = cmp.scopes.(cmp.scope_index).instructions
 
+let enter_scope cmp = {cmp with scope_index= cmp.scope_index + 1}
+
+let leave_scope cmp =
+  let inst = cmp.scopes.(cmp.scope_index).instructions in
+  cmp.scopes.(cmp.scope_index) <- null_scope ;
+  ({cmp with scope_index= cmp.scope_index - 1}, inst)
+
 let set_last_instruction opcode position cmp =
   let cur_scope = get_current_scope cmp in
   let previous_instruction = cur_scope.last_instruction in
@@ -72,6 +80,16 @@ let set_last_instruction opcode position cmp =
     ; previous_instruction= last_instruction }
   in
   set_current_scope new_scope cmp
+
+(* FIXME REMOVE *)
+let constant_string constants =
+  let constants =
+    IntMap.fold
+      (fun key value acc ->
+        acc ^ Format.sprintf "%d:%s, " key (Obj.item_to_string value) )
+      constants "{"
+  in
+  Format.sprintf "Constants: %s}" constants
 
 let pp_compiler fmt cmp =
   let pp_map map =

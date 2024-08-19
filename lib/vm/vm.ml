@@ -52,6 +52,7 @@ module VM_Helpers = struct
     let* b2 = Program_stack.read_then_increment vm.instructions in
     let constIndex = ByteFmt.int_of_hex [b1; b2] 2 in
     let constant_opt = IntMap.find_opt constIndex vm.constants in
+    let _ = Compiler.constant_string vm.constants |> print_string in
     let* constant =
       Option.to_result ~none:(Code.CodeError.ConstantNotFound constIndex)
         constant_opt

@@ -83,8 +83,8 @@ let setup_vm_test input =
   let program = parse input in
   let comp = Compiler.new_compiler in
   let* comp = Compiler.compile program.statements comp in
-  Code.ByteFmt.pp_byte_list (Compiler.current_instructions comp)
-  |> print_endline ;
+  (* Code.ByteFmt.pp_byte_list (Compiler.current_instructions comp) *)
+  (* |> print_endline ; *)
   let _ =
     Code.string_of_byte_list (Compiler.current_instructions comp)
     |> Result.fold ~error:Code.CodeError.print_error ~ok:print_endline

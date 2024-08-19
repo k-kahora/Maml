@@ -22,12 +22,8 @@ let alc_program_stack = Alcotest.testable pp_program_stack program_stack_eq
 let make_stack size = {ip= 0; stack= Array.make size None}
 
 let check_bounds index ps =
-  if index < Array.length ps.stack && index >= 0 then
-    let _ = print_endline "good" in
-    Ok ()
-  else
-    let _ = print_endline "bad" in
-    Error (Code.CodeError.CustomError "index out of bounds")
+  if index < Array.length ps.stack && index >= 0 then Ok ()
+  else Error (Code.CodeError.CustomError "index out of bounds")
 
 let stack_of_list list =
   let arr = Array.of_list list |> Array.map (fun a -> Some a) in

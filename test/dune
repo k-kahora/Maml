@@ -1,6 +1,5 @@
 (tests
- ;(names utils_test lexer_test parser_test ast_test evaluater_test object_test code_test compiler_test vm_test program_stack_test symbol_table_test)
- (names utils_test lexer_test parser_test ast_test evaluater_test object_test code_test compiler_test  program_stack_test symbol_table_test)
+ (names utils_test lexer_test parser_test ast_test evaluater_test object_test code_test compiler_test vm_test program_stack_test symbol_table_test)
  (libraries alcotest token lex parsing ast evaluater object code compiler vm program_stack symbol_table)
 )
 
