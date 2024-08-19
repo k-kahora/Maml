@@ -17,6 +17,19 @@ let test_instructions expected actual =
 
 let test_constants _ _ = ()
 
+let fresh_compiler instructions constants =
+  let cmp = new_compiler in
+  let null_emitted = {opcode= `Null; position= 0} in
+  let main_scope =
+    { previous_instruction= null_emitted
+    ; last_instruction= null_emitted
+    ; instructions }
+  in
+  let scopes = Program_stack.make_stack 65535 in
+  Program_stack.push main_scope scopes ;
+  scopes.ip <- scopes.ip - 1 ;
+  {cmp with scopes; constants}
+
 let[@ocaml.warning "-27"] run_compiler_tests tests =
   let craft_compiler input =
     let program = parse input in
@@ -28,12 +41,7 @@ let[@ocaml.warning "-27"] run_compiler_tests tests =
   in
   let helper (input, expected_constants, expected_instructions) =
     let concatted = List.concat expected_instructions in
-    let expected_compiler =
-      Ok
-        { Compiler.new_compiler with
-          instructions= concatted
-        ; constants= expected_constants }
-    in
+    let expected_compiler = Ok (fresh_compiler concatted expected_constants) in
     let actual = craft_compiler input in
     print_endline "expected" ;
     (* let _ = *)
@@ -285,6 +293,23 @@ let test_array_expression () =
   in
   run_compiler_tests tests
 
+let test_function_expression () =
+  let open Object in
+  let tests =
+    [ ( "fn () {return 5 + 10}"
+      , map_test_helper
+          [ Obj.Int 5
+          ; Int 10
+          ; CompFunc
+              ( [ make (`Constant 0)
+                ; make (`Constant 1)
+                ; make `Add
+                ; make `ReturnValue ]
+              |> List.concat ) ]
+      , make_test_helper [`Constant 2; `Pop] ) ]
+  in
+  run_compiler_tests tests
+
 let () =
   Alcotest.run "OpConstant arithmetic checking"
     [ ( "testing compiler"
@@ -300,4 +325,7 @@ let () =
     ; ( "hash compilation"
       , [Alcotest.test_case "hash work" `Quick test_hash_expressions] )
     ; ( "index compilation"
-      , [Alcotest.test_case "index work" `Quick test_index_expression] ) ]
+      , [Alcotest.test_case "index work" `Quick test_index_expression] )
+    ; ( "function compilation"
+      , [Alcotest.test_case "function work" `Quick test_function_expression] )
+    ]

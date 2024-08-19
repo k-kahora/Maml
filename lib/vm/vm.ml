@@ -21,7 +21,7 @@ type virtual_machine =
 let new_virtual_machine byte_code =
   let open Compiler in
   { constants= byte_code.constants
-  ; instructions= Program_stack.stack_of_list byte_code.instructions
+  ; instructions= Program_stack.stack_of_list (current_instructions byte_code)
   ; globals= Program_stack.make_stack global_size
   ; last_item_poped= Obj.Null
   ; stack= Program_stack.make_stack stack_size }

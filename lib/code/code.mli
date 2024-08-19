@@ -23,6 +23,9 @@ type opcode =
   | `Minus
   | `Bang
   | `Index
+  | `Call
+  | `ReturnValue
+  | `Return
   | `Pop ]
 
 val infix_operand_string : [< `Add | `Div | `Mul | `Sub] -> string
@@ -84,3 +87,5 @@ module ByteFmt : sig
 end
 
 val create_opcode : byte -> [> opcode]
+
+val operand_name : [< opcode | opcode_marker] -> string

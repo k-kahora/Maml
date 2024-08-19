@@ -21,13 +21,72 @@ let ( let* ) = Result.bind
 
 type emitted_instruction = {opcode: Code.opcode; position: int}
 
-type compiler =
+let string_of_emmited emmited =
+  Format.sprintf "{opcode: %s; position: %d}"
+    (Code.operand_name emmited.opcode)
+    emmited.position
+
+let null_emitted = {opcode= `Null; position= 0}
+
+type compilation_scope =
   { instructions: byte list
-  ; index: int
-  ; constants: Obj.item IntMap.t
   ; last_instruction: emitted_instruction
-  ; symbol_table: Symbol_table.symbol_table
   ; previous_instruction: emitted_instruction }
+
+let string_of_scope scope =
+  Format.sprintf
+    "instructions: %s;\nlast_instruction: %s;\nprevious_instruction: %s}"
+    (Code.ByteFmt.pp_byte_list scope.instructions)
+    (string_of_emmited scope.last_instruction)
+    (string_of_emmited scope.previous_instruction)
+
+let null_scope =
+  { previous_instruction= null_emitted
+  ; last_instruction= null_emitted
+  ; instructions= [] }
+
+type compiler =
+  { index: int
+  ; constants: Obj.item IntMap.t
+  ; scopes: compilation_scope Program_stack.program_stack
+  ; symbol_table: Symbol_table.symbol_table }
+
+let set_head item cmp =
+  Format.printf "index: %d" cmp.scopes.ip ;
+  Program_stack.set cmp.scopes.ip item cmp.scopes
+  |> Result.value ~default:(failwith "wrong")
+(* |> Result.value ~default:(failwith "head comp error") *)
+
+let set_current_scope item cmp =
+  Program_stack.set cmp.scopes.ip item cmp.scopes
+  |> Result.value ~default:(failwith "set comp error")
+
+let get_current_scope cmp =
+  let res =
+    Program_stack.get cmp.scopes.ip cmp.scopes
+    |> Result.value
+         ~default:(failwith (Format.sprintf "idnex: %d\n\n" cmp.scopes.ip))
+  in
+  (* (Format.sprintf "%s\n\n" (string_of_scope res)) *)
+  res
+
+let set_current_instruction instructions cmp =
+  let dummy_scope = get_current_scope cmp in
+  Program_stack.set cmp.scopes.ip {dummy_scope with instructions} cmp.scopes
+  |> Result.value ~default:(failwith "set current instructions")
+
+let current_instructions cmp = get_current_scope cmp |> fun a -> a.instructions
+
+let set_last_instruction opcode position cmp =
+  let cur_scope = get_current_scope cmp in
+  let previous_instruction = cur_scope.last_instruction in
+  let last_instruction = {opcode; position} in
+  let new_scope =
+    { cur_scope with
+      last_instruction= previous_instruction
+    ; previous_instruction= last_instruction }
+  in
+  set_current_scope new_scope cmp
 
 let pp_compiler fmt cmp =
   let pp_map map =
@@ -37,14 +96,14 @@ let pp_compiler fmt cmp =
       map "{"
   in
   Format.fprintf fmt "Instructions: %s\nConstants: %s}"
-    (Code.ByteFmt.pp_byte_list cmp.instructions)
+    (Code.ByteFmt.pp_byte_list @@ current_instructions cmp)
     (pp_map cmp.constants)
 
 let equal_compiler c1 c2 =
   let instructions =
     List.compare
       (fun a b -> int_of_char a - int_of_char b)
-      c1.instructions c2.instructions
+      (current_instructions c1) (current_instructions c2)
     = 0
   in
   let constants =
@@ -55,12 +114,16 @@ let equal_compiler c1 c2 =
 let alcotest_compiler = Alcotest.testable pp_compiler equal_compiler
 
 let new_compiler =
-  { instructions= []
-  ; index= 0
-  ; constants= IntMap.empty
-  ; symbol_table= Symbol_table.new_symbol_table ()
-  ; previous_instruction= {opcode= `Pop; position= 0}
-  ; last_instruction= {opcode= `Pop; position= 0} }
+  let scopes = Program_stack.make_stack 65535 in
+  Program_stack.push null_scope scopes ;
+  scopes.ip <- scopes.ip - 1 ;
+  let res =
+    { index= 0
+    ; constants= IntMap.empty
+    ; symbol_table= Symbol_table.new_symbol_table ()
+    ; scopes }
+  in
+  print_endline "wow" ; print_int res.scopes.ip ; res
 
 let new_with_state symbol_table constants =
   let n_cmp = new_compiler in
@@ -78,15 +141,17 @@ let rec add_constants obj cmp =
 and emit op cmp =
   let inst = Code.make op in
   let cmp, pos = add_instructions inst cmp in
-  let last = {opcode= op; position= pos} in
-  let cmp =
-    {cmp with previous_instruction= cmp.last_instruction; last_instruction= last}
-  in
+  set_last_instruction op pos cmp ;
   (cmp, pos)
 
 and add_instructions inst cmp =
-  let pos_new_inst = List.length cmp.instructions in
-  ({cmp with instructions= cmp.instructions @ inst}, pos_new_inst)
+  let cur_instructions = current_instructions cmp in
+  let pos_new_inst = List.length cur_instructions in
+  let new_instructions = cur_instructions @ inst in
+  let cur_scope = get_current_scope cmp in
+  let scope = {cur_scope with instructions= new_instructions} in
+  let _ = set_head scope cmp in
+  (cmp, pos_new_inst)
 
 let replace_instruction pos new_instruction cmp =
   let f pos l1 l2 =
@@ -100,12 +165,12 @@ let replace_instruction pos new_instruction cmp =
         else item )
       l2
   in
-  let patched_instructions = f pos new_instruction cmp.instructions in
-  {cmp with instructions= patched_instructions}
+  let patched_instructions = f pos new_instruction (current_instructions cmp) in
+  set_current_instruction patched_instructions cmp
 
 (**  [change_operand op_pos operand cmp] Assumes you only replace operands of the same type and same length *)
 let[@ocaml.warning "-9"] change_operand op_pos operand cmp =
-  let* {def} = List.nth cmp.instructions op_pos |> Code.lookup in
+  let* {def} = List.nth (current_instructions cmp) op_pos |> Code.lookup in
   let* marker = Code.marker_to_opcode operand def in
   let new_instruction = Code.make marker in
   Ok (replace_instruction op_pos new_instruction cmp)
@@ -120,11 +185,16 @@ let remove_pop cmp =
     | hd :: tl ->
         hd :: pop_last tl
   in
-  { cmp with
-    instructions= pop_last cmp.instructions
-  ; last_instruction= cmp.previous_instruction }
+  let cur_scope = get_current_scope cmp in
+  set_current_scope
+    { cur_scope with
+      last_instruction= cur_scope.previous_instruction
+    ; instructions= pop_last cur_scope.instructions }
+    cmp ;
+  cmp
 
-let last_instruction_pop cmp = cmp.last_instruction.opcode = `Pop
+let last_instruction_is_pop cmp =
+  `Pop = (get_current_scope cmp |> fun a -> a.last_instruction.opcode)
 
 let[@ocaml.warning "-27-9-26"] rec compile nodes cmp =
   let open Ast in
@@ -140,13 +210,11 @@ let[@ocaml.warning "-27-9-26"] rec compile nodes cmp =
         (* NOTE Compile the consequence every time*)
         let* cmp = compile_node consquence cmp in
         (* NOTE Remove the duplicated pop*)
-        let cmp = if last_instruction_pop cmp then remove_pop cmp else cmp in
+        let cmp = if last_instruction_is_pop cmp then remove_pop cmp else cmp in
         (* NOTE Get the position after the consquence*)
         let cmp, jump_pos = emit (`Jump 9999) cmp in
-        let after_consequence_pos = List.length cmp.instructions in
-        let* cmp =
-          change_operand jump_not_truth_pos after_consequence_pos cmp
-        in
+        let after_consequence_pos = List.length (current_instructions cmp) in
+        let* _ = change_operand jump_not_truth_pos after_consequence_pos cmp in
         let* cmp =
           if Option.is_none altenative then
             let cmp, _ = emit `Null cmp in
@@ -154,12 +222,13 @@ let[@ocaml.warning "-27-9-26"] rec compile nodes cmp =
           else
             let* cmp = compile_node (Option.get altenative) cmp in
             let cmp =
-              if last_instruction_pop cmp then remove_pop cmp else cmp
+              if last_instruction_is_pop cmp then remove_pop cmp else cmp
             in
             Ok cmp
         in
-        let after_alternative = List.length cmp.instructions in
-        change_operand jump_pos after_alternative cmp
+        let after_alternative = List.length (current_instructions cmp) in
+        let* _ = change_operand jump_pos after_alternative cmp in
+        Ok cmp
     | InfixExpression {left; right; operator} -> (
         let lr_compile = function
           | `Left2Right ->
