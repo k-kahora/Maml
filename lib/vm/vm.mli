@@ -9,6 +9,7 @@ type virtual_machine =
   ; instructions: byte Program_stack.program_stack
   ; globals: Obj.item Program_stack.program_stack
   ; last_item_poped: Obj.item
+  ; frames: Frame.frame Program_stack.program_stack
   ; stack: Obj.item Program_stack.program_stack }
 
 val new_virtual_machine : Compiler.compiler -> virtual_machine

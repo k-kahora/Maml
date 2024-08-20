@@ -1,3 +1,3 @@
 (library
  (name Interpreter)
- (libraries lex token ast parsing utils object evaluater builtin code compiler program_stack symbol_table))
+ (libraries lex token ast parsing utils object evaluater builtin code compiler program_stack symbol_table frame))

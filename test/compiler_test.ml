@@ -332,6 +332,23 @@ let test_function_expressions () =
   in
   run_compiler_tests tests
 
+let test_function_call () =
+  let open Object.Obj in
+  let tests =
+    [ ( "fn() {25}()"
+      , map_test_helper
+          [ Int 25
+          ; CompFunc ([make (`Constant 0); make `ReturnValue] |> List.concat) ]
+      , make_test_helper [`Constant 1; `Call; `Pop] )
+    ; ( "let no_arg = fn() { 25 }; no_arg();"
+      , map_test_helper
+          [ Int 25
+          ; CompFunc ([make (`Constant 0); make `ReturnValue] |> List.concat) ]
+      , make_test_helper [`Constant 1; `SetGlobal 0; `GetGlobal 0; `Call; `Pop]
+      ) ]
+  in
+  run_compiler_tests tests
+
 let test_compiler_scopes () =
   let index_check expected cmp =
     Alcotest.(check int) "checking initial scope value" expected cmp.scope_index
@@ -392,4 +409,5 @@ let () =
       )
     ; ( "function compilation"
       , [Alcotest.test_case "function work" `Slow test_function_expressions] )
-    ]
+    ; ( "function calls"
+      , [Alcotest.test_case "function calls work" `Slow test_function_call] ) ]

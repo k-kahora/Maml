@@ -5,6 +5,8 @@ let ( let* ) = Result.bind
 let stack_size = 2048
 
 let global_size = 65536
+
+let max_frames = 1024
 (* all operands are 2 bytes wide or 16 bits so FFFF is the max  amount of globals allowed `SetGlobal 65536*)
 
 type byte = char
@@ -16,14 +18,26 @@ type virtual_machine =
   ; instructions: byte Program_stack.program_stack
   ; globals: Obj.item Program_stack.program_stack
   ; last_item_poped: Obj.item
+  ; frames: Frame.frame Program_stack.program_stack
   ; stack: Obj.item Program_stack.program_stack }
+
+let push_frame frame vm = Program_stack.push frame vm.frames
+
+let pop_frame vm = Program_stack.pop vm.frames
+
+let current_frame vm = Program_stack.stack_head vm.frames
 
 let new_virtual_machine byte_code =
   let open Compiler in
+  let main_fn = Obj.CompFunc (current_instructions byte_code) in
+  let main_frame = Frame.new_frame main_fn in
+  let frames = Program_stack.make_stack max_frames in
+  Program_stack.push main_frame frames ;
   { constants= byte_code.constants
   ; instructions=
       Program_stack.stack_of_list (Compiler.current_instructions byte_code)
   ; globals= Program_stack.make_stack global_size
+  ; frames
   ; last_item_poped= Obj.Null
   ; stack= Program_stack.make_stack stack_size }
 

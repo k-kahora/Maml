@@ -29,6 +29,11 @@ let stack_of_list list =
   let arr = Array.of_list list |> Array.map (fun a -> Some a) in
   {ip= 0; stack= arr}
 
+let stack_head ps =
+  let* _ = check_bounds (ps.ip - 1) ps in
+  ps.stack.(ps.ip - 1)
+  |> Option.to_result ~none:(Code.CodeError.CustomError "stack head empty item")
+
 let head ps =
   let* _ = check_bounds ps.ip ps in
   ps.stack.(ps.ip)

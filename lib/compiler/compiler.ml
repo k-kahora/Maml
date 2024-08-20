@@ -338,8 +338,10 @@ let[@ocaml.warning "-27-9-26"] rec compile nodes cmp =
         let cmp, index = add_constants (Obj.CompFunc inst) cmp in
         let cmp, _ = emit (`Constant index) cmp in
         Ok cmp
-    | e ->
-        Error (Code.CodeError.ExpressionNotImplemented e)
+    | CallExpression {func} ->
+        let* cmp = compile_expression func cmp in
+        let cmp, _ = emit `Call cmp in
+        Ok cmp
   and compile_node node cmp =
     match node with
     | Expressionstatement exp ->

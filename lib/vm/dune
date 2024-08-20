@@ -1,4 +1,4 @@
 (library
  (name vm )
- (libraries code compiler ast object program_stack))
+ (libraries code compiler ast object program_stack frame))
 
