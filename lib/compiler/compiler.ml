@@ -21,13 +21,39 @@ let ( let* ) = Result.bind
 
 type emitted_instruction = {opcode: Code.opcode; position: int}
 
-type compiler =
+type compilation_scope =
   { instructions: byte list
-  ; index: int
-  ; constants: Obj.item IntMap.t
   ; last_instruction: emitted_instruction
-  ; symbol_table: Symbol_table.symbol_table
   ; previous_instruction: emitted_instruction }
+
+let null_scope =
+  let null_emitted = {opcode= `Null; position= 0} in
+  { instructions= []
+  ; last_instruction= null_emitted
+  ; previous_instruction= null_emitted }
+
+type compiler =
+  { index: int
+  ; scope_index: int
+  ; constants: Obj.item IntMap.t
+  ; symbol_table: Symbol_table.symbol_table
+  ; scopes: compilation_scope array }
+
+let current_instructions cmp = cmp.scopes.(cmp.scope_index).instructions
+
+let current_scope cmp = cmp.scopes.(cmp.scope_index)
+
+let update_current_scope scope cmp = cmp.scopes.(cmp.scope_index) <- scope
+
+let set_last_instruction opcode position cmp =
+  let cur_scope = current_scope cmp in
+  let previous = cur_scope.last_instruction in
+  let updated_scope =
+    { cur_scope with
+      previous_instruction= previous
+    ; last_instruction= {opcode; position} }
+  in
+  update_current_scope updated_scope cmp
 
 let pp_compiler fmt cmp =
   let pp_map map =
@@ -37,15 +63,13 @@ let pp_compiler fmt cmp =
       map "{"
   in
   Format.fprintf fmt "Instructions: %s\nConstants: %s}"
-    (Code.ByteFmt.pp_byte_list cmp.instructions)
+    (Code.ByteFmt.pp_byte_list (current_instructions cmp))
     (pp_map cmp.constants)
 
 let equal_compiler c1 c2 =
+  let c1_c, c2_c = (current_instructions c1, current_instructions c2) in
   let instructions =
-    List.compare
-      (fun a b -> int_of_char a - int_of_char b)
-      c1.instructions c2.instructions
-    = 0
+    List.compare (fun a b -> int_of_char a - int_of_char b) c1_c c2_c = 0
   in
   let constants =
     IntMap.compare TestObj.compare c1.constants c2.constants = 0
@@ -55,12 +79,11 @@ let equal_compiler c1 c2 =
 let alcotest_compiler = Alcotest.testable pp_compiler equal_compiler
 
 let new_compiler =
-  { instructions= []
-  ; index= 0
+  { index= 0
+  ; scope_index= 0
   ; constants= IntMap.empty
   ; symbol_table= Symbol_table.new_symbol_table ()
-  ; previous_instruction= {opcode= `Pop; position= 0}
-  ; last_instruction= {opcode= `Pop; position= 0} }
+  ; scopes= Array.init 65535 (fun _ -> null_scope) }
 
 let new_with_state symbol_table constants =
   let n_cmp = new_compiler in
@@ -78,15 +101,17 @@ let rec add_constants obj cmp =
 and emit op cmp =
   let inst = Code.make op in
   let cmp, pos = add_instructions inst cmp in
-  let last = {opcode= op; position= pos} in
-  let cmp =
-    {cmp with previous_instruction= cmp.last_instruction; last_instruction= last}
-  in
+  set_last_instruction op pos cmp ;
   (cmp, pos)
 
 and add_instructions inst cmp =
-  let pos_new_inst = List.length cmp.instructions in
-  ({cmp with instructions= cmp.instructions @ inst}, pos_new_inst)
+  let cur_inst = current_instructions cmp in
+  let pos_new_inst = List.length cur_inst in
+  let updated_instructions = cur_inst @ inst in
+  let cur_scope = current_scope cmp in
+  let new_scope = {cur_scope with instructions= updated_instructions} in
+  update_current_scope new_scope cmp ;
+  (cmp, pos_new_inst)
 
 let replace_instruction pos new_instruction cmp =
   let f pos l1 l2 =
@@ -100,12 +125,14 @@ let replace_instruction pos new_instruction cmp =
         else item )
       l2
   in
-  let patched_instructions = f pos new_instruction cmp.instructions in
-  {cmp with instructions= patched_instructions}
+  let patched_instructions = f pos new_instruction (current_instructions cmp) in
+  let cur_scope = current_scope cmp in
+  let new_scope = {cur_scope with instructions= patched_instructions} in
+  update_current_scope new_scope cmp
 
 (**  [change_operand op_pos operand cmp] Assumes you only replace operands of the same type and same length *)
 let[@ocaml.warning "-9"] change_operand op_pos operand cmp =
-  let* {def} = List.nth cmp.instructions op_pos |> Code.lookup in
+  let* {def} = List.nth (current_instructions cmp) op_pos |> Code.lookup in
   let* marker = Code.marker_to_opcode operand def in
   let new_instruction = Code.make marker in
   Ok (replace_instruction op_pos new_instruction cmp)
@@ -120,11 +147,18 @@ let remove_pop cmp =
     | hd :: tl ->
         hd :: pop_last tl
   in
-  { cmp with
-    instructions= pop_last cmp.instructions
-  ; last_instruction= cmp.previous_instruction }
+  let cur_scope = current_scope cmp in
+  let old = cur_scope.instructions in
+  let new_inst = pop_last old in
+  let new_scope =
+    { cur_scope with
+      instructions= new_inst
+    ; last_instruction= cur_scope.previous_instruction }
+  in
+  update_current_scope new_scope cmp
 
-let last_instruction_pop cmp = cmp.last_instruction.opcode = `Pop
+let last_instruction_pop cmp =
+  (current_scope cmp).last_instruction.opcode = `Pop
 
 let[@ocaml.warning "-27-9-26"] rec compile nodes cmp =
   let open Ast in
@@ -140,13 +174,13 @@ let[@ocaml.warning "-27-9-26"] rec compile nodes cmp =
         (* NOTE Compile the consequence every time*)
         let* cmp = compile_node consquence cmp in
         (* NOTE Remove the duplicated pop*)
-        let cmp = if last_instruction_pop cmp then remove_pop cmp else cmp in
+        let cmp =
+          if last_instruction_pop cmp then (remove_pop cmp ; cmp) else cmp
+        in
         (* NOTE Get the position after the consquence*)
         let cmp, jump_pos = emit (`Jump 9999) cmp in
-        let after_consequence_pos = List.length cmp.instructions in
-        let* cmp =
-          change_operand jump_not_truth_pos after_consequence_pos cmp
-        in
+        let after_consequence_pos = List.length (current_instructions cmp) in
+        let* _ = change_operand jump_not_truth_pos after_consequence_pos cmp in
         let* cmp =
           if Option.is_none altenative then
             let cmp, _ = emit `Null cmp in
@@ -154,12 +188,13 @@ let[@ocaml.warning "-27-9-26"] rec compile nodes cmp =
           else
             let* cmp = compile_node (Option.get altenative) cmp in
             let cmp =
-              if last_instruction_pop cmp then remove_pop cmp else cmp
+              if last_instruction_pop cmp then (remove_pop cmp ; cmp) else cmp
             in
             Ok cmp
         in
-        let after_alternative = List.length cmp.instructions in
-        change_operand jump_pos after_alternative cmp
+        let after_alternative = List.length (current_instructions cmp) in
+        let* _ = change_operand jump_pos after_alternative cmp in
+        Ok cmp
     | InfixExpression {left; right; operator} -> (
         let lr_compile = function
           | `Left2Right ->

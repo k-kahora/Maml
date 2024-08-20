@@ -6,13 +6,19 @@ module IntMap : module type of Map.Make (Int)
 
 type emitted_instruction = {opcode: Code.opcode; position: int}
 
-type compiler =
+type compilation_scope =
   { instructions: byte list
-  ; index: int
-  ; constants: Obj.item IntMap.t
   ; last_instruction: emitted_instruction
-  ; symbol_table: Symbol_table.symbol_table
   ; previous_instruction: emitted_instruction }
+
+type compiler =
+  { index: int
+  ; scope_index: int
+  ; constants: Obj.item IntMap.t
+  ; symbol_table: Symbol_table.symbol_table
+  ; scopes: compilation_scope array }
+
+val current_instructions : compiler -> byte list
 
 val new_compiler : compiler
 

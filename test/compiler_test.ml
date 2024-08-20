@@ -28,10 +28,15 @@ let[@ocaml.warning "-27"] run_compiler_tests tests =
   in
   let helper (input, expected_constants, expected_instructions) =
     let concatted = List.concat expected_instructions in
+    let main_scope =
+      { last_instruction= {opcode= `Null; position= 0}
+      ; previous_instruction= {opcode= `Null; position= 0}
+      ; instructions= concatted }
+    in
     let expected_compiler =
       Ok
         { Compiler.new_compiler with
-          instructions= concatted
+          scopes= [|main_scope|]
         ; constants= expected_constants }
     in
     let actual = craft_compiler input in
