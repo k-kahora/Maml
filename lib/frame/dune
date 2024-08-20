@@ -1,0 +1,4 @@
+(library
+ (name frame )
+ (libraries core code object ast symbol_table program_stack ))
+
