@@ -311,18 +311,18 @@ let () =
   Alcotest.run "OpConstant arithmetic checking"
     [ ( "testing compiler"
       , [ Alcotest.test_case "int arithmetic" `Quick test_int_arithmetic
-        ; Alcotest.test_case "bool expressions" `Quick test_bool_expressions
-        ; Alcotest.test_case "conditionals" `Quick test_conditionals ] )
+        ; Alcotest.test_case "bool expressions" `Slow test_bool_expressions
+        ; Alcotest.test_case "conditionals" `Slow test_conditionals ] )
     ; ( "let bindings"
-      , [Alcotest.test_case "bindings" `Quick test_global_let_statement] )
+      , [Alcotest.test_case "bindings" `Slow test_global_let_statement] )
     ; ( "string compilation"
-      , [Alcotest.test_case "string work" `Quick test_string_expression] )
+      , [Alcotest.test_case "string work" `Slow test_string_expression] )
     ; ( "array comp"
-      , [Alcotest.test_case "array work" `Quick test_array_expression] )
+      , [Alcotest.test_case "array work" `Slow test_array_expression] )
     ; ( "hash compilation"
-      , [Alcotest.test_case "hash work" `Quick test_hash_expressions] )
+      , [Alcotest.test_case "hash work" `Slow test_hash_expressions] )
     ; ( "index compilation"
-      , [Alcotest.test_case "index work" `Quick test_index_expression] )
+      , [Alcotest.test_case "index work" `Slow test_index_expression] )
     ; ( "function compilation"
-      , [Alcotest.test_case "function work" `Quick test_function_expressions] )
+      , [Alcotest.test_case "function work" `Slow test_function_expressions] )
     ]

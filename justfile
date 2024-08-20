@@ -10,4 +10,4 @@ build:
 utop:
 	utop -init ./bin/inti_script.ml
 test:
-	dune runtest
+	dune runtest 

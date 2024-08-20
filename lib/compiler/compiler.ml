@@ -100,7 +100,7 @@ let rec add_constants obj cmp =
 
 and emit op cmp =
   let inst = Code.make op in
-  let cmp, pos = add_instructions inst cmp in
+  let pos = add_instructions inst cmp in
   set_last_instruction op pos cmp ;
   (cmp, pos)
 
@@ -111,7 +111,7 @@ and add_instructions inst cmp =
   let cur_scope = current_scope cmp in
   let new_scope = {cur_scope with instructions= updated_instructions} in
   update_current_scope new_scope cmp ;
-  (cmp, pos_new_inst)
+  pos_new_inst
 
 let replace_instruction pos new_instruction cmp =
   let f pos l1 l2 =
