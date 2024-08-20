@@ -22,15 +22,15 @@ type virtual_machine =
   ; stack: Obj.item Program_stack.program_stack }
 
 let push_frame frame vm =
-  vm.frames.(vm.frame_index) <- frame ;
+  vm.frames.(vm.frame_index + 1) <- frame ;
   {vm with frame_index= vm.frame_index + 1}
 
 let pop_frame vm =
-  let new_vm = {vm with frame_index= vm.frame_index - 1} in
   vm.frames.(vm.frame_index) <- Frame.new_frame (Obj.CompFunc []) ;
+  let new_vm = {vm with frame_index= vm.frame_index - 1} in
   new_vm
 
-let current_frame vm = vm.frames.(vm.frame_index - 1)
+let current_frame vm = vm.frames.(vm.frame_index)
 
 let frame_instructions vm = current_frame vm |> fun a -> a.fn
 
@@ -43,7 +43,7 @@ let new_virtual_machine byte_code =
   { constants= byte_code.constants
   ; globals= Program_stack.make_stack global_size
   ; frames
-  ; frame_index= 1
+  ; frame_index= 0
   ; last_item_poped= Obj.Null
   ; stack= Program_stack.make_stack stack_size }
 

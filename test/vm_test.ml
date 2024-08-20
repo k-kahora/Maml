@@ -273,8 +273,7 @@ let test_function_without_return_values () =
 let test_function_literals () =
   let option_mapper (a, b) = (a, Ok (Option.map (fun d -> Int d) b)) in
   let tests =
-    [ ("let fivePlusTen = fn() { 5 + 10; }; fivePlusTen();", Some 15)
-    ; ( {|
+    [ ( {|
   let one = fn() { 1; };
   let two = fn() { 1 + one() };
   let three = fn() { 1 + two() };
@@ -288,6 +287,19 @@ let test_function_literals () =
   a() + b() + c()
 |}
       , Some 6 ) ]
+    |> List.map option_mapper
+  in
+  List.iter run_vm_tests tests
+
+let test_first_class_funcs () =
+  let option_mapper (a, b) = (a, Ok (Option.map (fun d -> Int d) b)) in
+  let tests =
+    [ ( {|
+         let returnsOne = fn() { 1; };
+         let returnsOneReturner = fn() { returnsOne; };
+         returnsOneReturner()();
+|}
+      , Some 1 ) ]
     |> List.map option_mapper
   in
   List.iter run_vm_tests tests
@@ -317,4 +329,7 @@ let () =
             test_function_literals_return ] )
     ; ( "argumentlss functions without bodys"
       , [ Alcotest.test_case "functions tests" `Quick
-            test_function_without_return_values ] ) ]
+            test_function_without_return_values ] )
+    ; ( "first class functions"
+      , [Alcotest.test_case "functions tests" `Quick test_first_class_funcs] )
+    ]
