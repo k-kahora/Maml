@@ -285,6 +285,23 @@ let test_array_expression () =
   in
   run_compiler_tests tests
 
+let test_function_expressions () =
+  let open Object.Obj in
+  let tests =
+    [ ( "fn () {return 10 * 2}"
+      , map_test_helper
+          [ Int 10
+          ; Int 2
+          ; CompFunc
+              ( [ make (`Constant 0)
+                ; make (`Constant 1)
+                ; make `Mul
+                ; make `ReturnValue ]
+              |> List.concat ) ]
+      , make_test_helper [`Constant 2; `Pop] ) ]
+  in
+  run_compiler_tests tests
+
 let () =
   Alcotest.run "OpConstant arithmetic checking"
     [ ( "testing compiler"
@@ -300,4 +317,7 @@ let () =
     ; ( "hash compilation"
       , [Alcotest.test_case "hash work" `Quick test_hash_expressions] )
     ; ( "index compilation"
-      , [Alcotest.test_case "index work" `Quick test_index_expression] ) ]
+      , [Alcotest.test_case "index work" `Quick test_index_expression] )
+    ; ( "function compilation"
+      , [Alcotest.test_case "function work" `Quick test_function_expressions] )
+    ]

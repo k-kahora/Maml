@@ -5,6 +5,7 @@ module rec Obj : sig
     | Bool'
     (* Parameters, Body, Environment *)
     | Function'
+    | CompFunc'
     | Null'
     | Return'
     | Error'
@@ -21,6 +22,7 @@ module rec Obj : sig
     | Bool of bool
     (* Parameters, Body, Environment *)
     | Function of Ast.expression list * Ast.statement * Environment.environment
+    | CompFunc of char list
     | Null
     | Return of item
     | Error of string
@@ -56,6 +58,7 @@ end = struct
     | Bool'
     (* Parameters, Body, Environment *)
     | Function'
+    | CompFunc'
     | Null'
     | Return'
     | Error'
@@ -71,6 +74,7 @@ end = struct
     | String of string
     | Bool of bool
     | Function of Ast.expression list * Ast.statement * Environment.environment
+    | CompFunc of char list
     | Null
     | Return of item
     | Error of string
@@ -90,6 +94,8 @@ end = struct
         Bool'
     | Function _ ->
         Function'
+    | CompFunc _ ->
+        CompFunc'
     | Null ->
         Null'
     | Return _ ->
@@ -130,6 +136,8 @@ end = struct
         failwith "HashKey not yet implemented"
     | Hash _ ->
         failwith "Hash not yet implemented"
+    | CompFunc _ ->
+        failwith "CompFunc not yet implemented"
 
   let hashable = function
     | Int _ ->
@@ -151,6 +159,8 @@ end = struct
     | HashKey _ ->
         false
     | Function _ ->
+        false
+    | CompFunc _ ->
         false
     | Hash _ ->
         false
@@ -178,6 +188,8 @@ end = struct
         "BOOLEAN"
     | Function _ ->
         "FUNCTION"
+    | CompFunc _ ->
+        "CompFunc"
     | Null ->
         "Null"
     | Return _ ->
@@ -198,6 +210,11 @@ end = struct
         i
     | Bool b ->
         string_of_bool b
+    | CompFunc ls ->
+        List.fold_left
+          (fun acc a -> acc ^ Format.sprintf "0x%02X," (int_of_char a))
+          "[" ls
+        ^ "]"
     | Function (parmeters, _, _) ->
         let str =
           List.fold_left
