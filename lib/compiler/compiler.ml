@@ -13,6 +13,8 @@ module TestObj = struct
         Int.compare a b
     | String a, String b ->
         String.compare a b
+    | CompFunc lst1, CompFunc lst2 ->
+        List.compare (fun a b -> int_of_char a - int_of_char b) lst1 lst2
     | _ ->
         -1
 end
@@ -304,6 +306,13 @@ let[@ocaml.warning "-27-9-26"] rec compile nodes cmp =
         let* cmp = compile_expression index cmp in
         let cmp = emit `Index cmp |> fst in
         Ok cmp
+    | FunctionLiteral {parameters; body} ->
+        let cmp = enter_scope cmp in
+        let* cmp = compile_node body cmp in
+        let cmp, inst = leave_scope cmp in
+        let cmp, index = add_constants (Obj.CompFunc inst) cmp in
+        let cmp, _ = emit (`Constant index) cmp in
+        Ok cmp
     | e ->
         Error (Code.CodeError.ExpressionNotImplemented e)
   and compile_node node cmp =
@@ -326,8 +335,10 @@ let[@ocaml.warning "-27-9-26"] rec compile nodes cmp =
         let st, symbol = Symbol_table.define id cmp.symbol_table in
         let cmp, _ = emit (`SetGlobal symbol.index) cmp in
         Ok {cmp with symbol_table= st}
-    | a ->
-        Error (Code.CodeError.StatementNotImplemented node)
+    | Returnstatement {return_value} ->
+        let* cmp = compile_expression return_value cmp in
+        let cmp, _ = emit `ReturnValue cmp in
+        Ok cmp
   and compile_statements statement_list cmp =
     match statement_list with
     | [] ->
