@@ -307,6 +307,45 @@ let test_function_expressions () =
   in
   run_compiler_tests tests
 
+let test_compiler_scopes () =
+  let index_check expected cmp =
+    Alcotest.(check int) "checking initial scope value" expected cmp.scope_index
+  in
+  let length_check expected cmp =
+    Alcotest.(check int)
+      "instruction length check" expected
+      (List.length (current_instructions cmp))
+  in
+  let instruction_check marker expected cmp =
+    match marker with
+    | `Last ->
+        Alcotest.(check string)
+          "last opcode check"
+          (Code.operand_name expected)
+          (Code.operand_name_not_marker
+             cmp.scopes.(cmp.scope_index).last_instruction.opcode )
+    | `Previous ->
+        Alcotest.(check string)
+          "previous opcode check"
+          (Code.operand_name expected)
+          (Code.operand_name_not_marker
+             cmp.scopes.(cmp.scope_index).previous_instruction.opcode )
+  in
+  let emit_h opcode cmp = emit opcode cmp |> fst in
+  let cmp = new_compiler () in
+  index_check 0 cmp ;
+  let cmp = emit_h `Mul cmp |> enter_scope in
+  index_check 1 cmp ;
+  let cmp = emit_h `Sub cmp in
+  length_check 1 cmp ;
+  instruction_check `Last `Sub cmp ;
+  let cmp = leave_scope cmp |> fst in
+  index_check 0 cmp ;
+  let cmp = emit_h `Add cmp in
+  length_check 2 cmp ;
+  instruction_check `Last `Add cmp ;
+  instruction_check `Previous `Mul cmp
+
 let () =
   Alcotest.run "OpConstant arithmetic checking"
     [ ( "testing compiler"
@@ -323,6 +362,9 @@ let () =
       , [Alcotest.test_case "hash work" `Slow test_hash_expressions] )
     ; ( "index compilation"
       , [Alcotest.test_case "index work" `Slow test_index_expression] )
+    ; ( "scope indexing"
+      , [Alcotest.test_case "scope index chekinge" `Slow test_compiler_scopes]
+      )
     ; ( "function compilation"
       , [Alcotest.test_case "function work" `Slow test_function_expressions] )
     ]

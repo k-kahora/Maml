@@ -31,6 +31,56 @@ type opcode =
 type opcode_marker =
   [`CONSTANT | `JUMP | `JUMPNOTTRUTHY | `GETGLOBAL | `SETGLOBAL | `ARRAY | `HASH]
 
+let operand_name_not_marker = function
+  | `Constant _ ->
+      "Constant"
+  | `JumpNotTruthy _ ->
+      "JumpNotTruthy"
+  | `Jump _ ->
+      "Jump"
+  | `GetGlobal _ ->
+      "GetGlobal"
+  | `SetGlobal _ ->
+      "SetGlobal"
+  | `Array _ ->
+      "Array"
+  | `Hash _ ->
+      "Hash"
+  | `Add ->
+      "Add"
+  | `Pop ->
+      "Pop"
+  | `Sub ->
+      "Sub"
+  | `Mul ->
+      "Mul"
+  | `Div ->
+      "Div"
+  | `True ->
+      "True"
+  | `False ->
+      "False"
+  | `Equal ->
+      "Equal"
+  | `GreaterThan ->
+      "GreaterThan"
+  | `Minus ->
+      "Minus"
+  | `Null ->
+      "Null"
+  | `Bang ->
+      "Bang"
+  | `NotEqual ->
+      "NotEqual"
+  | `Index ->
+      "Index"
+  | `Call ->
+      "Call"
+  | `Return ->
+      "Return"
+  | `ReturnValue ->
+      "ReturnValue"
+
 let operand_name = function
   | `Constant _ | `CONSTANT ->
       "Constant"

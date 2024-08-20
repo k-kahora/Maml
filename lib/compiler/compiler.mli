@@ -31,7 +31,12 @@ val empty_symbol_table_and_constants :
 val compile :
   Ast.statement list -> compiler -> (compiler, Code.CodeError.error) result
 
+val emit : Code.opcode -> compiler -> compiler * int
+
 val alcotest_compiler : compiler Alcotest.testable
 
-(* val compile : compiler -> Ast.program -> (int, error) result *)
+val enter_scope : compiler -> compiler
+
+val leave_scope : compiler -> compiler * byte list
 (** [compile compiler program] The [program] is first evaluated as a list of statements and each statement is then evaluated on its own type going deeper into the AST returns a completed compiler *)
+(* val compile : compiler -> Ast.program -> (int, error) result *)

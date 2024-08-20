@@ -45,6 +45,13 @@ let current_scope cmp = cmp.scopes.(cmp.scope_index)
 
 let update_current_scope scope cmp = cmp.scopes.(cmp.scope_index) <- scope
 
+let enter_scope cmp = {cmp with scope_index= cmp.scope_index + 1}
+
+let leave_scope cmp =
+  let cur_inst = current_instructions cmp in
+  cmp.scopes.(cmp.scope_index) <- null_scope ;
+  ({cmp with scope_index= cmp.scope_index - 1}, cur_inst)
+
 let set_last_instruction opcode position cmp =
   let cur_scope = current_scope cmp in
   let previous = cur_scope.last_instruction in

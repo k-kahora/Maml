@@ -87,3 +87,7 @@ module ByteFmt : sig
 end
 
 val create_opcode : byte -> [> opcode]
+
+val operand_name : [opcode | opcode_marker] -> string
+
+val operand_name_not_marker : opcode -> string
