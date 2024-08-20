@@ -6,10 +6,10 @@ type byte = char
 
 type virtual_machine =
   { constants: Obj.item IntMap.t
-  ; instructions: byte Program_stack.program_stack
   ; globals: Obj.item Program_stack.program_stack
   ; last_item_poped: Obj.item
-  ; frames: Frame.frame Program_stack.program_stack
+  ; frames: Frame.frame array
+  ; frame_index: int
   ; stack: Obj.item Program_stack.program_stack }
 
 val new_virtual_machine : Compiler.compiler -> virtual_machine

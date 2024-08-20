@@ -15,29 +15,35 @@ module IntMap = Map.Make (Int)
 
 type virtual_machine =
   { constants: Obj.item IntMap.t
-  ; instructions: byte Program_stack.program_stack
   ; globals: Obj.item Program_stack.program_stack
   ; last_item_poped: Obj.item
-  ; frames: Frame.frame Program_stack.program_stack
+  ; frames: Frame.frame array
+  ; frame_index: int
   ; stack: Obj.item Program_stack.program_stack }
 
-let push_frame frame vm = Program_stack.push frame vm.frames
+let push_frame frame vm =
+  vm.frames.(vm.frame_index) <- frame ;
+  {vm with frame_index= vm.frame_index + 1}
 
-let pop_frame vm = Program_stack.pop vm.frames
+let pop_frame vm =
+  let new_vm = {vm with frame_index= vm.frame_index - 1} in
+  vm.frames.(vm.frame_index) <- Frame.new_frame (Obj.CompFunc []) ;
+  new_vm
 
-let current_frame vm = Program_stack.stack_head vm.frames
+let current_frame vm = vm.frames.(vm.frame_index - 1)
+
+let frame_instructions vm = current_frame vm |> fun a -> a.fn
 
 let new_virtual_machine byte_code =
   let open Compiler in
   let main_fn = Obj.CompFunc (current_instructions byte_code) in
   let main_frame = Frame.new_frame main_fn in
-  let frames = Program_stack.make_stack max_frames in
-  Program_stack.push main_frame frames ;
+  let frames = Array.make max_frames @@ Frame.new_frame (Obj.CompFunc []) in
+  frames.(0) <- main_frame ;
   { constants= byte_code.constants
-  ; instructions=
-      Program_stack.stack_of_list (Compiler.current_instructions byte_code)
   ; globals= Program_stack.make_stack global_size
   ; frames
+  ; frame_index= 1
   ; last_item_poped= Obj.Null
   ; stack= Program_stack.make_stack stack_size }
 
@@ -63,8 +69,8 @@ module VM_Helpers = struct
   let finish_run vm = Ok vm
 
   let evaluate_opconstant vm =
-    let* b1 = Program_stack.read_then_increment vm.instructions in
-    let* b2 = Program_stack.read_then_increment vm.instructions in
+    let* b1 = Program_stack.read_then_increment (frame_instructions vm) in
+    let* b2 = Program_stack.read_then_increment (frame_instructions vm) in
     let constIndex = ByteFmt.int_of_hex [b1; b2] 2 in
     let constant_opt = IntMap.find_opt constIndex vm.constants in
     let* constant =
@@ -163,10 +169,10 @@ module VM_Helpers = struct
 
   (* NOTE YOu were tired and keep typing stack instead of instruction ip, SWITCH stack back to a stack and not your custom BS *)
   let evaluate_jump vm =
-    let* b1 = Program_stack.read_then_increment vm.instructions in
-    let* b2 = Program_stack.read_then_increment vm.instructions in
+    let* b1 = Program_stack.read_then_increment (frame_instructions vm) in
+    let* b2 = Program_stack.read_then_increment (frame_instructions vm) in
     let jump_pos = ByteFmt.int_of_hex [b1; b2] 2 in
-    vm.instructions.ip <- jump_pos ;
+    (frame_instructions vm).ip <- jump_pos ;
     finish_run vm
 
   let truthy = function
@@ -180,23 +186,23 @@ module VM_Helpers = struct
         true
 
   let evaluate_jump_not_truthy vm =
-    let* b1 = Program_stack.read_then_increment vm.instructions in
-    let* b2 = Program_stack.read_then_increment vm.instructions in
+    let* b1 = Program_stack.read_then_increment (frame_instructions vm) in
+    let* b2 = Program_stack.read_then_increment (frame_instructions vm) in
     let pos = ByteFmt.int_of_hex [b1; b2] 2 in
     let* condition = pop vm in
-    if not (truthy condition) then vm.instructions.ip <- pos ;
+    if not (truthy condition) then (frame_instructions vm).ip <- pos ;
     finish_run vm
 
   let evaluate_get_global vm =
-    let* b1 = Program_stack.read_then_increment vm.instructions in
-    let* b2 = Program_stack.read_then_increment vm.instructions in
+    let* b1 = Program_stack.read_then_increment (frame_instructions vm) in
+    let* b2 = Program_stack.read_then_increment (frame_instructions vm) in
     let global_index = ByteFmt.int_of_hex [b1; b2] 2 in
     let* item = Program_stack.get global_index vm.globals in
     push item vm ; finish_run vm
 
   let evaluate_set_global vm =
-    let* b1 = Program_stack.read_then_increment vm.instructions in
-    let* b2 = Program_stack.read_then_increment vm.instructions in
+    let* b1 = Program_stack.read_then_increment (frame_instructions vm) in
+    let* b2 = Program_stack.read_then_increment (frame_instructions vm) in
     let global_index = ByteFmt.int_of_hex [b1; b2] 2 in
     let* poped = pop vm in
     let* _ = Program_stack.set global_index poped vm.globals in
@@ -229,8 +235,8 @@ module VM_Helpers = struct
       let* hash = looper (Ok (Hashtbl.create (List.length slice))) slice in
       Ok (Obj.Hash hash)
     in
-    let* b1 = Program_stack.read_then_increment vm.instructions in
-    let* b2 = Program_stack.read_then_increment vm.instructions in
+    let* b1 = Program_stack.read_then_increment (frame_instructions vm) in
+    let* b2 = Program_stack.read_then_increment (frame_instructions vm) in
     let num_elements = ByteFmt.int_of_hex [b1; b2] 2 in
     let* hash = build_hash (vm.stack.ip - num_elements) vm.stack.ip vm in
     push hash vm ; finish_run vm
@@ -240,8 +246,8 @@ module VM_Helpers = struct
       let len = Array.length arr in
       Array.init len (fun i -> arr.(len - i - 1))
     in
-    let* b1 = Program_stack.read_then_increment vm.instructions in
-    let* b2 = Program_stack.read_then_increment vm.instructions in
+    let* b1 = Program_stack.read_then_increment (frame_instructions vm) in
+    let* b2 = Program_stack.read_then_increment (frame_instructions vm) in
     let arr_length = ByteFmt.int_of_hex [b1; b2] 2 in
     let t_arr = Array.init arr_length (fun _ -> pop vm) in
     let error = Array.find_opt Result.is_error t_arr in
@@ -332,13 +338,13 @@ let[@ocaml.tailcall] [@ocaml.warning "-9-11"] run vm =
     Array.fold_left
       (fun vm _ ->
         let* vm = vm in
-        match Program_stack.read_then_increment vm.instructions with
+        match Program_stack.read_then_increment (frame_instructions vm) with
         | Ok hd ->
             let* {def} = lookup hd in
             match_opcode vm def
         | Error _ ->
             Ok vm )
-      (Ok vm) vm.instructions.stack
+      (Ok vm) (frame_instructions vm).stack
   in
   x
 
