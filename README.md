@@ -32,9 +32,9 @@ For many it is a mystery how programming languages work, the goal of this projec
 
 Dillinger uses a number of open source projects to work properly:
 
-- [Ocaml](https://ocaml.org/) - An industrial-strength functional programming language with an emphasis on expressiveness and safety 
-- [Alcotest](https://github.com/mirage/alcotest) - Alcotest exposes a simple interface to perform unit tests
-- [xxhash](https://github.com/Cyan4973/xxHash) - xxHash is an Extremely fast Hash algorithm, processing at RAM speed limits.
+- [Ocaml] - An industrial-strength functional programming language with an emphasis on expressiveness and safety 
+- [Alcotest] - Alcotest exposes a simple interface to perform unit tests
+- [xxhash] - xxHash is an Extremely fast Hash algorithm, processing at RAM speed limits.
 
 
 ## Installation
@@ -80,6 +80,7 @@ Open your terminal
 * .ape file extensions
 * custom lsp for this toy langugae
 * instructions for running the language
+* Add a CI/CD script to auto run tests on push
 
 ### standards
 #### Copiler Must Have
@@ -115,7 +116,9 @@ MIT
    [@tjholowaychuk]: <http://twitter.com/tjholowaychuk>
    [express]: <http://expressjs.com>
    [AngularJS]: <http://angularjs.org>
-   [Gulp]: <http://gulpjs.com>
+   [Ocaml]: <https://ocaml.org/>
+   [Alcotest]: <https://github.com/mirage/alcotest>
+   [xxhash]: <https://github.com/Cyan4973/xxHash>
 
    [PlDb]: <https://github.com/joemccann/dillinger/tree/master/plugins/dropbox/README.md>
    [PlGh]: <https://github.com/joemccann/dillinger/tree/master/plugins/github/README.md>
