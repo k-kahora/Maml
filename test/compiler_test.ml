@@ -303,7 +303,32 @@ let test_function_expressions () =
                 ; make `Mul
                 ; make `ReturnValue ]
               |> List.concat ) ]
-      , make_test_helper [`Constant 2; `Pop] ) ]
+      , make_test_helper [`Constant 2; `Pop] )
+    ; ( "fn () { 10 * 2}"
+      , map_test_helper
+          [ Int 10
+          ; Int 2
+          ; CompFunc
+              ( [ make (`Constant 0)
+                ; make (`Constant 1)
+                ; make `Mul
+                ; make `ReturnValue ]
+              |> List.concat ) ]
+      , make_test_helper [`Constant 2; `Pop] )
+    ; ( "fn () {1; 2}"
+      , map_test_helper
+          [ Int 1
+          ; Int 2
+          ; CompFunc
+              ( [ make (`Constant 0)
+                ; make `Pop
+                ; make (`Constant 1)
+                ; make `ReturnValue ]
+              |> List.concat ) ]
+      , make_test_helper [`Constant 2; `Pop] )
+    ; ( "fn () {}"
+      , map_test_helper [CompFunc ([make `Return] |> List.concat)]
+      , make_test_helper [`Constant 0; `Pop] ) ]
   in
   run_compiler_tests tests
 

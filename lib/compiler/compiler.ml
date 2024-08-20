@@ -138,7 +138,8 @@ let replace_instruction pos new_instruction cmp =
   let patched_instructions = f pos new_instruction (current_instructions cmp) in
   let cur_scope = current_scope cmp in
   let new_scope = {cur_scope with instructions= patched_instructions} in
-  update_current_scope new_scope cmp
+  update_current_scope new_scope cmp ;
+  current_scope cmp
 
 (**  [change_operand op_pos operand cmp] Assumes you only replace operands of the same type and same length *)
 let[@ocaml.warning "-9"] change_operand op_pos operand cmp =
@@ -167,8 +168,10 @@ let remove_pop cmp =
   in
   update_current_scope new_scope cmp
 
-let last_instruction_pop cmp =
-  (current_scope cmp).last_instruction.opcode = `Pop
+let last_instruction_is opcode cmp =
+  (* Defensive check *)
+  if List.length (current_instructions cmp) = 0 then false
+  else (current_scope cmp).last_instruction.opcode = opcode
 
 let[@ocaml.warning "-27-9-26"] rec compile nodes cmp =
   let open Ast in
@@ -185,7 +188,7 @@ let[@ocaml.warning "-27-9-26"] rec compile nodes cmp =
         let* cmp = compile_node consquence cmp in
         (* NOTE Remove the duplicated pop*)
         let cmp =
-          if last_instruction_pop cmp then (remove_pop cmp ; cmp) else cmp
+          if last_instruction_is `Pop cmp then (remove_pop cmp ; cmp) else cmp
         in
         (* NOTE Get the position after the consquence*)
         let cmp, jump_pos = emit (`Jump 9999) cmp in
@@ -198,7 +201,8 @@ let[@ocaml.warning "-27-9-26"] rec compile nodes cmp =
           else
             let* cmp = compile_node (Option.get altenative) cmp in
             let cmp =
-              if last_instruction_pop cmp then (remove_pop cmp ; cmp) else cmp
+              if last_instruction_is `Pop cmp then (remove_pop cmp ; cmp)
+              else cmp
             in
             Ok cmp
         in
@@ -253,11 +257,11 @@ let[@ocaml.warning "-27-9-26"] rec compile nodes cmp =
     | IntegerLiteral {value} ->
         let integer = Obj.Int value in
         let cmp, index = add_constants integer cmp in
-        Format.printf "\nprevious_byte_list %s\n"
-          (current_instructions cmp |> Code.ByteFmt.pp_byte_list) ;
+        (* Format.printf "\nprevious_byte_list %s\n" *)
+        (*   (current_instructions cmp |> Code.ByteFmt.pp_byte_list) ; *)
         let cmp, inst_pos = emit (`Constant index) cmp in
-        Format.printf "\ncurrent_byte_list %s\n"
-          (current_instructions cmp |> Code.ByteFmt.pp_byte_list) ;
+        (* Format.printf "\ncurrent_byte_list %s\n" *)
+        (*   (current_instructions cmp |> Code.ByteFmt.pp_byte_list) ; *)
         Ok cmp
     | BooleanExpression {value} ->
         let cmp, _ = if value then emit `True cmp else emit `False cmp in
@@ -307,8 +311,29 @@ let[@ocaml.warning "-27-9-26"] rec compile nodes cmp =
         let cmp = emit `Index cmp |> fst in
         Ok cmp
     | FunctionLiteral {parameters; body} ->
+        let replace_last_pop_with_return cmp =
+          let cur_scope = current_scope cmp in
+          let cur_last_inst_updated =
+            {cur_scope.last_instruction with opcode= `ReturnValue}
+          in
+          let last_pos = cur_scope.last_instruction.position in
+          let new_scope =
+            replace_instruction last_pos (Code.make `ReturnValue) cmp
+          in
+          update_current_scope
+            {new_scope with last_instruction= cur_last_inst_updated}
+            cmp
+        in
         let cmp = enter_scope cmp in
         let* cmp = compile_node body cmp in
+        (* Implicit returns *)
+        if last_instruction_is `Pop cmp then replace_last_pop_with_return cmp ;
+        (* Somehow there is not return statemet or pop in the body  *)
+        let cmp =
+          if not (last_instruction_is `ReturnValue cmp) then
+            emit `Return cmp |> fst
+          else cmp
+        in
         let cmp, inst = leave_scope cmp in
         let cmp, index = add_constants (Obj.CompFunc inst) cmp in
         let cmp, _ = emit (`Constant index) cmp in
