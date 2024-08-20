@@ -78,15 +78,16 @@ let equal_compiler c1 c2 =
 
 let alcotest_compiler = Alcotest.testable pp_compiler equal_compiler
 
-let new_compiler =
+let new_compiler () =
+  let empty_array = Array.init 65535 (fun _ -> null_scope) in
   { index= 0
   ; scope_index= 0
   ; constants= IntMap.empty
   ; symbol_table= Symbol_table.new_symbol_table ()
-  ; scopes= Array.init 65535 (fun _ -> null_scope) }
+  ; scopes= empty_array }
 
 let new_with_state symbol_table constants =
-  let n_cmp = new_compiler in
+  let n_cmp = new_compiler () in
   {n_cmp with symbol_table; constants}
 
 let empty_symbol_table_and_constants () =
@@ -243,7 +244,11 @@ let[@ocaml.warning "-27-9-26"] rec compile nodes cmp =
     | IntegerLiteral {value} ->
         let integer = Obj.Int value in
         let cmp, index = add_constants integer cmp in
+        Format.printf "\nprevious_byte_list %s\n"
+          (current_instructions cmp |> Code.ByteFmt.pp_byte_list) ;
         let cmp, inst_pos = emit (`Constant index) cmp in
+        Format.printf "\ncurrent_byte_list %s\n"
+          (current_instructions cmp |> Code.ByteFmt.pp_byte_list) ;
         Ok cmp
     | BooleanExpression {value} ->
         let cmp, _ = if value then emit `True cmp else emit `False cmp in

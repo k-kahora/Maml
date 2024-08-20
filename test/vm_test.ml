@@ -81,7 +81,7 @@ let test_expected_object actual =
 (* FIXME incorrect use of let* *)
 let setup_vm_test input =
   let program = parse input in
-  let comp = Compiler.new_compiler in
+  let comp = Compiler.new_compiler () in
   let* comp = Compiler.compile program.statements comp in
   Code.ByteFmt.pp_byte_list (Compiler.current_instructions comp)
   |> print_endline ;

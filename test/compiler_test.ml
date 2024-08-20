@@ -20,7 +20,7 @@ let test_constants _ _ = ()
 let[@ocaml.warning "-27"] run_compiler_tests tests =
   let craft_compiler input =
     let program = parse input in
-    let compiler = new_compiler in
+    let compiler = new_compiler () in
     compile program.statements compiler
     (* FIXME figure out why I need a bytecode DS *)
     (* let bytecode = bytecode compiler in *)
@@ -35,19 +35,19 @@ let[@ocaml.warning "-27"] run_compiler_tests tests =
     in
     let expected_compiler =
       Ok
-        { Compiler.new_compiler with
+        { (Compiler.new_compiler ()) with
           scopes= [|main_scope|]
         ; constants= expected_constants }
     in
     let actual = craft_compiler input in
-    print_endline "expected" ;
     (* let _ = *)
     (*   Code.string_of_byte_list concatted *)
     (*   |> Result.fold ~error:CodeError.print_error ~ok:print_endline *)
     (* in *)
     (* print_endline "actual" ; *)
     (* let _ = *)
-    (*   Code.string_of_byte_list (Result.get_ok actual |> fun a -> a.instructions) *)
+    (*   Code.string_of_byte_list *)
+    (*     (Result.get_ok actual |> fun a -> Compiler.current_instructions a) *)
     (*   |> Result.fold ~error:CodeError.print_error ~ok:print_endline *)
     (* in *)
     (* FIXME currently do not check constants and index *)

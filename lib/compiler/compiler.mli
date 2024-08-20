@@ -20,7 +20,7 @@ type compiler =
 
 val current_instructions : compiler -> byte list
 
-val new_compiler : compiler
+val new_compiler : unit -> compiler
 
 val new_with_state :
   Symbol_table.symbol_table -> Object.Obj.item IntMap.t -> compiler
