@@ -235,6 +235,63 @@ let test_hash_literals () =
   in
   List.iter run_vm_tests tests
 
+let test_function_literals_return () =
+  let option_mapper (a, b) = (a, Ok (Option.map (fun d -> Int d) b)) in
+  let tests =
+    [ ( {|
+         let earlyExit = fn () { return 99; 100; }
+         earlyExit()
+|}
+      , Some 99 )
+    ; ( {|
+         let earlyExit = fn () { return 99; return 100; }
+         earlyExit()
+|}
+      , Some 99 ) ]
+    |> List.map option_mapper
+  in
+  List.iter run_vm_tests tests
+
+let test_function_without_return_values () =
+  let option_mapper (a, b) = (a, Ok (Option.map (fun d -> Int d) b)) in
+  let tests =
+    [ ({|
+         let noReturn = fn() { };
+         noReturn()
+|}, None)
+    ; ( {|
+         let noReturn = fn() { };
+         let noReturnTwo = fn() { noReturn() };
+         noReturn();
+         noReturnTwo();
+|}
+      , None ) ]
+    |> List.map option_mapper
+  in
+  List.iter run_vm_tests tests
+
+let test_function_literals () =
+  let option_mapper (a, b) = (a, Ok (Option.map (fun d -> Int d) b)) in
+  let tests =
+    [ ("let fivePlusTen = fn() { 5 + 10; }; fivePlusTen();", Some 15)
+    ; ( {|
+  let one = fn() { 1; };
+  let two = fn() { 1 + one() };
+  let three = fn() { 1 + two() };
+  three() + one()
+|}
+      , Some 4 )
+    ; ( {|
+  let a = fn() { 1 };
+  let b = fn() { 2 };
+  let c = fn() { 3 };
+  a() + b() + c()
+|}
+      , Some 6 ) ]
+    |> List.map option_mapper
+  in
+  List.iter run_vm_tests tests
+
 let () =
   Alcotest.run "Virtual Machine Tests"
     [ ( "Arithmatic"
@@ -252,4 +309,12 @@ let () =
     ; ( "arrays"
       , [Alcotest.test_case "array monkey tests" `Quick test_array_literals] )
     ; ( "hash tables"
-      , [Alcotest.test_case "hash table tests" `Quick test_hash_literals] ) ]
+      , [Alcotest.test_case "hash table tests" `Quick test_hash_literals] )
+    ; ( "argumentlss functions"
+      , [Alcotest.test_case "functions tests" `Quick test_function_literals] )
+    ; ( "argumentlss functions with explicit returns"
+      , [ Alcotest.test_case "functions tests" `Quick
+            test_function_literals_return ] )
+    ; ( "argumentlss functions without bodys"
+      , [ Alcotest.test_case "functions tests" `Quick
+            test_function_without_return_values ] ) ]

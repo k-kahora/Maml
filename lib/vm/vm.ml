@@ -287,6 +287,48 @@ module VM_Helpers = struct
     let* left = pop vm in
     let* _ = execute_vm_expression left index vm in
     finish_run vm
+
+  let evaluate_index vm =
+    let execute_vm_expression left index vm =
+      match (left, index) with
+      | Obj.Array array, Obj.Int index ->
+          if index >= 0 && index < Array.length array then
+            Ok (push array.(index) vm)
+          else Ok (push Obj.Null vm)
+      | Obj.Hash hash, _ ->
+          if not (Obj.hashable index) then
+            Error (CodeError.CustomError "Index is not hashable")
+          else
+            let item =
+              Hashtbl.find_opt hash (Obj.hash_key index)
+              |> Option.fold ~none:Obj.Null ~some:(fun a -> a.Obj.value)
+            in
+            push item vm ; Ok ()
+      (* FIXME make a better error here *)
+      | _ ->
+          Error (CodeError.CustomError "Index operator not supported")
+    in
+    let* index = pop vm in
+    let* left = pop vm in
+    let* _ = execute_vm_expression left index vm in
+    finish_run vm
+
+  (** [evaluate_call vm] get the current item on the top of the stack which should be a CompiledFunc 100% of the time, a exception is thrown if not; make a new frame with it and push it onto the stack_frames  *)
+  let evaluate_call vm =
+    let* fn = Program_stack.stack_head vm.stack in
+    let frame = Frame.new_frame fn in
+    finish_run (push_frame frame vm)
+
+  let return_value vm =
+    let* return_value = pop vm in
+    let vm = pop_frame vm in
+    let* _ = pop vm in
+    push return_value vm ; finish_run vm
+
+  let return vm =
+    let vm = pop_frame vm in
+    let* _ = pop vm in
+    push Obj.Null vm ; finish_run vm
 end
 
 (*FIXME any inperformant functions called in here is an issue *)
@@ -327,6 +369,12 @@ let[@ocaml.tailcall] [@ocaml.warning "-9-11"] run vm =
         VM_Helpers.evaluate_array vm
     | `Hash _ | `HASH ->
         VM_Helpers.evaluate_hash vm
+    | `Call ->
+        VM_Helpers.evaluate_call vm
+    | `ReturnValue ->
+        VM_Helpers.return_value vm
+    | `Return ->
+        VM_Helpers.return vm
     | a ->
         Error (Code.CodeError.OpCodeNotImplemented a)
   in
