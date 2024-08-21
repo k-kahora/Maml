@@ -56,6 +56,13 @@ graffiti --version
 | Medium | [plugins/medium/README.md][PlMe] |
 | Google Analytics | [plugins/googleanalytics/README.md][PlGa] |
 
+## Inspiration
+- [token-ast-node]
+- [d3-visualizer]
+- [clean-formatter]
+- [sql-query]
+- [Gleam]
+
 ## Development
 
 Open your terminal
@@ -69,6 +76,11 @@ Open your terminal
 - [ ] Make every failswith return a Result instead of a runtime error return an error object using Result by Ocaml
 
 #### future plans
+- STEP 1: Finish the compiler and interpreter as well as a useful cmdline utility to use both (repl, ast outpus, bytecode output)
+- STEP 2: Website with lang info as well as breif tutorial
+- STEP 3: AST visualizer
+- STEP 4: Bytecode visualizer
+
 
 * Add less than or equal to and greater than respectively
 * Make the langugage installable on Nix systems via the flake in your github
@@ -81,6 +93,7 @@ Open your terminal
 * custom lsp for this toy langugae
 * instructions for running the language
 * Add a CI/CD script to auto run tests on push
+* Like gleam create a tutorial to learn the language
 
 ### standards
 #### Copiler Must Have
@@ -117,8 +130,13 @@ MIT
    [express]: <http://expressjs.com>
    [AngularJS]: <http://angularjs.org>
    [Ocaml]: <https://ocaml.org/>
+   [Gleam]: <https://ocaml.org/>
    [Alcotest]: <https://github.com/mirage/alcotest>
    [xxhash]: <https://github.com/Cyan4973/xxHash>
+   [token-ast-node]: <https://resources.jointjs.com/demos/rappid/apps/Ast/index.html>
+   [d3-visualizer]: <https://observablehq.com/@aarebecca/ast-explorer>
+   [clean-formatter]: <https://viswesh.github.io/astVisualizer/index.html>
+   [sql-query]: <https://observablehq.com/@john-guerra/sql-query-visualizer>
 
    [PlDb]: <https://github.com/joemccann/dillinger/tree/master/plugins/dropbox/README.md>
    [PlGh]: <https://github.com/joemccann/dillinger/tree/master/plugins/github/README.md>

@@ -7,6 +7,8 @@ type opcode =
   | `Jump of int
   | `GetGlobal of int
   | `SetGlobal of int
+  | `GetLocal of int
+  | `SetLocal of int
   | `Array of int
   | `Hash of int
   | `Add
@@ -31,7 +33,15 @@ type opcode =
 val infix_operand_string : [< `Add | `Div | `Mul | `Sub] -> string
 
 type opcode_marker =
-  [`CONSTANT | `JUMP | `JUMPNOTTRUTHY | `GETGLOBAL | `SETGLOBAL | `ARRAY | `HASH]
+  [ `CONSTANT
+  | `JUMP
+  | `JUMPNOTTRUTHY
+  | `GETGLOBAL
+  | `SETGLOBAL
+  | `ARRAY
+  | `HASH
+  | `SETLOCAL
+  | `GETLOCAL ]
 
 module CodeError : sig
   type error =

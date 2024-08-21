@@ -7,6 +7,8 @@ type opcode =
   | `Jump of int
   | `GetGlobal of int
   | `SetGlobal of int
+  | `GetLocal of int
+  | `SetLocal of int
   | `Array of int
   | `Hash of int
   | `Add
@@ -29,7 +31,15 @@ type opcode =
   | `Pop ]
 
 type opcode_marker =
-  [`CONSTANT | `JUMP | `JUMPNOTTRUTHY | `GETGLOBAL | `SETGLOBAL | `ARRAY | `HASH]
+  [ `CONSTANT
+  | `JUMP
+  | `JUMPNOTTRUTHY
+  | `GETGLOBAL
+  | `SETGLOBAL
+  | `ARRAY
+  | `HASH
+  | `SETLOCAL
+  | `GETLOCAL ]
 
 let operand_name_not_marker = function
   | `Constant _ ->
@@ -42,6 +52,10 @@ let operand_name_not_marker = function
       "GetGlobal"
   | `SetGlobal _ ->
       "SetGlobal"
+  | `SetLocal _ ->
+      "SetLocal"
+  | `GetLocal _ ->
+      "GetLocal"
   | `Array _ ->
       "Array"
   | `Hash _ ->
@@ -92,6 +106,10 @@ let operand_name = function
       "GetGlobal"
   | `SetGlobal _ | `SETGLOBAL ->
       "SetGlobal"
+  | `SetLocal _ | `SETLOCAL ->
+      "SetLocal"
+  | `GetLocal _ | `GETLOCAL ->
+      "GetLocal"
   | `Array _ | `ARRAY ->
       "Array"
   | `Hash _ | `HASH ->
@@ -263,6 +281,10 @@ let opcode_length = function
   | `SetGlobal _
   | `GETGLOBAL
   | `GetGlobal _
+  | `SETLOCAL
+  | `SetLocal _
+  | `GETLOCAL
+  | `GetLocal _
   | `JUMPNOTTRUTHY
   | `Hash _
   | `HASH
@@ -351,6 +373,10 @@ let lookup_opcode = function
       Ok `ReturnValue
   | '\x18' ->
       Ok `Return
+  | '\x19' ->
+      Ok `SETLOCAL
+  | '\x1A' ->
+      Ok `GETLOCAL
   | a ->
       Error (CodeError.UnrecognizedByte a)
 
@@ -403,6 +429,10 @@ let lookup_byte = function
       '\x13'
   | `Hash _ | `HASH ->
       '\x14'
+  | `SetLocal _ | `SETLOCAL ->
+      '\x19'
+  | `GetLocal _ | `GETLOCAL ->
+      '\x1A'
 
 let lookup byte =
   let* opcode = lookup_opcode byte in
@@ -423,6 +453,10 @@ let make op =
   | `SetGlobal operand ->
       convert op operand length
   | `GetGlobal operand ->
+      convert op operand length
+  | `SetLocal operand ->
+      convert op operand length
+  | `GetLocal operand ->
       convert op operand length
   | `Array operand ->
       convert op operand length

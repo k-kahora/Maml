@@ -349,6 +349,54 @@ let test_function_call () =
   in
   run_compiler_tests tests
 
+let test_let_stmt_scopes () =
+  let open Object.Obj in
+  let tests =
+    [ ( {|let num = 55;
+         fn() { num }|}
+      , map_test_helper
+          [ Int 55
+          ; CompFunc ([make (`GetGlobal 0); make `ReturnValue] |> List.concat)
+          ]
+      , make_test_helper [`Constant 0; `SetGlobal 0; `Constant 1; `Pop] )
+    ; ( {|fn() {
+           let num = 55;
+           num
+         }
+   |}
+      , map_test_helper
+          [ Int 55
+          ; CompFunc
+              ( [ make (`Constant 0)
+                ; make (`SetLocal 0)
+                ; make (`GetLocal 0)
+                ; make `ReturnValue ]
+              |> List.concat ) ]
+      , make_test_helper [`Constant 1; `Pop] )
+    ; ( {|
+         fn() {
+           let a = 55;
+           let b = 77;
+           a + b
+         }
+         |}
+      , map_test_helper
+          [ Int 55
+          ; Int 77
+          ; CompFunc
+              ( [ make (`Constant 0)
+                ; make (`SetLocal 0)
+                ; make (`Constant 1)
+                ; make (`SetLocal 1)
+                ; make (`GetLocal 0)
+                ; make (`GetLocal 1)
+                ; make `Add
+                ; make `ReturnValue ]
+              |> List.concat ) ]
+      , make_test_helper [`Constant 2; `Pop] ) ]
+  in
+  run_compiler_tests tests
+
 let test_compiler_scopes () =
   let index_check expected cmp =
     Alcotest.(check int) "checking initial scope value" expected cmp.scope_index
@@ -410,4 +458,6 @@ let () =
     ; ( "function compilation"
       , [Alcotest.test_case "function work" `Slow test_function_expressions] )
     ; ( "function calls"
-      , [Alcotest.test_case "function calls work" `Slow test_function_call] ) ]
+      , [Alcotest.test_case "function calls work" `Slow test_function_call] )
+    ; ( "stmt scopes"
+      , [Alcotest.test_case "local scopes" `Slow test_let_stmt_scopes] ) ]
