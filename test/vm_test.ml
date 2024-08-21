@@ -89,6 +89,7 @@ let setup_vm_test input =
     Code.string_of_byte_list (Compiler.current_instructions comp)
     |> Result.fold ~error:Code.CodeError.print_error ~ok:print_endline
   in
+  let _ = print_endline (Ast.program_str program) in
   let vm = Vm.new_virtual_machine comp in
   let* res = Vm.run vm in
   let stack_elem = res.last_item_poped in
@@ -282,7 +283,12 @@ let test_function_literals () =
 |}
       , Some 4 )
     ; ( {|
-         let add_one = fn() { return (1 + 2 * 30 - 20);};
+         let fivePlusTen = fn() { 5 + 10 };
+         fivePlusTen();
+|}
+      , Some 15 )
+    ; ( {|
+         let add_one = fn() { 1 + 2 * 30 ; 10 };
          add_one()
 |}
       , Some 50 )

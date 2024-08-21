@@ -40,15 +40,28 @@ let[@ocaml.warning "-27"] run_compiler_tests tests =
         ; constants= expected_constants }
     in
     let actual = craft_compiler input in
+    print_endline "expected" ;
+    let _ =
+      Code.string_of_byte_list concatted
+      |> Result.fold ~error:CodeError.print_error ~ok:print_endline
+    in
+    print_endline "actual" ;
+    let _ =
+      Code.string_of_byte_list
+        (Result.get_ok actual |> fun a -> Compiler.current_instructions a)
+      |> Result.fold ~error:CodeError.print_error ~ok:print_endline
+    in
+    (* print_endline "actual function" ; *)
     (* let _ = *)
-    (*   Code.string_of_byte_list concatted *)
-    (*   |> Result.fold ~error:CodeError.print_error ~ok:print_endline *)
-    (* in *)
-    (* print_endline "actual" ; *)
-    (* let _ = *)
-    (*   Code.string_of_byte_list *)
-    (*     (Result.get_ok actual |> fun a -> Compiler.current_instructions a) *)
-    (*   |> Result.fold ~error:CodeError.print_error ~ok:print_endline *)
+    (*   let const_obj = *)
+    (*     Result.get_ok actual |> fun a -> IntMap.find 4 a.constants *)
+    (*   in *)
+    (*   match const_obj with *)
+    (*   | Object.Obj.CompFunc ls -> *)
+    (*       Code.string_of_byte_list ls *)
+    (*       |> Result.fold ~error:CodeError.print_error ~ok:print_endline *)
+    (*   | _ -> *)
+    (*       failwith "AGG" *)
     (* in *)
     (* FIXME currently do not check constants and index *)
     Alcotest.(check (result alcotest_compiler Code.CodeError.alcotest_error))
@@ -345,6 +358,24 @@ let test_function_call () =
           [ Int 25
           ; CompFunc ([make (`Constant 0); make `ReturnValue] |> List.concat) ]
       , make_test_helper [`Constant 1; `SetGlobal 0; `GetGlobal 0; `Call; `Pop]
+      )
+    ; ( "let no_arg = fn() {1 + 2 * 30 - 20}; no_arg();"
+      , map_test_helper
+          [ Int 1
+          ; Int 2
+          ; Int 30
+          ; Int 20
+          ; CompFunc
+              ( [ make (`Constant 0)
+                ; make (`Constant 1)
+                ; make (`Constant 2)
+                ; make `Mul
+                ; make `Add
+                ; make (`Constant 3)
+                ; make `Sub
+                ; make `ReturnValue ]
+              |> List.concat ) ]
+      , make_test_helper [`Constant 4; `SetGlobal 0; `GetGlobal 0; `Call; `Pop]
       ) ]
   in
   run_compiler_tests tests
