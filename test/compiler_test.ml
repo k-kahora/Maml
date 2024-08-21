@@ -424,12 +424,21 @@ let test_compiler_scopes () =
   let emit_h opcode cmp = emit opcode cmp |> fst in
   let cmp = new_compiler () in
   index_check 0 cmp ;
+  let global_symbol_table = cmp.symbol_table in
   let cmp = emit_h `Mul cmp |> enter_scope in
   index_check 1 cmp ;
   let cmp = emit_h `Sub cmp in
   length_check 1 cmp ;
   instruction_check `Last `Sub cmp ;
+  Alcotest.(check (option Symbol_table.alc_symbol_table))
+    "outer symbol table should be the global symbal table"
+    cmp.symbol_table.outer (Some global_symbol_table) ;
   let cmp = leave_scope cmp |> fst in
+  Alcotest.(check (option Symbol_table.alc_symbol_table))
+    "symbol table check after leave scope shold be global"
+    (Some cmp.symbol_table) (Some global_symbol_table) ;
+  Alcotest.(check (option Symbol_table.alc_symbol_table))
+    "outer scope should be None" None cmp.symbol_table.outer ;
   index_check 0 cmp ;
   let cmp = emit_h `Add cmp in
   length_check 2 cmp ;

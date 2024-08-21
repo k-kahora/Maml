@@ -148,6 +148,7 @@ let test_int_arithmatic () =
     ; ("-5", -5)
     ; ("-10", -10)
     ; ("-50 + 100 + -50", 0)
+    ; ("1 + 2 * 30 - 20", 41)
     ; ("(5 + 10 * 2 + 15 / 3) * 2 + -10", 50) ]
     |> List.map (fun (a, b) -> (a, Ok (Some (Int b))))
   in
@@ -280,6 +281,11 @@ let test_function_literals () =
   three() + one()
 |}
       , Some 4 )
+    ; ( {|
+         let add_one = fn() { return (1 + 2 * 30 - 20);};
+         add_one()
+|}
+      , Some 50 )
     ; ( {|
   let a = fn() { 1 };
   let b = fn() { 2 };

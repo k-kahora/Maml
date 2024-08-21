@@ -47,12 +47,20 @@ let current_scope cmp = cmp.scopes.(cmp.scope_index)
 
 let update_current_scope scope cmp = cmp.scopes.(cmp.scope_index) <- scope
 
-let enter_scope cmp = {cmp with scope_index= cmp.scope_index + 1}
+(** [enter_scope cmp] when a function is compiled a new scope will be set as the current scope and a new symbol table shall be created to accomadet local bindings *)
+let enter_scope cmp =
+  { cmp with
+    scope_index= cmp.scope_index + 1
+  ; symbol_table= Symbol_table.new_enclosed_symbol_table cmp.symbol_table }
 
+(** [leave_scope cmp] called once a function is finished compiling, symbol_table is then brought back to the enclosed oute scope *)
 let leave_scope cmp =
   let cur_inst = current_instructions cmp in
+  let symbol_table =
+    cmp.symbol_table.outer |> Option.value ~default:cmp.symbol_table
+  in
   cmp.scopes.(cmp.scope_index) <- null_scope ;
-  ({cmp with scope_index= cmp.scope_index - 1}, cur_inst)
+  ({cmp with scope_index= cmp.scope_index - 1; symbol_table}, cur_inst)
 
 let set_last_instruction opcode position cmp =
   let cur_scope = current_scope cmp in
@@ -269,7 +277,13 @@ let[@ocaml.warning "-27-9-26"] rec compile nodes cmp =
     | Identifier {value} ->
         (* NOTE Compilet time error *)
         let* symbol = Symbol_table.resolve value cmp.symbol_table in
-        let cmp, _ = emit (`GetGlobal symbol.index) cmp in
+        let cmp, _ =
+          match symbol.scope with
+          | GLOBAL ->
+              emit (`GetGlobal symbol.index) cmp
+          | LOCAL ->
+              emit (`GetLocal symbol.index) cmp
+        in
         Ok cmp
     | StringLiteral {value} ->
         let string = Obj.String value in
@@ -360,7 +374,13 @@ let[@ocaml.warning "-27-9-26"] rec compile nodes cmp =
                  (Code.CodeError.CustomError "expression is not an identifier ")
         in
         let st, symbol = Symbol_table.define id cmp.symbol_table in
-        let cmp, _ = emit (`SetGlobal symbol.index) cmp in
+        let cmp, _ =
+          match symbol.scope with
+          | GLOBAL ->
+              emit (`SetGlobal symbol.index) cmp
+          | LOCAL ->
+              emit (`SetLocal symbol.index) cmp
+        in
         Ok {cmp with symbol_table= st}
     | Returnstatement {return_value} ->
         let* cmp = compile_expression return_value cmp in
