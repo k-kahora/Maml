@@ -17,6 +17,9 @@ Graffiti is a interprted and compiled language written in Ocaml.
 - First class functons
 - Closusers, (Inteprted only)
 
+## DELETE ME
+Priority, having weird issues with functions not compiling with multiple statments inside.  In addition checked back in on the interprter and it could not compile function with no arguments due to a List.hd error!!
+
 ## In Progress
 
 This is designed to be a learning language, so I want the compiler to be able to output a well structured Abstract Syntax Tree, Easy to read bytecode and a visual way to see the program walk the ast or bytecode.
