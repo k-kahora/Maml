@@ -317,6 +317,17 @@ let test_function_expressions () =
                 ; make `ReturnValue ]
               |> List.concat ) ]
       , make_test_helper [`Constant 2; `Pop] )
+    ; ( "fn () { 1 + 2 * 30 ; 10}"
+      , map_test_helper
+          [ Int 10
+          ; Int 2
+          ; CompFunc
+              ( [ make (`Constant 0)
+                ; make (`Constant 1)
+                ; make `Mul
+                ; make `ReturnValue ]
+              |> List.concat ) ]
+      , make_test_helper [`Constant 2; `Pop] )
     ; ( "fn () { 10 * 2}"
       , map_test_helper
           [ Int 10
@@ -359,6 +370,40 @@ let test_function_call () =
           ; CompFunc ([make (`Constant 0); make `ReturnValue] |> List.concat) ]
       , make_test_helper [`Constant 1; `SetGlobal 0; `GetGlobal 0; `Call; `Pop]
       )
+    ; ( {|
+         let fivePlusTen = fn() { 5 + 10 };
+         fivePlusTen();
+         let fivePlusTwo = fn() { 5 + 2 };
+         fivePlusTwo();
+|}
+      , map_test_helper
+          [ Int 5
+          ; Int 10
+          ; CompFunc
+              ( [ make (`Constant 0)
+                ; make (`Constant 1)
+                ; make `Add
+                ; make `ReturnValue ]
+              |> List.concat )
+          ; Int 5
+          ; Int 2
+          ; CompFunc
+              ( [ make (`Constant 3)
+                ; make (`Constant 4)
+                ; make `Add
+                ; make `ReturnValue ]
+              |> List.concat ) ]
+      , make_test_helper
+          [ `Constant 2
+          ; `SetGlobal 0
+          ; `GetGlobal 0
+          ; `Call
+          ; `Pop
+          ; `Constant 5
+          ; `SetGlobal 1
+          ; `GetGlobal 1
+          ; `Call
+          ; `Pop ] )
     ; ( "let no_arg = fn() {1 + 2 * 30 - 20}; no_arg();"
       , map_test_helper
           [ Int 1

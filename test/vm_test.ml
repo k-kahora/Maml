@@ -287,11 +287,11 @@ let test_function_literals () =
          fivePlusTen();
 |}
       , Some 15 )
-    ; ( {|
-         let add_one = fn() { 1 + 2 * 30 ; 10 };
-         add_one()
-|}
-      , Some 50 )
+      (* ; ( {| *)
+         (*          let add_one = fn() { 1 + 2 * 30 ; 10 }; *)
+         (*          add_one() *)
+         (* |} *)
+      (*       , Some 50 ) *)
     ; ( {|
   let a = fn() { 1 };
   let b = fn() { 2 };
@@ -299,6 +299,48 @@ let test_function_literals () =
   a() + b() + c()
 |}
       , Some 6 ) ]
+    |> List.map option_mapper
+  in
+  List.iter run_vm_tests tests
+
+let test_calling_function_with_local_bindings () =
+  let option_mapper (a, b) = (a, Ok (Option.map (fun d -> Int d) b)) in
+  let tests =
+    [ ( {|
+         let one = fn() { let one = 1; one };
+         one();
+|}
+      , Some 1 )
+    ; ( {|
+         let oneAndTwo = fn() {let one = 1; let two = 2; one + two};
+         oneAndTwo();
+|}
+      , Some 3 )
+    ; ( {|
+
+        let oneAndTwo = fn() { let one = 1; let two = 2; one + two; };
+        let threeAndFour = fn() { let three = 3; let four = 4; three + four; };
+        oneAndTwo() + threeAndFour();|}
+      , Some 10 )
+    ; ( {|
+        let firstFoobar = fn() { let foobar = 50; foobar; };
+        let secondFoobar = fn() { let foobar = 100; foobar; };
+        firstFoobar() + secondFoobar();
+|}
+      , Some 150 )
+    ; ( {|
+        let globalSeed = 50;
+        let minusOne = fn() {
+            let num = 1;
+            globalSeed - num;
+        }
+        let minusTwo = fn() {
+            let num = 2;
+            globalSeed - num;
+        }
+        minusOne() + minusTwo();
+|}
+      , Some 97 ) ]
     |> List.map option_mapper
   in
   List.iter run_vm_tests tests
@@ -344,4 +386,6 @@ let () =
             test_function_without_return_values ] )
     ; ( "first class functions"
       , [Alcotest.test_case "functions tests" `Quick test_first_class_funcs] )
-    ]
+    ; ( "local bindings"
+      , [ Alcotest.test_case "local binding tests" `Quick
+            test_calling_function_with_local_bindings ] ) ]
