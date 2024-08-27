@@ -1,8 +1,14 @@
 let ( let* ) = Result.bind
 
-type symbol_scope = GLOBAL | LOCAL
+type symbol_scope = GLOBAL | LOCAL | BUILTIN
 
-let scope_to_string = function GLOBAL -> "GLOBAL" | LOCAL -> "LOCAL"
+let scope_to_string = function
+  | GLOBAL ->
+      "GLOBAL"
+  | LOCAL ->
+      "LOCAL"
+  | BUILTIN ->
+      "BUILTIN"
 
 type symbol = {name: string; scope: symbol_scope; index: int}
 
@@ -25,6 +31,11 @@ module StringMap = Map.Make (String)
 
 type symbol_table =
   {store: symbol StringMap.t; num_definitions: int; outer: symbol_table option}
+
+let define_builtin index name st =
+  let symbol = {name; index; scope= BUILTIN} in
+  let store = StringMap.add name symbol st.store in
+  (symbol, {st with store})
 
 let rec symbol_table_string symb_tb =
   Format.sprintf "{store=%s; num_definitions=%d; outer=%s}"

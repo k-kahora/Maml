@@ -8,6 +8,8 @@ type vm_test_type =
   | Int of int
   | Bool of bool
   | String of string
+  | Null
+  | Error of string
   | Array of Obj.item array
   | Hash of (Obj.item, Obj.hash_item) Hashtbl.t
 
@@ -34,6 +36,10 @@ let pp_test_type fmt test_type =
           format_helper fmt "%b" a
       | String a ->
           format_helper fmt "%s" a
+      | Error a ->
+          format_helper fmt "%s" a
+      | Null ->
+          format_helper fmt "None"
       | Array arr -> (
         match arr with
         | [||] ->
@@ -75,6 +81,8 @@ let test_expected_object actual =
       Ok None
   | Obj.Hash value ->
       Ok (Some (Hash value))
+  | Obj.Error value ->
+      Ok (Some (Error value))
   | obj ->
       Error (Code.CodeError.ObjectNotImplemented obj)
 
@@ -233,6 +241,8 @@ let test_hash_literals () =
     ; ("{1: 1, 2: 2}[1]", Some 1)
     ; ("{1: 1, 2: 2}[2]", Some 2)
     ; ("{1: 1}[0]", None)
+      (* ; ( {|[{"name": "Anna", "age": 24}, {"name": "Bob", "age": 99}][0]["age"]|} *)
+      (*   , Some 24 ) *)
     ; ("{}[0]", None) ]
     |> List.map option_mapper
   in
@@ -367,6 +377,104 @@ let test_first_class_funcs () =
   in
   List.iter run_vm_tests tests
 
+let test_functions_with_arguments () =
+  let option_mapper (a, b) = (a, Ok (Option.map (fun d -> Int d) b)) in
+  let tests =
+    [ ({|
+let identity = fn(a) { a; };
+        identity(4);|}, Some 4)
+    ; ({|
+        let sum = fn(a, b) { a + b; };
+        sum(1, 2);|}, Some 3)
+    ; ( {|
+        let sum = fn(a, b) {
+            let c = a + b;
+            c;
+        };
+        sum(1, 2);
+        |}
+      , Some 3 )
+    ; ( {|
+        let sum = fn(a, b) {
+            let c = a + b;
+            c;
+        };
+        sum(1, 2) + sum(3, 4);|}
+      , Some 10 )
+    ; ( {|
+        let sum = fn(a, b) {
+            let c = a + b;
+            c;
+        };
+        let outer = fn() {
+            sum(1, 2) + sum(3, 4);
+        };
+        outer();
+        |}
+      , Some 10 )
+    ; ( {|
+        let globalNum = 10;
+
+        let sum = fn(a, b) {
+            let c = a + b;
+            c + globalNum;
+        };
+
+        let outer = fn() {
+            sum(1, 2) + sum(3, 4) + globalNum;
+        };
+
+        outer() + globalNum;
+        |}
+      , Some 50 ) ]
+    |> List.map option_mapper
+  in
+  List.iter run_vm_tests tests
+
+let test_calling_function_with_wrong_arguments () =
+  let tests =
+    [ ( {|
+         fn() { 1; }(1);
+|}
+      , Result.Error (Code.CodeError.WrongNumberOfArguments (0, 1)) )
+    ; ( {|
+         fn(a) { a; }();
+|}
+      , Error (Code.CodeError.WrongNumberOfArguments (1, 0)) )
+    ; ( {|
+         fn(a, b) { a + b; }(1);
+|}
+      , Error (Code.CodeError.WrongNumberOfArguments (2, 1)) ) ]
+  in
+  List.iter run_vm_tests tests
+
+let test_built_in_functions () =
+  let option_wrapper (a, b) =
+    match b with Null -> (a, Ok None) | b -> (a, Ok (Some b))
+  in
+  let tests =
+    [ ({|len("")|}, Int 0)
+    ; ({|len("four")|}, Int 4)
+    ; ({|len("hello world")|}, Int 11)
+    ; ({|len(1)|}, Error "argument to `len` not supported, got INTEGER")
+    ; ({|len("one", "two")|}, Error "wrong number of arguments. got=2, want=1")
+    ; ({|len([1, 2, 3])|}, Int 3)
+    ; ({|len([])|}, Int 0)
+    ; ({|puts("hello", "world!")|}, Null)
+    ; ({|first([1, 2, 3])|}, Int 1)
+    ; ({|first([])|}, Null)
+    ; ({|first(1)|}, Error "argument to `first` must be ARRAY, got INTEGER")
+    ; ({|last([1, 2, 3])|}, Int 3)
+    ; ({|last([])|}, Null)
+    ; ({|last(1)|}, Error "argument to `last` must be ARRAY, got INTEGER")
+    ; ({|rest([1, 2, 3])|}, Array [|Obj.Int 2; Int 3|])
+    ; ({|rest([])|}, Null)
+    ; ({|push([], 1)|}, Array [|Obj.Int 1|])
+    ; ({|push(1, 1)|}, Error "argument to `push` must be ARRAY, got INTEGER") ]
+    |> List.map option_wrapper
+  in
+  List.iter run_vm_tests tests
+
 let () =
   Alcotest.run "Virtual Machine Tests"
     [ ( "Arithmatic"
@@ -397,4 +505,13 @@ let () =
       , [Alcotest.test_case "functions tests" `Quick test_first_class_funcs] )
     ; ( "local bindings"
       , [ Alcotest.test_case "local binding tests" `Quick
-            test_calling_function_with_local_bindings ] ) ]
+            test_calling_function_with_local_bindings ] )
+    ; ( "argument bindings"
+      , [ Alcotest.test_case "local argument bindings tests" `Quick
+            test_functions_with_arguments ] )
+    ; ( "error testing arguments"
+      , [ Alcotest.test_case "wrong arguments error testing" `Quick
+            test_calling_function_with_wrong_arguments ] )
+    ; ( "test built in functions"
+      , [Alcotest.test_case "built in functions" `Quick test_built_in_functions]
+      ) ]

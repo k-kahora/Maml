@@ -26,6 +26,7 @@ type opcode =
   | `Bang
   | `Index
   | `Call of int
+  | `GetBuiltIn of int
   | `Return
   | `ReturnValue
   | `Pop ]
@@ -38,6 +39,7 @@ type opcode_marker =
   | `SETGLOBAL
   | `ARRAY
   | `CALL
+  | `GETBUILTIN
   | `HASH
   | `SETLOCAL
   | `GETLOCAL ]
@@ -91,6 +93,8 @@ let operand_name_not_marker = function
       "Index"
   | `Call _ ->
       "Call"
+  | `GetBuiltIn _ ->
+      "GetBuiltIn"
   | `Return ->
       "Return"
   | `ReturnValue ->
@@ -143,6 +147,8 @@ let operand_name = function
       "NotEqual"
   | `Index ->
       "Index"
+  | `GetBuiltIn _ | `GETBUILTIN ->
+      "Call"
   | `Call _ | `CALL ->
       "Call"
   | `Return ->
@@ -174,6 +180,7 @@ module CodeError = struct
     | UnsuportedType of string * Object.Obj.item
     | UnsuportedOperator of Object.Obj.item * string
     | SymbolNotFound of string * string
+    | WrongNumberOfArguments of int * int
     | EmptyStack
 
   let equal_error e1 e2 = e1 = e2
@@ -212,6 +219,9 @@ module CodeError = struct
     | SymbolNotFound (caller, symbol) ->
         format_helper fmt "SymbolNotFound: Symbol -> %s; Called From %s" symbol
           caller
+    | WrongNumberOfArguments (expected, argument_length) ->
+        format_helper fmt "WrongNumberOfArguments: want -> %d; got -> %d"
+          expected argument_length
     | CustomError err ->
         format_helper fmt "CustomError: %s" err
 
@@ -292,7 +302,7 @@ let opcode_length = function
   | `Array _
   | `ARRAY ->
       2
-  | `Call _ | `CALL ->
+  | `Call _ | `CALL | `GetBuiltIn _ | `GETBUILTIN ->
       1
   | `Pop
   | `Sub
@@ -324,6 +334,8 @@ let marker_to_opcode operand = function
   | `HASH ->
       Ok (`Hash operand)
   | `CALL ->
+      Ok (`Call operand)
+  | `GETBUILTIN ->
       Ok (`Call operand)
   | a ->
       Error (CodeError.OpCodeNotImplemented a)
@@ -381,6 +393,8 @@ let lookup_opcode = function
       Ok `SETLOCAL
   | '\x1A' ->
       Ok `GETLOCAL
+  | '\x1B' ->
+      Ok `GETBUILTIN
   | a ->
       Error (CodeError.UnrecognizedByte a)
 
@@ -437,6 +451,8 @@ let lookup_byte = function
       '\x19'
   | `GetLocal _ | `GETLOCAL ->
       '\x1A'
+  | `GetBuiltIn _ | `GETBUILTIN ->
+      '\x1B'
 
 let lookup byte =
   let* opcode = lookup_opcode byte in
@@ -467,6 +483,8 @@ let make op =
   | `Hash operand ->
       convert op operand length
   | `Call operand ->
+      convert op operand length
+  | `GetBuiltIn operand ->
       convert op operand length
   | a ->
       [lb a]

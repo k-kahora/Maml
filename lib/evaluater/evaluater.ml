@@ -341,6 +341,7 @@ and apply_function (func : Obj.item) (args : Obj.item list) =
       in
       unwrap_return_value evaluated
   | Obj.Builtin fn ->
+      (* FIXME temp fix for results *)
       fn args
   | _ ->
       Obj.new_error @@ "not a function" ^ Obj.item_to_string func

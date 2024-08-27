@@ -43,7 +43,7 @@ let current_frame vm = vm.frames.(vm.frame_index)
 let pop_frame vm =
   let old_frame = current_frame vm in
   vm.frames.(vm.frame_index) <-
-    Frame.new_frame (Obj.CompFunc ([], 0)) ~base_pointer:0 ;
+    Frame.new_frame (Obj.CompFunc ([], 0, 0)) ~base_pointer:0 ;
   let new_vm = {vm with frame_index= vm.frame_index - 1} in
   (new_vm, old_frame)
 
@@ -53,11 +53,11 @@ let frame_instructions vm = current_frame vm |> fun a -> a.fn
 
 let new_virtual_machine byte_code =
   let open Compiler in
-  let main_fn = Obj.CompFunc (current_instructions byte_code, 0) in
+  let main_fn = Obj.CompFunc (current_instructions byte_code, 0, 0) in
   let main_frame = Frame.new_frame main_fn ~base_pointer:0 in
   let frames =
     Array.make max_frames
-    @@ Frame.new_frame (Obj.CompFunc ([], 0)) ~base_pointer:0
+    @@ Frame.new_frame (Obj.CompFunc ([], 0, 0)) ~base_pointer:0
   in
   frames.(0) <- main_frame ;
   { constants= byte_code.constants
@@ -120,7 +120,6 @@ module VM_Helpers = struct
     in
     let* right = pop vm in
     let* left = pop vm in
-    print_endline "in added" ;
     match (left, right) with
     | Obj.Int l, Obj.Int r ->
         push (Obj.Int (execute_binary_integer_operation l r op)) vm ;
@@ -331,21 +330,64 @@ module VM_Helpers = struct
     let* _ = execute_vm_expression left index vm in
     finish_run vm
 
+  let call_function comp_func num_args vm =
+    let expected_args = Frame.num_parameters comp_func in
+    let* vm =
+      if num_args <> expected_args then
+        Error (Code.CodeError.WrongNumberOfArguments (expected_args, num_args))
+      else Ok vm
+    in
+    let frame =
+      Frame.new_frame comp_func ~base_pointer:(vm.stack.ip - num_args)
+    in
+    let vm = push_frame frame vm in
+    vm.stack.ip <- frame.base_pointer + Frame.num_locals comp_func ;
+    Ok vm
+
+  let call_builtin built_in num_args vm =
+    let args = vm.stack.ip - num_args in
+    let arg_list =
+      List.init num_args (fun i -> Program_stack.get (i + args) vm.stack)
+    in
+    let _is_error =
+      List.find_opt Result.is_error arg_list
+      (* |> Option.to_result ~none:(List.map Result.get_ok) *)
+    in
+    let x = List.map Result.get_ok arg_list in
+    let result =
+      match built_in with
+      | Obj.Builtin fn ->
+          fn x
+      | _ ->
+          failwith "should never trigger"
+    in
+    vm.stack.ip <- vm.stack.ip - num_args - 1 ;
+    (* if Result.is_ok result then push (Result.get_ok result) vm *)
+    (* else push Obj.Null vm ; *)
+    push result vm ;
+    finish_run vm
+
+  let execute_call num_args vm =
+    let* calle = Program_stack.get (vm.stack.ip - 1 - num_args) vm.stack in
+    match calle with
+    | Obj.CompFunc _ ->
+        call_function calle num_args vm
+    | Obj.Builtin _ ->
+        call_builtin calle num_args vm
+    | _ ->
+        Error
+          (Code.CodeError.CustomError "calling non-function and non-built-in")
+
   (** [evaluate_call vm] get the current item on the top of the stack which should be a CompiledFunc 100% of the time, a exception is thrown if not; make a new frame with it and push it onto the stack_frames  *)
   let evaluate_call vm =
-    let* _arguments_byte =
-      Program_stack.read_then_increment (frame_instructions vm)
-    in
-    let* fn = Program_stack.stack_head vm.stack in
-    let frame = Frame.new_frame fn ~base_pointer:vm.stack.ip in
-    let vm = push_frame frame vm in
-    vm.stack.ip <- frame.base_pointer + Frame.num_locals fn ;
+    let* b1 = Program_stack.read_then_increment (frame_instructions vm) in
+    let num_of_args = ByteFmt.int_of_hex [b1] 1 in
+    let* vm = execute_call num_of_args vm in
     finish_run vm
 
   let return_value vm =
     let* return_value = pop vm in
     let vm, frame = pop_frame vm in
-    Format.printf "Return Value:%s" (Obj.item_to_string return_value) ;
     (* let* _ = pop vm in *)
     vm.stack.ip <- frame.base_pointer - 1 ;
     push return_value vm ;
@@ -357,6 +399,19 @@ module VM_Helpers = struct
     vm.stack.ip <- frame.base_pointer - 1 ;
     push Obj.Null vm ;
     finish_run vm
+
+  let evaluate_builtin vm =
+    let* b1 = Program_stack.read_then_increment (frame_instructions vm) in
+    let built_in_index = ByteFmt.int_of_hex [b1] 1 in
+    let* _, def =
+      List.nth_opt Object.Builtin.builtins built_in_index
+      |> Option.to_result
+           ~none:
+             (Code.CodeError.CustomError
+                "Builtin index not found, maybe built in you want is not \
+                 implemented" )
+    in
+    push def vm ; finish_run vm
 end
 
 (*FIXME any inperformant functions called in here is an issue *)
@@ -379,7 +434,6 @@ let[@ocaml.tailcall] [@ocaml.warning "-9-11"] run vm =
     | `Bang ->
         VM_Helpers.execute_bang vm
     | `Minus ->
-        print_endline "Minus" ;
         VM_Helpers.execute_minus vm
     | `Index ->
         VM_Helpers.evaluate_index vm
@@ -408,8 +462,10 @@ let[@ocaml.tailcall] [@ocaml.warning "-9-11"] run vm =
         VM_Helpers.return_value vm
     | `Return ->
         VM_Helpers.return vm
-    | a ->
-        Error (Code.CodeError.OpCodeNotImplemented a)
+    | `GetBuiltIn _ | `GETBUILTIN ->
+        VM_Helpers.evaluate_builtin vm
+    (* | a -> *)
+    (*     Error (Code.CodeError.OpCodeNotImplemented a) *)
   in
   (* Perf issuse what happens here is the loop will continue even if the ip is done pointing at what it needs to  *)
   (* let x = *)

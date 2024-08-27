@@ -20,9 +20,22 @@ let rec evaluate (l : lexer) : unit =
 
 let env = Object.Environment.new_environment ()
 
-let symbol_table, constants = Compiler.empty_symbol_table_and_constants ()
+let constants = Compiler.empty_constants ()
 
 let globals = Vm.empty_globals ()
+
+let symbol_table_with_built_ins () =
+  let _, symbol_table =
+    List.fold_left
+      (fun (idx, symbol_table) (name, _fn) ->
+        let _, new_table = Symbol_table.define_builtin idx name symbol_table in
+        (idx + 1, new_table) )
+      (0, Symbol_table.new_symbol_table ())
+      Object.Builtin.builtins
+  in
+  symbol_table
+
+let symbol_table = symbol_table_with_built_ins ()
 
 let rec repl state =
   let symbol_table, constants, globals = state in

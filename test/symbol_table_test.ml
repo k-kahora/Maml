@@ -115,6 +115,27 @@ let[@ocaml.warning "-26"] test_resolve_local_nested () =
   in
   List.iter helper expected
 
+let[@ocaml.warning "-26"] test_define_resolve_builtin () =
+  let expected =
+    StringMap.(
+      empty
+      |> add "a" (n_symbol "a" BUILTIN 0)
+      |> add "c" (n_symbol "c" BUILTIN 1)
+      |> add "e" (n_symbol "e" BUILTIN 2)
+      |> add "f" (n_symbol "f" BUILTIN 3) )
+  in
+  let global = new_symbol_table () in
+  let first_local = new_enclosed_symbol_table global in
+  let second_local = new_enclosed_symbol_table first_local in
+  let _item =
+    StringMap.fold
+      (fun name _symbol _acc ->
+        let _ = define name global in
+        "" )
+      expected ""
+  in
+  ()
+
 let () =
   Alcotest.run "Symbol Table Tests"
     [ ("Symbol init", [Alcotest.test_case "define" `Quick test_define])
@@ -122,4 +143,6 @@ let () =
     ; ( "reslove local"
       , [Alcotest.test_case "resolve local" `Quick test_resolve_local] )
     ; ( "reslove local nested"
-      , [Alcotest.test_case "nested" `Quick test_resolve_local_nested] ) ]
+      , [Alcotest.test_case "nested" `Quick test_resolve_local_nested] )
+    ; ( "resolve and define builtins"
+      , [Alcotest.test_case "builtin" `Quick test_define_resolve_builtin] ) ]

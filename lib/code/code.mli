@@ -26,6 +26,7 @@ type opcode =
   | `Bang
   | `Index
   | `Call of int
+  | `GetBuiltIn of int
   | `Return
   | `ReturnValue
   | `Pop ]
@@ -40,6 +41,7 @@ type opcode_marker =
   | `SETGLOBAL
   | `ARRAY
   | `CALL
+  | `GETBUILTIN
   | `HASH
   | `SETLOCAL
   | `GETLOCAL ]
@@ -58,6 +60,7 @@ module CodeError : sig
     | UnsuportedType of string * Object.Obj.item
     | UnsuportedOperator of Object.Obj.item * string
     | SymbolNotFound of string * string
+    | WrongNumberOfArguments of int * int
     | EmptyStack
 
   val equal_error : error -> error -> bool

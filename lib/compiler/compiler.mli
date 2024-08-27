@@ -25,8 +25,7 @@ val new_compiler : unit -> compiler
 val new_with_state :
   Symbol_table.symbol_table -> Object.Obj.item IntMap.t -> compiler
 
-val empty_symbol_table_and_constants :
-  unit -> Symbol_table.symbol_table * 'a IntMap.t
+val empty_constants : unit -> 'a IntMap.t
 
 val compile :
   Ast.statement list -> compiler -> (compiler, Code.CodeError.error) result

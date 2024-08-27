@@ -1,3 +1,5 @@
+let ( let* ) = Result.bind
+
 module rec Obj : sig
   type item_type =
     | Int'
@@ -23,7 +25,8 @@ module rec Obj : sig
     (* Parameters, Body, Environment *)
     | Function of Ast.expression list * Ast.statement * Environment.environment
     (* bytecode followed by num of locals in the function *)
-    | CompFunc of char list * int
+    (* The first number is the number of local vars and the next is num of parameters *)
+    | CompFunc of char list * int * int
     | Null
     | Return of item
     | Error of string
@@ -75,7 +78,7 @@ end = struct
     | String of string
     | Bool of bool
     | Function of Ast.expression list * Ast.statement * Environment.environment
-    | CompFunc of char list * int
+    | CompFunc of char list * int * int
     | Null
     | Return of item
     | Error of string
@@ -213,7 +216,7 @@ end = struct
         string_of_bool b
     (* | CompFunc (_ls, _locals) -> *)
     (*     "COMPFUNC" *)
-    | CompFunc (ls, _locals) ->
+    | CompFunc (ls, _locals, _params) ->
         List.fold_left
           (fun acc a -> acc ^ Format.sprintf "0x%02X," (int_of_char a))
           "[" ls
@@ -292,12 +295,18 @@ end
 
 and Builtin : sig
   val built_in_list : (string, Obj.item) Utils.Token_AssocList.t
+
+  val builtins : (string * Obj.item) list
 end = struct
+  let pp_err = Format.sprintf
+
+  let make_error str = Obj.Error str
+
   let puts args =
     let puts_string =
       List.fold_left (fun acc nxt -> acc ^ Obj.item_to_string nxt) "" args
     in
-    print_endline puts_string ; Obj.String puts_string
+    print_endline puts_string ; (* Ok (Obj.String puts_string) *) Obj.Null
 
   let push args =
     match args with
@@ -313,13 +322,12 @@ end = struct
             (* Modifeis array in place *)
             Obj.Array arr_copy
       | t ->
-          Obj.new_error
-          @@ Format.sprintf "argument to `push` must be ARRAY, got %s"
-               (Obj.object_string t) )
+          make_error
+            (pp_err "argument to `push` must be ARRAY, got %s"
+               (Obj.object_string t) ) )
     | _ ->
-        Obj.new_error
-        @@ Format.sprintf "wrong number of arguments. got=%d, want=1"
-             (List.length args)
+        make_error
+          (pp_err "wrong number of arguments. got=%d, want=1" (List.length args))
 
   let rest args =
     match args with
@@ -332,13 +340,12 @@ end = struct
           else if Array.length arr = 1 then Obj.Array [||]
           else Obj.Null
       | t ->
-          Obj.new_error
-          @@ Format.sprintf "argument to `rest` must be ARRAY, got %s"
-               (Obj.object_string t) )
+          make_error
+            (pp_err "argument to `rest` must be ARRAY, got %s"
+               (Obj.object_string t) ) )
     | _ ->
-        Obj.new_error
-        @@ Format.sprintf "wrong number of arguments. got=%d, want=1"
-             (List.length args)
+        make_error
+          (pp_err "wrong number of arguments. got=%d, want=1" (List.length args))
 
   let last args =
     match args with
@@ -347,13 +354,12 @@ end = struct
       | Obj.Array arr ->
           if Array.length arr > 1 then arr.(Array.length arr - 1) else Obj.Null
       | t ->
-          Obj.new_error
-          @@ Format.sprintf "argument to `last` must be ARRAY, got %s"
-               (Obj.object_string t) )
+          make_error
+            (pp_err "argument to `last` must be ARRAY, got %s"
+               (Obj.object_string t) ) )
     | _ ->
-        Obj.new_error
-        @@ Format.sprintf "wrong number of arguments. got=%d, want=1"
-             (List.length args)
+        make_error
+          (pp_err "wrong number of arguments. got=%d, want=1" (List.length args))
 
   let first args =
     match args with
@@ -362,13 +368,12 @@ end = struct
       | Obj.Array arr ->
           if Array.length arr > 0 then arr.(0) else Obj.Null
       | t ->
-          Obj.new_error
-          @@ Format.sprintf "argument to `first` must be ARRAY, got %s"
-               (Obj.object_string t) )
+          make_error
+            (pp_err "argument to `first` must be ARRAY, got %s"
+               (Obj.object_string t) ) )
     | _ ->
-        Obj.new_error
-        @@ Format.sprintf "wrong number of arguments. got=%d, want=1"
-             (List.length args)
+        make_error
+          (pp_err "wrong number of arguments. got=%d, want=1" (List.length args))
 
   let length args =
     match args with
@@ -379,21 +384,33 @@ end = struct
       | Obj.Array arr ->
           Obj.Int (Array.length arr)
       | t ->
-          Obj.new_error
-          @@ Format.sprintf "argument to `len` not supported, got %s"
-               (Obj.object_string t) )
+          make_error
+            (pp_err "argument to `len` not supported, got %s"
+               (Obj.object_string t) ) )
     | _ ->
-        Obj.new_error
-        @@ Format.sprintf "wrong number of arguments. got=%d, want=1"
-             (List.length args)
+        make_error
+          (pp_err "wrong number of arguments. got=%d, want=1" (List.length args))
+
+  (* This is easier to iterate over than a map *)
+  let builtins =
+    [ ("len", Obj.Builtin length)
+    ; ("puts", Obj.Builtin puts)
+    ; ("first", Obj.Builtin first)
+    ; ("last", Obj.Builtin last)
+    ; ("rest", Obj.Builtin rest)
+    ; ("push", Obj.Builtin push) ]
+
+  let get_built_in_by_name name =
+    let built_in = List.find (fun (a, _) -> name = a) builtins in
+    built_in |> snd
 
   let built_in_list =
     Utils.Token_AssocList.(
       empty
-      |> add "len" (Obj.Builtin length)
-      |> add "first" (Obj.Builtin first)
-      |> add "last" (Obj.Builtin last)
-      |> add "push" (Obj.Builtin push)
-      |> add "puts" (Obj.Builtin puts)
-      |> add "rest" (Obj.Builtin rest) )
+      |> add "len" (get_built_in_by_name "len")
+      |> add "first" (get_built_in_by_name "first")
+      |> add "last" (get_built_in_by_name "last")
+      |> add "push" (get_built_in_by_name "push")
+      |> add "puts" (get_built_in_by_name "puts")
+      |> add "rest" (get_built_in_by_name "rest") )
 end

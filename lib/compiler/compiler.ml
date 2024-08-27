@@ -13,7 +13,7 @@ module TestObj = struct
         Int.compare a b
     | String a, String b ->
         String.compare a b
-    | CompFunc (lst1, _), CompFunc (lst2, _) ->
+    | CompFunc (lst1, _, _), CompFunc (lst2, _, _) ->
         List.compare (fun a b -> int_of_char a - int_of_char b) lst1 lst2
     | _ ->
         -1
@@ -78,7 +78,7 @@ let pp_compiler fmt cmp =
       (fun key value acc ->
         let string =
           match value with
-          (* | Obj.CompFunc (ls, _) -> *)
+          (* | Obj.CompFunc (ls, _, _) -> *)
           (*     let item = *)
           (*       Code.string_of_byte_list ls *)
           (*       |> function *)
@@ -116,18 +116,25 @@ let alcotest_compiler = Alcotest.testable pp_compiler equal_compiler
 
 let new_compiler () =
   let empty_array = Array.init 65535 (fun _ -> null_scope) in
+  let _, symbol_table =
+    List.fold_left
+      (fun (idx, symbol_table) (name, _fn) ->
+        let _, new_table = Symbol_table.define_builtin idx name symbol_table in
+        (idx + 1, new_table) )
+      (0, Symbol_table.new_symbol_table ())
+      Object.Builtin.builtins
+  in
   { index= 0
   ; scope_index= 0
   ; constants= IntMap.empty
-  ; symbol_table= Symbol_table.new_symbol_table ()
+  ; symbol_table
   ; scopes= empty_array }
 
 let new_with_state symbol_table constants =
   let n_cmp = new_compiler () in
   {n_cmp with symbol_table; constants}
 
-let empty_symbol_table_and_constants () =
-  (Symbol_table.new_symbol_table (), IntMap.empty)
+let empty_constants () = IntMap.empty
 
 let rec add_constants obj cmp =
   ( { cmp with
@@ -149,6 +156,16 @@ and add_instructions inst cmp =
   let new_scope = {cur_scope with instructions= updated_instructions} in
   update_current_scope new_scope cmp ;
   pos_new_inst
+
+let load_symbol symbol cmp =
+  let open Symbol_table in
+  match symbol.scope with
+  | GLOBAL ->
+      emit (`GetGlobal symbol.index) cmp
+  | LOCAL ->
+      emit (`GetLocal symbol.index) cmp
+  | BUILTIN ->
+      emit (`GetBuiltIn symbol.index) cmp
 
 let replace_instruction pos new_instruction cmp =
   let f pos l1 l2 =
@@ -296,13 +313,7 @@ let[@ocaml.warning "-27-9-26"] rec compile nodes cmp =
     | Identifier {value} ->
         (* NOTE Compilet time error *)
         let* symbol = Symbol_table.resolve value cmp.symbol_table in
-        let cmp, _ =
-          match symbol.scope with
-          | GLOBAL ->
-              emit (`GetGlobal symbol.index) cmp
-          | LOCAL ->
-              emit (`GetLocal symbol.index) cmp
-        in
+        let cmp, _ = load_symbol symbol cmp in
         Ok cmp
     | StringLiteral {value} ->
         let string = Obj.String value in
@@ -358,6 +369,23 @@ let[@ocaml.warning "-27-9-26"] rec compile nodes cmp =
             cmp
         in
         let cmp = enter_scope cmp in
+        let* cmp =
+          List.fold_left
+            (fun cmp argument ->
+              let* cmp = cmp in
+              let* value =
+                Ast.get_ident argument
+                |> Option.to_result
+                     ~none:
+                       (Code.CodeError.CustomError
+                          "argument is not a identifier" )
+              in
+              let symbol_table, sym =
+                Symbol_table.define value cmp.symbol_table
+              in
+              Ok {cmp with symbol_table} )
+            (Ok cmp) parameters
+        in
         let* cmp = compile_node body cmp in
         (* Implicit returns *)
         if last_instruction_is `Pop cmp then replace_last_pop_with_return cmp ;
@@ -369,7 +397,11 @@ let[@ocaml.warning "-27-9-26"] rec compile nodes cmp =
         in
         let num_locals = cmp.symbol_table.num_definitions in
         let cmp, inst = leave_scope cmp in
-        let cmp, index = add_constants (Obj.CompFunc (inst, num_locals)) cmp in
+        let cmp, index =
+          add_constants
+            (Obj.CompFunc (inst, num_locals, List.length parameters))
+            cmp
+        in
         let cmp, _ = emit (`Constant index) cmp in
         Ok cmp
     | CallExpression {func; arguments} ->
@@ -406,6 +438,8 @@ let[@ocaml.warning "-27-9-26"] rec compile nodes cmp =
               emit (`SetGlobal symbol.index) cmp
           | LOCAL ->
               emit (`SetLocal symbol.index) cmp
+          | BUILTIN ->
+              failwith "not implemented"
         in
         Ok {cmp with symbol_table= st}
     | Returnstatement {return_value} ->
