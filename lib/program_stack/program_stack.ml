@@ -70,5 +70,5 @@ let pop ps =
   else (
     deincrement ps ;
     let poped = ps.stack.(ps.ip) in
-    ps.stack.(ps.ip) <- None ;
+    (* ps.stack.(ps.ip) <- None ; *)
     Ok poped )

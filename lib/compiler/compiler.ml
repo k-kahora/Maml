@@ -13,7 +13,7 @@ module TestObj = struct
         Int.compare a b
     | String a, String b ->
         String.compare a b
-    | CompFunc lst1, CompFunc lst2 ->
+    | CompFunc (lst1, _), CompFunc (lst2, _) ->
         List.compare (fun a b -> int_of_char a - int_of_char b) lst1 lst2
     | _ ->
         -1
@@ -76,12 +76,28 @@ let pp_compiler fmt cmp =
   let pp_map map =
     IntMap.fold
       (fun key value acc ->
-        acc ^ Format.sprintf "%d:%s, " key (Obj.item_to_string value) )
+        let string =
+          match value with
+          | Obj.CompFunc (ls, _) ->
+              let item =
+                Code.string_of_byte_list ls
+                |> function
+                | Ok str -> str | Error err -> Code.CodeError.error_string err
+              in
+              item
+          | a ->
+              Obj.item_to_string a
+        in
+        acc ^ Format.sprintf "%d:%s, " key string )
       map "{"
   in
+  let item =
+    Code.string_of_byte_list (current_instructions cmp)
+    |> function Ok str -> str | Error err -> Code.CodeError.error_string err
+  in
   Format.fprintf fmt "Instructions: %s\nConstants: %s}"
-    (Code.ByteFmt.pp_byte_list (current_instructions cmp))
-    (pp_map cmp.constants)
+    (* (Code.ByteFmt.pp_byte_list (current_instructions cmp)) *)
+    item (pp_map cmp.constants)
 
 let equal_compiler c1 c2 =
   let c1_c, c2_c = (current_instructions c1, current_instructions c2) in
@@ -348,8 +364,9 @@ let[@ocaml.warning "-27-9-26"] rec compile nodes cmp =
             emit `Return cmp |> fst
           else cmp
         in
+        let num_locals = cmp.symbol_table.num_definitions in
         let cmp, inst = leave_scope cmp in
-        let cmp, index = add_constants (Obj.CompFunc inst) cmp in
+        let cmp, index = add_constants (Obj.CompFunc (inst, num_locals)) cmp in
         let cmp, _ = emit (`Constant index) cmp in
         Ok cmp
     | CallExpression {func} ->

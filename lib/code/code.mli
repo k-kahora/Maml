@@ -63,6 +63,8 @@ module CodeError : sig
 
   val pp_error : Format.formatter -> error -> unit
 
+  val error_string : error -> string
+
   val print_error : error -> unit
 
   val alcotest_error : error Alcotest.testable

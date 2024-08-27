@@ -214,9 +214,9 @@ module CodeError = struct
     | CustomError err ->
         format_helper fmt "CustomError: %s" err
 
-  let print_error error =
-    let error_str = Format.asprintf "%a" pp_error error in
-    print_endline error_str
+  let error_string error = Format.asprintf "%a" pp_error error
+
+  let print_error error = print_endline (error_string error)
 
   let alcotest_error = Alcotest.testable pp_error equal_error
 end

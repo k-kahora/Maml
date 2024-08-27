@@ -12,6 +12,11 @@ type virtual_machine =
   ; frame_index: int
   ; stack: Obj.item Program_stack.program_stack }
 
+(* val last_item_popped : *)
+(*   virtual_machine -> (Object.Obj.item, Code.CodeError.error) result *)
+
+val last_item_popped : virtual_machine -> Obj.item
+
 val new_virtual_machine : Compiler.compiler -> virtual_machine
 
 val new_with_global_store :

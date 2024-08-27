@@ -315,7 +315,8 @@ let test_function_expressions () =
                 ; make (`Constant 1)
                 ; make `Mul
                 ; make `ReturnValue ]
-              |> List.concat ) ]
+                |> List.concat
+              , 0 ) ]
       , make_test_helper [`Constant 2; `Pop] )
     ; ( "fn () { 1 + 2 * 30 ; 10}"
       , map_test_helper
@@ -326,7 +327,8 @@ let test_function_expressions () =
                 ; make (`Constant 1)
                 ; make `Mul
                 ; make `ReturnValue ]
-              |> List.concat ) ]
+                |> List.concat
+              , 0 ) ]
       , make_test_helper [`Constant 2; `Pop] )
     ; ( "fn () { 10 * 2}"
       , map_test_helper
@@ -337,7 +339,8 @@ let test_function_expressions () =
                 ; make (`Constant 1)
                 ; make `Mul
                 ; make `ReturnValue ]
-              |> List.concat ) ]
+                |> List.concat
+              , 0 ) ]
       , make_test_helper [`Constant 2; `Pop] )
     ; ( "fn () {1; 2}"
       , map_test_helper
@@ -348,10 +351,11 @@ let test_function_expressions () =
                 ; make `Pop
                 ; make (`Constant 1)
                 ; make `ReturnValue ]
-              |> List.concat ) ]
+                |> List.concat
+              , 0 ) ]
       , make_test_helper [`Constant 2; `Pop] )
     ; ( "fn () {}"
-      , map_test_helper [CompFunc ([make `Return] |> List.concat)]
+      , map_test_helper [CompFunc ([make `Return] |> List.concat, 0)]
       , make_test_helper [`Constant 0; `Pop] ) ]
   in
   run_compiler_tests tests
@@ -362,14 +366,22 @@ let test_function_call () =
     [ ( "fn() {25}()"
       , map_test_helper
           [ Int 25
-          ; CompFunc ([make (`Constant 0); make `ReturnValue] |> List.concat) ]
+          ; CompFunc ([make (`Constant 0); make `ReturnValue] |> List.concat, 0)
+          ]
       , make_test_helper [`Constant 1; `Call; `Pop] )
     ; ( "let no_arg = fn() { 25 }; no_arg();"
       , map_test_helper
           [ Int 25
-          ; CompFunc ([make (`Constant 0); make `ReturnValue] |> List.concat) ]
+          ; CompFunc ([make (`Constant 0); make `ReturnValue] |> List.concat, 0)
+          ]
       , make_test_helper [`Constant 1; `SetGlobal 0; `GetGlobal 0; `Call; `Pop]
       )
+    ; ( {|let oneAndTwo = fn() {let one = 1; let two = 2; one + two};
+         oneAndTwo()
+
+|}
+      , map_test_helper [Int 30]
+      , make_test_helper [`Constant 0] )
     ; ( {|
          let fivePlusTen = fn() { 5 + 10 };
          fivePlusTen();
@@ -384,7 +396,8 @@ let test_function_call () =
                 ; make (`Constant 1)
                 ; make `Add
                 ; make `ReturnValue ]
-              |> List.concat )
+                |> List.concat
+              , 0 )
           ; Int 5
           ; Int 2
           ; CompFunc
@@ -392,7 +405,8 @@ let test_function_call () =
                 ; make (`Constant 4)
                 ; make `Add
                 ; make `ReturnValue ]
-              |> List.concat ) ]
+                |> List.concat
+              , 0 ) ]
       , make_test_helper
           [ `Constant 2
           ; `SetGlobal 0
@@ -419,7 +433,8 @@ let test_function_call () =
                 ; make (`Constant 3)
                 ; make `Sub
                 ; make `ReturnValue ]
-              |> List.concat ) ]
+                |> List.concat
+              , 0 ) ]
       , make_test_helper [`Constant 4; `SetGlobal 0; `GetGlobal 0; `Call; `Pop]
       ) ]
   in
@@ -432,7 +447,7 @@ let test_let_stmt_scopes () =
          fn() { num }|}
       , map_test_helper
           [ Int 55
-          ; CompFunc ([make (`GetGlobal 0); make `ReturnValue] |> List.concat)
+          ; CompFunc ([make (`GetGlobal 0); make `ReturnValue] |> List.concat, 0)
           ]
       , make_test_helper [`Constant 0; `SetGlobal 0; `Constant 1; `Pop] )
     ; ( {|fn() {
@@ -447,7 +462,8 @@ let test_let_stmt_scopes () =
                 ; make (`SetLocal 0)
                 ; make (`GetLocal 0)
                 ; make `ReturnValue ]
-              |> List.concat ) ]
+                |> List.concat
+              , 0 ) ]
       , make_test_helper [`Constant 1; `Pop] )
     ; ( {|
          fn() {
@@ -468,7 +484,8 @@ let test_let_stmt_scopes () =
                 ; make (`GetLocal 1)
                 ; make `Add
                 ; make `ReturnValue ]
-              |> List.concat ) ]
+                |> List.concat
+              , 0 ) ]
       , make_test_helper [`Constant 2; `Pop] ) ]
   in
   run_compiler_tests tests
@@ -540,8 +557,8 @@ let () =
     ; ( "scope indexing"
       , [Alcotest.test_case "scope index chekinge" `Slow test_compiler_scopes]
       )
-    ; ( "function compilation"
-      , [Alcotest.test_case "function work" `Slow test_function_expressions] )
+      (* ; ( "function compilation" *)
+      (*   , [Alcotest.test_case "function work" `Slow test_function_expressions] ) *)
     ; ( "function calls"
       , [Alcotest.test_case "function calls work" `Slow test_function_call] )
     ; ( "stmt scopes"

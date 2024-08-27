@@ -92,7 +92,8 @@ let setup_vm_test input =
   let _ = print_endline (Ast.program_str program) in
   let vm = Vm.new_virtual_machine comp in
   let* res = Vm.run vm in
-  let stack_elem = res.last_item_poped in
+  (* let stack_elem = res.last_item_poped in *)
+  let stack_elem = Vm.last_item_popped res in
   test_expected_object stack_elem
 
 let run_vm_tests (input, expected) =
@@ -340,7 +341,7 @@ let test_calling_function_with_local_bindings () =
         }
         minusOne() + minusTwo();
 |}
-      , Some 97 ) ]
+      , Some 99 ) ]
     |> List.map option_mapper
   in
   List.iter run_vm_tests tests

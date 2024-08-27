@@ -2,7 +2,9 @@ open Object
 
 let ( let* ) = Result.bind
 
-let stack_size = 2048
+(* FIXME set it to this once in prod *)
+(* let stack_size = 2048 *)
+let stack_size = 16
 
 let global_size = 65536
 
@@ -21,30 +23,48 @@ type virtual_machine =
   ; frame_index: int
   ; stack: Obj.item Program_stack.program_stack }
 
+let last_item_popped vm =
+  Program_stack.head vm.stack |> Result.value ~default:(Obj.String "Null Item!!")
+
+let print_stack vm =
+  Format.printf "Stack::Pointer::%d\n" vm.stack.ip ;
+  Array.iteri
+    (fun idx item ->
+      Format.printf "%40d %s\n" idx
+        (Option.fold ~none:"None" ~some:Obj.item_to_string item) )
+    vm.stack.stack
+
 let push_frame frame vm =
   vm.frames.(vm.frame_index + 1) <- frame ;
   {vm with frame_index= vm.frame_index + 1}
 
-let pop_frame vm =
-  vm.frames.(vm.frame_index) <- Frame.new_frame (Obj.CompFunc []) ;
-  let new_vm = {vm with frame_index= vm.frame_index - 1} in
-  new_vm
-
 let current_frame vm = vm.frames.(vm.frame_index)
+
+let pop_frame vm =
+  let old_frame = current_frame vm in
+  vm.frames.(vm.frame_index) <-
+    Frame.new_frame (Obj.CompFunc ([], 0)) ~base_pointer:0 ;
+  let new_vm = {vm with frame_index= vm.frame_index - 1} in
+  (new_vm, old_frame)
+
+let update_current_frame frame vm = vm.frames.(vm.frame_index) <- frame
 
 let frame_instructions vm = current_frame vm |> fun a -> a.fn
 
 let new_virtual_machine byte_code =
   let open Compiler in
-  let main_fn = Obj.CompFunc (current_instructions byte_code) in
-  let main_frame = Frame.new_frame main_fn in
-  let frames = Array.make max_frames @@ Frame.new_frame (Obj.CompFunc []) in
+  let main_fn = Obj.CompFunc (current_instructions byte_code, 0) in
+  let main_frame = Frame.new_frame main_fn ~base_pointer:0 in
+  let frames =
+    Array.make max_frames
+    @@ Frame.new_frame (Obj.CompFunc ([], 0)) ~base_pointer:0
+  in
   frames.(0) <- main_frame ;
   { constants= byte_code.constants
   ; globals= Program_stack.make_stack global_size
   ; frames
-  ; frame_index= 0
-  ; last_item_poped= Obj.Null
+  ; frame_index= 0 (* ; last_item_poped= Obj.Null *)
+  ; last_item_poped= Obj.String "test"
   ; stack= Program_stack.make_stack stack_size }
 
 let empty_globals () = Program_stack.make_stack global_size
@@ -66,7 +86,7 @@ let push item vm = Program_stack.push item vm.stack
 module VM_Helpers = struct
   open Code
 
-  let finish_run vm = Ok vm
+  let finish_run vm = print_stack vm ; Ok vm
 
   let evaluate_opconstant vm =
     let* b1 = Program_stack.read_then_increment (frame_instructions vm) in
@@ -100,6 +120,7 @@ module VM_Helpers = struct
     in
     let* right = pop vm in
     let* left = pop vm in
+    print_endline "in added" ;
     match (left, right) with
     | Obj.Int l, Obj.Int r ->
         push (Obj.Int (execute_binary_integer_operation l r op)) vm ;
@@ -138,8 +159,9 @@ module VM_Helpers = struct
         Error (Code.CodeError.ObjectNotImplemented l)
 
   let evaluate_oppop vm =
-    let* a = pop vm in
-    {vm with last_item_poped= a} |> finish_run
+    let* _ = pop vm in
+    finish_run vm
+  (* {vm with last_item_poped= a} |> finish_run *)
 
   let execute_minus vm =
     let* operand = pop vm in
@@ -206,6 +228,27 @@ module VM_Helpers = struct
     let global_index = ByteFmt.int_of_hex [b1; b2] 2 in
     let* poped = pop vm in
     let* _ = Program_stack.set global_index poped vm.globals in
+    finish_run vm
+
+  let evaluate_get_local vm =
+    let* b1 = Program_stack.read_then_increment (frame_instructions vm) in
+    let* b2 = Program_stack.read_then_increment (frame_instructions vm) in
+    let local_index = ByteFmt.int_of_hex [b1; b2] 2 in
+    let frame = current_frame vm in
+    (* update_current_frame {frame with ip= frame.ip + 1} vm ; *)
+    let* item = Program_stack.get (frame.base_pointer + local_index) vm.stack in
+    push item vm ; finish_run vm
+
+  let evaluate_set_local vm =
+    let* b1 = Program_stack.read_then_increment (frame_instructions vm) in
+    let* b2 = Program_stack.read_then_increment (frame_instructions vm) in
+    let local_index = ByteFmt.int_of_hex [b1; b2] 2 in
+    let frame = current_frame vm in
+    (* update_current_frame {frame with ip= frame.ip + 1} vm ; *)
+    let* poped_item = pop vm in
+    let* _ =
+      Program_stack.set (frame.base_pointer + local_index) poped_item vm.stack
+    in
     finish_run vm
 
   let evaluate_hash vm =
@@ -288,47 +331,29 @@ module VM_Helpers = struct
     let* _ = execute_vm_expression left index vm in
     finish_run vm
 
-  let evaluate_index vm =
-    let execute_vm_expression left index vm =
-      match (left, index) with
-      | Obj.Array array, Obj.Int index ->
-          if index >= 0 && index < Array.length array then
-            Ok (push array.(index) vm)
-          else Ok (push Obj.Null vm)
-      | Obj.Hash hash, _ ->
-          if not (Obj.hashable index) then
-            Error (CodeError.CustomError "Index is not hashable")
-          else
-            let item =
-              Hashtbl.find_opt hash (Obj.hash_key index)
-              |> Option.fold ~none:Obj.Null ~some:(fun a -> a.Obj.value)
-            in
-            push item vm ; Ok ()
-      (* FIXME make a better error here *)
-      | _ ->
-          Error (CodeError.CustomError "Index operator not supported")
-    in
-    let* index = pop vm in
-    let* left = pop vm in
-    let* _ = execute_vm_expression left index vm in
-    finish_run vm
-
   (** [evaluate_call vm] get the current item on the top of the stack which should be a CompiledFunc 100% of the time, a exception is thrown if not; make a new frame with it and push it onto the stack_frames  *)
   let evaluate_call vm =
     let* fn = Program_stack.stack_head vm.stack in
-    let frame = Frame.new_frame fn in
-    finish_run (push_frame frame vm)
+    let frame = Frame.new_frame fn ~base_pointer:vm.stack.ip in
+    let vm = push_frame frame vm in
+    vm.stack.ip <- frame.base_pointer + Frame.num_locals fn ;
+    finish_run vm
 
   let return_value vm =
     let* return_value = pop vm in
-    let vm = pop_frame vm in
-    let* _ = pop vm in
-    push return_value vm ; finish_run vm
+    let vm, frame = pop_frame vm in
+    Format.printf "Return Value:%s" (Obj.item_to_string return_value) ;
+    (* let* _ = pop vm in *)
+    vm.stack.ip <- frame.base_pointer - 1 ;
+    push return_value vm ;
+    finish_run vm
 
   let return vm =
-    let vm = pop_frame vm in
-    let* _ = pop vm in
-    push Obj.Null vm ; finish_run vm
+    let vm, frame = pop_frame vm in
+    (* let* _ = pop vm in *)
+    vm.stack.ip <- frame.base_pointer - 1 ;
+    push Obj.Null vm ;
+    finish_run vm
 end
 
 (*FIXME any inperformant functions called in here is an issue *)
@@ -337,64 +362,93 @@ let[@ocaml.tailcall] [@ocaml.warning "-9-11"] run vm =
   let open Code in
   let match_opcode vm = function
     | `Constant _ | `CONSTANT ->
+        print_endline "Constant" ;
         VM_Helpers.evaluate_opconstant vm
     | (`Add | `Sub | `Mul | `Div) as op ->
+        print_endline "Add" ;
         VM_Helpers.execute_binary_operation op vm
     | `True ->
+        print_endline "True" ;
         VM_Helpers.execute_bool true vm
     | `False ->
+        print_endline "False" ;
         VM_Helpers.execute_bool false vm
     | `Pop ->
+        print_endline "Pop" ;
         VM_Helpers.evaluate_oppop vm
     | (`Equal | `NotEqual | `GreaterThan) as op ->
+        print_endline "Equal" ;
         VM_Helpers.execute_comparison op vm
     | `Bang ->
-        VM_Helpers.execute_bang vm
+        print_endline "Bang" ; VM_Helpers.execute_bang vm
     | `Minus ->
+        print_endline "Minus" ;
         VM_Helpers.execute_minus vm
     | `Index ->
+        print_endline "Index" ;
         VM_Helpers.evaluate_index vm
     (* NOTE Jumps will be difficult as I am dealing with an actual stack and not a list with a program counter *)
     | `Jump _ | `JUMP ->
+        print_endline "Jump" ;
         VM_Helpers.evaluate_jump vm
     | `JumpNotTruthy _ | `JUMPNOTTRUTHY ->
+        print_endline "JumpNotTruthy" ;
         VM_Helpers.evaluate_jump_not_truthy vm
     | `Null ->
-        push Obj.Null vm ; VM_Helpers.finish_run vm
+        print_endline "Null" ; push Obj.Null vm ; VM_Helpers.finish_run vm
     | `SetGlobal _ | `SETGLOBAL ->
+        print_endline "SetGlobal" ;
         VM_Helpers.evaluate_set_global vm
     | `GetGlobal _ | `GETGLOBAL ->
+        print_endline "GetGlobal" ;
         VM_Helpers.evaluate_get_global vm
+    | `SetLocal _ | `SETLOCAL ->
+        print_endline "SetLocal" ;
+        VM_Helpers.evaluate_set_local vm
+    | `GetLocal _ | `GETLOCAL ->
+        print_endline "GetLocal" ;
+        VM_Helpers.evaluate_get_local vm
     | `Array _ | `ARRAY ->
+        print_endline "Array" ;
         VM_Helpers.evaluate_array vm
     | `Hash _ | `HASH ->
+        print_endline "Hash" ;
         VM_Helpers.evaluate_hash vm
     | `Call ->
+        print_endline "Call" ;
         VM_Helpers.evaluate_call vm
     | `ReturnValue ->
+        print_endline "ReturnValue" ;
         VM_Helpers.return_value vm
     | `Return ->
-        VM_Helpers.return vm
+        print_endline "Return" ; VM_Helpers.return vm
     | a ->
         Error (Code.CodeError.OpCodeNotImplemented a)
   in
-  (* Array.iter *)
-  (*   (fun a -> print_endline (Option.get a |> ByteFmt.pp_byte)) *)
-  (*   vm.instructions.stack ; *)
   (* Perf issuse what happens here is the loop will continue even if the ip is done pointing at what it needs to  *)
-  let x =
-    Array.fold_left
-      (fun vm _ ->
-        let* vm = vm in
-        match Program_stack.read_then_increment (frame_instructions vm) with
-        | Ok hd ->
-            let* {def} = lookup hd in
-            match_opcode vm def
-        | Error _ ->
-            Ok vm )
-      (Ok vm) (frame_instructions vm).stack
+  (* let x = *)
+  (*   Array.fold_left *)
+  (*     (fun vm _ -> *)
+  (*       let* vm = vm in *)
+  (*       match Program_stack.read_then_increment (frame_instructions vm) with *)
+  (*       | Ok hd -> *)
+  (*           let* {def} = lookup hd in *)
+  (*           match_opcode vm def *)
+  (*       | Error _ -> *)
+  (*           Ok vm ) *)
+  (*     (Ok vm) (frame_instructions vm).stack *)
+  (* in *)
+  (* x *)
+  let rec helper acc =
+    match Program_stack.read_then_increment @@ frame_instructions acc with
+    | Ok hd ->
+        let* {def} = lookup hd in
+        let* acc = match_opcode acc def in
+        helper acc
+    | Error _ ->
+        Ok acc
   in
-  x
+  helper vm
 
 (* match vm.instructions.stack with *)
 (* | [| |] -> *)
