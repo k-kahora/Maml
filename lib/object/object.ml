@@ -211,13 +211,13 @@ end = struct
         i
     | Bool b ->
         string_of_bool b
-    | CompFunc (_ls, _locals) ->
-        "COMPFUNC"
-    (* | CompFunc (ls, _locals) -> *)
-    (*     List.fold_left *)
-    (*       (fun acc a -> acc ^ Format.sprintf "0x%02X," (int_of_char a)) *)
-    (*       "[" ls *)
-    (*     ^ "]" *)
+    (* | CompFunc (_ls, _locals) -> *)
+    (*     "COMPFUNC" *)
+    | CompFunc (ls, _locals) ->
+        List.fold_left
+          (fun acc a -> acc ^ Format.sprintf "0x%02X," (int_of_char a))
+          "[" ls
+        ^ "]"
     | Function (parmeters, _, _) ->
         let str =
           List.fold_left

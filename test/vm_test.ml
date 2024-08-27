@@ -341,7 +341,7 @@ let test_calling_function_with_local_bindings () =
         }
         minusOne() + minusTwo();
 |}
-      , Some 99 ) ]
+      , Some 97 ) ]
     |> List.map option_mapper
   in
   List.iter run_vm_tests tests
@@ -353,6 +353,14 @@ let test_first_class_funcs () =
          let returnsOne = fn() { 1; };
          let returnsOneReturner = fn() { returnsOne; };
          returnsOneReturner()();
+|}
+      , Some 1 )
+    ; ( {|
+   let returnsOneReturner = fn() {
+     let returnsOne = fn() { 1; };
+     returnsOne;
+   }
+   returnsOneReturner()();
 |}
       , Some 1 ) ]
     |> List.map option_mapper

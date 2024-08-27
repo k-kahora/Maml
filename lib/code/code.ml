@@ -25,7 +25,7 @@ type opcode =
   | `Minus
   | `Bang
   | `Index
-  | `Call
+  | `Call of int
   | `Return
   | `ReturnValue
   | `Pop ]
@@ -37,6 +37,7 @@ type opcode_marker =
   | `GETGLOBAL
   | `SETGLOBAL
   | `ARRAY
+  | `CALL
   | `HASH
   | `SETLOCAL
   | `GETLOCAL ]
@@ -88,7 +89,7 @@ let operand_name_not_marker = function
       "NotEqual"
   | `Index ->
       "Index"
-  | `Call ->
+  | `Call _ ->
       "Call"
   | `Return ->
       "Return"
@@ -142,7 +143,7 @@ let operand_name = function
       "NotEqual"
   | `Index ->
       "Index"
-  | `Call ->
+  | `Call _ | `CALL ->
       "Call"
   | `Return ->
       "Return"
@@ -291,6 +292,8 @@ let opcode_length = function
   | `Array _
   | `ARRAY ->
       2
+  | `Call _ | `CALL ->
+      1
   | `Pop
   | `Sub
   | `Add
@@ -304,7 +307,6 @@ let opcode_length = function
   | `Bang
   | `Null
   | `Index
-  | `Call
   | `Return
   | `ReturnValue
   | `GreaterThan ->
@@ -321,6 +323,8 @@ let marker_to_opcode operand = function
       Ok (`Array operand)
   | `HASH ->
       Ok (`Hash operand)
+  | `CALL ->
+      Ok (`Call operand)
   | a ->
       Error (CodeError.OpCodeNotImplemented a)
 
@@ -368,7 +372,7 @@ let lookup_opcode = function
   | '\x15' ->
       Ok `Index
   | '\x16' ->
-      Ok `Call
+      Ok `CALL
   | '\x17' ->
       Ok `ReturnValue
   | '\x18' ->
@@ -415,7 +419,7 @@ let lookup_byte = function
       '\x10'
   | `Index ->
       '\x15'
-  | `Call ->
+  | `Call _ | `CALL ->
       '\x16'
   | `ReturnValue ->
       '\x17'
@@ -461,6 +465,8 @@ let make op =
   | `Array operand ->
       convert op operand length
   | `Hash operand ->
+      convert op operand length
+  | `Call operand ->
       convert op operand length
   | a ->
       [lb a]

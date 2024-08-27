@@ -86,7 +86,7 @@ let push item vm = Program_stack.push item vm.stack
 module VM_Helpers = struct
   open Code
 
-  let finish_run vm = print_stack vm ; Ok vm
+  let finish_run vm = (* print_stack vm ; *) Ok vm
 
   let evaluate_opconstant vm =
     let* b1 = Program_stack.read_then_increment (frame_instructions vm) in
@@ -333,6 +333,9 @@ module VM_Helpers = struct
 
   (** [evaluate_call vm] get the current item on the top of the stack which should be a CompiledFunc 100% of the time, a exception is thrown if not; make a new frame with it and push it onto the stack_frames  *)
   let evaluate_call vm =
+    let* _arguments_byte =
+      Program_stack.read_then_increment (frame_instructions vm)
+    in
     let* fn = Program_stack.stack_head vm.stack in
     let frame = Frame.new_frame fn ~base_pointer:vm.stack.ip in
     let vm = push_frame frame vm in
@@ -362,66 +365,49 @@ let[@ocaml.tailcall] [@ocaml.warning "-9-11"] run vm =
   let open Code in
   let match_opcode vm = function
     | `Constant _ | `CONSTANT ->
-        print_endline "Constant" ;
         VM_Helpers.evaluate_opconstant vm
     | (`Add | `Sub | `Mul | `Div) as op ->
-        print_endline "Add" ;
         VM_Helpers.execute_binary_operation op vm
     | `True ->
-        print_endline "True" ;
         VM_Helpers.execute_bool true vm
     | `False ->
-        print_endline "False" ;
         VM_Helpers.execute_bool false vm
     | `Pop ->
-        print_endline "Pop" ;
         VM_Helpers.evaluate_oppop vm
     | (`Equal | `NotEqual | `GreaterThan) as op ->
-        print_endline "Equal" ;
         VM_Helpers.execute_comparison op vm
     | `Bang ->
-        print_endline "Bang" ; VM_Helpers.execute_bang vm
+        VM_Helpers.execute_bang vm
     | `Minus ->
         print_endline "Minus" ;
         VM_Helpers.execute_minus vm
     | `Index ->
-        print_endline "Index" ;
         VM_Helpers.evaluate_index vm
     (* NOTE Jumps will be difficult as I am dealing with an actual stack and not a list with a program counter *)
     | `Jump _ | `JUMP ->
-        print_endline "Jump" ;
         VM_Helpers.evaluate_jump vm
     | `JumpNotTruthy _ | `JUMPNOTTRUTHY ->
-        print_endline "JumpNotTruthy" ;
         VM_Helpers.evaluate_jump_not_truthy vm
     | `Null ->
-        print_endline "Null" ; push Obj.Null vm ; VM_Helpers.finish_run vm
+        push Obj.Null vm ; VM_Helpers.finish_run vm
     | `SetGlobal _ | `SETGLOBAL ->
-        print_endline "SetGlobal" ;
         VM_Helpers.evaluate_set_global vm
     | `GetGlobal _ | `GETGLOBAL ->
-        print_endline "GetGlobal" ;
         VM_Helpers.evaluate_get_global vm
     | `SetLocal _ | `SETLOCAL ->
-        print_endline "SetLocal" ;
         VM_Helpers.evaluate_set_local vm
     | `GetLocal _ | `GETLOCAL ->
-        print_endline "GetLocal" ;
         VM_Helpers.evaluate_get_local vm
     | `Array _ | `ARRAY ->
-        print_endline "Array" ;
         VM_Helpers.evaluate_array vm
     | `Hash _ | `HASH ->
-        print_endline "Hash" ;
         VM_Helpers.evaluate_hash vm
-    | `Call ->
-        print_endline "Call" ;
+    | `Call _ | `CALL ->
         VM_Helpers.evaluate_call vm
     | `ReturnValue ->
-        print_endline "ReturnValue" ;
         VM_Helpers.return_value vm
     | `Return ->
-        print_endline "Return" ; VM_Helpers.return vm
+        VM_Helpers.return vm
     | a ->
         Error (Code.CodeError.OpCodeNotImplemented a)
   in

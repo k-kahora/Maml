@@ -78,26 +78,29 @@ let pp_compiler fmt cmp =
       (fun key value acc ->
         let string =
           match value with
-          | Obj.CompFunc (ls, _) ->
-              let item =
-                Code.string_of_byte_list ls
-                |> function
-                | Ok str -> str | Error err -> Code.CodeError.error_string err
-              in
-              item
+          (* | Obj.CompFunc (ls, _) -> *)
+          (*     let item = *)
+          (*       Code.string_of_byte_list ls *)
+          (*       |> function *)
+          (*       | Ok str -> str | Error err -> Code.CodeError.error_string err *)
+          (*     in *)
+          (*     item *)
           | a ->
               Obj.item_to_string a
         in
         acc ^ Format.sprintf "%d:%s, " key string )
       map "{"
   in
-  let item =
-    Code.string_of_byte_list (current_instructions cmp)
-    |> function Ok str -> str | Error err -> Code.CodeError.error_string err
-  in
+  (* let item = *)
+  (*   Code.string_of_byte_list (current_instructions cmp) *)
+  (*   |> function Ok str -> str | Error err -> Code.CodeError.error_string err *)
+  (* in *)
+  (* Format.fprintf fmt "Instructions: %s\nConstants: %s}" *)
+  (* (Code.ByteFmt.pp_byte_list (current_instructions cmp)) *)
+  (* item (pp_map cmp.constants) *)
   Format.fprintf fmt "Instructions: %s\nConstants: %s}"
-    (* (Code.ByteFmt.pp_byte_list (current_instructions cmp)) *)
-    item (pp_map cmp.constants)
+    (Code.ByteFmt.pp_byte_list (current_instructions cmp))
+    (pp_map cmp.constants)
 
 let equal_compiler c1 c2 =
   let c1_c, c2_c = (current_instructions c1, current_instructions c2) in
@@ -369,9 +372,15 @@ let[@ocaml.warning "-27-9-26"] rec compile nodes cmp =
         let cmp, index = add_constants (Obj.CompFunc (inst, num_locals)) cmp in
         let cmp, _ = emit (`Constant index) cmp in
         Ok cmp
-    | CallExpression {func} ->
+    | CallExpression {func; arguments} ->
         let* cmp = compile_expression func cmp in
-        let cmp, _ = emit `Call cmp in
+        let* cmp =
+          List.fold_left
+            (fun cmp argument ->
+              Result.bind cmp (fun a -> compile_expression argument a) )
+            (Ok cmp) arguments
+        in
+        let cmp, _ = emit (`Call (List.length arguments)) cmp in
         Ok cmp
   and compile_node node cmp =
     match node with

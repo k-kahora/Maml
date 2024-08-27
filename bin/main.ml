@@ -56,7 +56,7 @@ and[@ocaml.warning "-27-26"] operate_machine state input =
   let* compiler = Compiler.compile program.statements fresh_compiler in
   let machine = Vm.new_with_global_store compiler globals in
   let* vm = Vm.run machine in
-  let stack_elem = vm.last_item_poped in
+  let stack_elem = Vm.last_item_popped vm in
   let state = (compiler.symbol_table, compiler.constants, vm.globals) in
   Ok (stack_elem, state)
 

@@ -25,7 +25,7 @@ type opcode =
   | `Minus
   | `Bang
   | `Index
-  | `Call
+  | `Call of int
   | `Return
   | `ReturnValue
   | `Pop ]
@@ -39,6 +39,7 @@ type opcode_marker =
   | `GETGLOBAL
   | `SETGLOBAL
   | `ARRAY
+  | `CALL
   | `HASH
   | `SETLOCAL
   | `GETLOCAL ]

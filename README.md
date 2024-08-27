@@ -107,6 +107,11 @@ Open your terminal
 * Always remove all warning silencers before release
 * No exceptions only use Results and Result.bind
 
+### Bugs in the book
+Compiler-in-go/writing_a_compiler_in_go_1.2.html#implementing-local-bindings-in-the-vm 
+
+the code right before the chapter ends says minusOne() + minusOne() which is incorrect is should be minusOne() + minusTwo()
+
 
 
 #### Building for source
