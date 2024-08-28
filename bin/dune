@@ -2,11 +2,11 @@
  (public_name Freakyscript)
  (name freak) 
   (modules freak)
-(libraries core core_unix.command_unix core_unix.filename_unix lex parsing ast evaluater)
+(libraries core core_unix.command_unix core_unix.filename_unix lex parsing ast evaluater cmdliner repl)
 (preprocess (pps ppx_jane)))
 
 (executable
  (public_name Interpreter)
  (name main)
   (modules main)
- (libraries Interpreter lex parsing ast evaluater vm))
+ (libraries Interpreter repl))

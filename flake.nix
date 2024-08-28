@@ -49,6 +49,7 @@
             legacyPackages.rlwrap
             legacyPackages.just
             ocamlPackages.odoc
+            ocamlPackages.cmdliner
             ocamlPackages.ocamlc-loc
             ocamlPackages.ocaml-lsp
             ocamlPackages.alcotest

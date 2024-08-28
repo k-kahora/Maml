@@ -1,0 +1,4 @@
+(library
+ (name repl )
+ (libraries lex parsing ast evaluater vm))
+

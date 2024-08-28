@@ -1,97 +1,56 @@
-open Core
+open Cmdliner
 
-let env = Object.Environment.new_environment ()
+(** [graffiti] features of graffiti will be as follows
+    
+--ast will always print out the ast in the repl
+--bytecode will always print out the byte code in the repl
+--bytecode & --ast will always print out the byte code and the ast in the repl
+    
+:> graffiti --ast --bytecode
+:> graffiti --bytecode
+:> graffiti --ast
 
-let checksum_from_string buf =
-  Md5.digest_string buf |> Md5.to_hex |> print_endline
 
-let evaluate_program input =
-  let l = Lex.new' input in
-  let p = Parsing.new_parser l in
-  let program = Parsing.parse_program p in
-  (* print_endline (Ast.program_str program) ; *)
-  Evaluater.eval env program
+*)
 
-let read_string str =
-  let evaluated = evaluate_program str in
-  print_endline @@ Object.Obj.item_to_string evaluated
+let graffiti repl ast bytecode prompt =
+  if repl then Repl.boot_into_repl ~prompt ()
+  else Format.printf "ast: %B, bytecode: %b" ast bytecode
 
-let repl () =
-  let rec repl' () =
-    print_string "==> " ;
-    (* Print prompt *)
-    Out_channel.(flush stdout) ;
-    (* Ensure the prompt is displayed *)
-    let input = In_channel.(input_line_exn stdin) in
-    (* Read a line of input from the user *)
-    (* if input = "exit" then *)
-    (* Check if the input is a command to exit *)
-    (* print_endline "Goodbye!" *)
-    (* else *)
-    (* FIXME NOTE This code failwis unless an int is passed *)
-    let evaluated = evaluate_program input in
-    print_endline @@ Object.Obj.item_to_string evaluated ;
-    repl' ()
+let repl =
+  let doc = "run the repl" in
+  Arg.(value & flag & info ["r"; "repl"] ~doc)
+
+let ast =
+  let doc = "Output the ast of each command in the repl" in
+  Arg.(value & flag & info ["a"; "ast"] ~doc)
+
+let prompt =
+  let doc = "Custom string for the prompt defalt is ==>" in
+  Arg.(value & opt string "==>" & info ["p"; "prompt"] ~doc)
+
+let bytecode =
+  let doc = "Output the bytecode of each command in the repl" in
+  Arg.(value & flag & info ["b"; "bytecode"] ~doc)
+
+(* let msg = *)
+(*   let env = *)
+(*     let doc = "Overrides the default message to print." in *)
+(*     Cmd.Env.info "CHORUS_MSG" ~doc *)
+(*   in *)
+(*   let doc = "The message to print." in *)
+(*   Arg.(value & pos 0 string "Revolt!" & info [] ~env ~docv:"MSG" ~doc) *)
+
+let graffiti_t = Term.(const graffiti $ repl $ ast $ bytecode $ prompt)
+
+let cmd =
+  let doc = "A toy language for visualizing the AST, and the bytecode" in
+  let man =
+    [`S Manpage.s_bugs; `P "Email bug reports to <bugs@example.org>."]
   in
-  print_string
-    {|
-     Welcome to Freakyscript 😤😡😠🤬😈👿💀☠️
-                                                
-                                                
-                ▒▒▒▒▒▒▒▒    ▒▒▒▒▒▒▒▒            
-              ▒▒▒▒      ▒▒▒▒▒▒      ▒▒          
-            ▒▒▒▒  ▒▒▒▒▒▒▒▒▒▒  ▒▒▒▒▒▒▒▒          
-          ▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒        
-          ▒▒▒▒      ▒▒▒▒▒▒      ▒▒▒▒▒▒▒▒        
-      ▒▒▒▒▒▒                      ▒▒▒▒▒▒▒▒      
-    ▒▒▒▒██████        ████        ██▒▒▒▒▒▒▒▒    
-  ▒▒▒▒▒▒██████▒▒▒▒▒▒████████▒▒▒▒▒▒▒▒████▒▒▒▒▒▒  
-    ▒▒▒▒██▒▒▒▒▒▒▒▒████▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒██▒▒▒▒    
-      ▒▒▒▒▒▒  ▒▒████▒▒▒▒▒▒▒▒    ▒▒▒▒██▒▒▒▒      
-      ▒▒▒▒    ▒▒██▒▒▒▒▒▒▒▒    ▒▒▒▒██▒▒▒▒        
-    ▒▒▒▒    ▒▒██▒▒▒▒▒▒▒▒    ▒▒▒▒██▒▒▒▒          
-  ▒▒▒▒▒▒  ▒▒██▒▒▒▒▒▒▒▒▒▒  ▒▒▒▒██▒▒▒▒▒▒          
-  ▒▒▒▒    ▒▒██▒▒▒▒▒▒▒▒    ▒▒▒▒██▒▒▒▒            
-▒▒▒▒▒▒    ████▒▒▒▒▒▒▒▒    ▒▒██▒▒▒▒              
-▒▒▒▒▒▒    ▒▒▒▒▒▒▒▒▒▒    ▒▒▒▒██▒▒▒▒              
-▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒    ▒▒██▒▒▒▒                
-  ▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒    ▒▒▒▒██▒▒                  
-  ▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒██                      
-    ▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒██                        
-      ▒▒▒▒▒▒▒▒▒▒▒▒▒▒██                          
-          ▒▒▒▒▒▒▒▒                              
-                                                
-                                                
+  let info = Cmd.info "graffiti" ~version:"%‌%VERSION%%" ~doc ~man in
+  Cmd.v info graffiti_t
 
+let main () = exit (Cmd.eval cmd)
 
-|} ;
-  repl' ()
-
-let read_file filename =
-  let evaluate contents =
-    let evaluated = evaluate_program contents in
-    print_endline @@ Object.Obj.item_to_string evaluated
-  in
-  match filename with
-  | "@" ->
-      ()
-  | "-" ->
-      evaluate @@ In_channel.input_all In_channel.stdin
-  | filename ->
-      evaluate @@ In_channel.read_all filename
-
-let command =
-  Command.basic ~summary:"Run the freakyscript interpreter"
-    (let%map_open.Command use_string =
-       flag "-s" (optional string) ~doc:"string Provide freakyscript code"
-     and _trial = flag "-t" no_arg ~doc:"run a built-in time trial"
-     and repl_flag = flag "-r" no_arg ~doc:"run the monkey repl"
-     and filename =
-       anon (maybe_with_default "@" ("filename" %: Filename_unix.arg_type))
-     in
-     fun () ->
-       (* if trial then printf "Running time trial\n" else *)
-       if repl_flag then repl () else read_file filename ;
-       match use_string with Some buf -> read_string buf | None -> () )
-
-let () = Command_unix.run command
+let () = main ()
