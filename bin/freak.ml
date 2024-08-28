@@ -13,13 +13,24 @@ open Cmdliner
 
 *)
 
-let graffiti repl ast bytecode prompt =
-  if repl then Repl.boot_into_repl ~prompt ()
-  else Format.printf "ast: %B, bytecode: %b" ast bytecode
+let graffiti repl interpret ast bytecode prompt =
+  match repl with
+  | true -> (
+    match interpret with
+    | true ->
+        Repl.boot_into_repl ~prompt ~run_or_comp:`Interpret ()
+    | false ->
+        Repl.boot_into_repl ~prompt () )
+  | false ->
+      Format.printf "ast: %B, bytecode: %b" ast bytecode
 
 let repl =
   let doc = "run the repl" in
   Arg.(value & flag & info ["r"; "repl"] ~doc)
+
+let interpret =
+  let doc = "compile output in the repl or intrepret it" in
+  Arg.(value & flag & info ["i"; "interpret"] ~doc)
 
 let ast =
   let doc = "Output the ast of each command in the repl" in
@@ -41,7 +52,8 @@ let bytecode =
 (*   let doc = "The message to print." in *)
 (*   Arg.(value & pos 0 string "Revolt!" & info [] ~env ~docv:"MSG" ~doc) *)
 
-let graffiti_t = Term.(const graffiti $ repl $ ast $ bytecode $ prompt)
+let graffiti_t =
+  Term.(const graffiti $ repl $ interpret $ ast $ bytecode $ prompt)
 
 let cmd =
   let doc = "A toy language for visualizing the AST, and the bytecode" in
