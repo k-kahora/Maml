@@ -118,6 +118,7 @@ let rec expression_str (e : expression) : string =
       "{"
       ^ Hashtbl.fold
           (fun key value acc ->
+            (* let {key; value} = value in *)
             acc
             ^ Format.sprintf "%s: %s, " (expression_str key)
                 (expression_str value) )

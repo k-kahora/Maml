@@ -21,6 +21,9 @@ let snd (_, b, _) = b
 
 let fst (a, _, _) = a
 
+let inst ~default {fn; ip= _; base_pointer= _} =
+  fn |> Program_stack.list_of_programstack ~default
+
 let num_locals a = item_check a |> snd
 
 let num_parameters a = item_check a |> thrd

@@ -244,9 +244,9 @@ end = struct
         Int64.to_string v
     | Hash table ->
         Hashtbl.fold
-          (fun key {key= _; value} acc ->
+          (fun _hash_code {key= true_key; value} acc ->
             acc
-            ^ Format.sprintf "%s:%s, " (item_to_string key)
+            ^ Format.sprintf "%s:%s, " (item_to_string true_key)
                 (item_to_string value) )
           table "{"
         ^ "}"

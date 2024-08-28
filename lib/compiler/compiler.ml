@@ -130,9 +130,9 @@ let new_compiler () =
   ; symbol_table
   ; scopes= empty_array }
 
-let new_with_state symbol_table constants =
+let new_with_state index symbol_table constants =
   let n_cmp = new_compiler () in
-  {n_cmp with symbol_table; constants}
+  {n_cmp with symbol_table; constants; index}
 
 let empty_constants () = IntMap.empty
 

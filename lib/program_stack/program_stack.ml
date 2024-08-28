@@ -56,6 +56,9 @@ let push item ps =
   ps.stack.(ps.ip) <- Some item ;
   increment ps
 
+(* Could throw an index out of bound exception *)
+let get_err ~default index ps = ps.stack.(index) |> Option.value ~default
+
 let get index ps =
   let* _ = check_bounds index ps in
   ps.stack.(index)
@@ -72,3 +75,6 @@ let pop ps =
     let poped = ps.stack.(ps.ip) in
     (* ps.stack.(ps.ip) <- None ; *)
     Ok poped )
+
+let list_of_programstack ~default ps =
+  Array.to_list ps.stack |> List.map (fun a -> Option.value ~default a)

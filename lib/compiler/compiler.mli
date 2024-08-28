@@ -23,7 +23,7 @@ val current_instructions : compiler -> byte list
 val new_compiler : unit -> compiler
 
 val new_with_state :
-  Symbol_table.symbol_table -> Object.Obj.item IntMap.t -> compiler
+  int -> Symbol_table.symbol_table -> Object.Obj.item IntMap.t -> compiler
 
 val empty_constants : unit -> 'a IntMap.t
 

@@ -24,6 +24,8 @@ let constants = Compiler.empty_constants ()
 
 let globals = Vm.empty_globals ()
 
+let index = 0
+
 let symbol_table_with_built_ins () =
   let _, symbol_table =
     List.fold_left
@@ -48,20 +50,9 @@ let rec repl run_or_comp output_mode prompt state =
   let result =
     match run_or_comp with
     | `Compiled ->
-        operate_machine_compile state input
+        operate_machine_compile state input output_mode
     | `Interpret ->
-        operate_machine_interpret state input
-  in
-  let _ =
-    match output_mode with
-    | `Default ->
-        ()
-    | `Ast ->
-        ()
-    | `Byte ->
-        ()
-    | `Both ->
-        ()
+        operate_machine_interpret state input output_mode
   in
   (* FIXME NOTE This code failwis unless an int is passed *)
   Result.fold
@@ -73,20 +64,38 @@ let rec repl run_or_comp output_mode prompt state =
       repl run_or_comp output_mode prompt state )
     result
 
-and[@ocaml.warning "-27-26"] operate_machine_compile state input =
-  let symbol_table, constants, globals = state in
+and[@ocaml.warning "-27-26"] operate_machine_compile state input output_mode =
+  let index, symbol_table, constants, globals = state in
   let l = Lex.new' input in
   let p = Parsing.new_parser l in
   let program = Parsing.parse_program p in
-  let fresh_compiler = Compiler.new_with_state symbol_table constants in
+  let fresh_compiler = Compiler.new_with_state index symbol_table constants in
   let* compiler = Compiler.compile program.statements fresh_compiler in
+  let _ =
+    match output_mode with
+    | `Default ->
+        ()
+    | `Ast ->
+        ()
+    | `Byte ->
+        Code.string_of_byte_list (Compiler.current_instructions compiler)
+        |> Result.value ~default:"Failed to generate bytecode"
+        |> print_endline
+    | `Both ->
+        Code.string_of_byte_list (Compiler.current_instructions compiler)
+        |> Result.value ~default:"Failed to generate bytecode"
+        |> print_endline
+  in
   let machine = Vm.new_with_global_store compiler globals in
+  (* Vm.string_of_vm machine |> print_endline ; *)
   let* vm = Vm.run machine in
   let stack_elem = Vm.last_item_popped vm in
-  let state = (compiler.symbol_table, compiler.constants, vm.globals) in
+  let state =
+    (compiler.index, compiler.symbol_table, compiler.constants, vm.globals)
+  in
   Ok (stack_elem, state)
 
-and[@ocaml.warning "-27-26"] operate_machine_interpret state input =
+and[@ocaml.warning "-27-26"] operate_machine_interpret state input output_mode =
   let l = Lex.new' input in
   let p = Parsing.new_parser l in
   let program = Parsing.parse_program p in
@@ -96,4 +105,4 @@ and[@ocaml.warning "-27-26"] operate_machine_interpret state input =
 
 let boot_into_repl ?(run_or_comp = `Compiled) ?(output_mode = `Default)
     ?(prompt = "==>") () =
-  repl run_or_comp output_mode prompt (symbol_table, constants, globals)
+  repl run_or_comp output_mode prompt (index, symbol_table, constants, globals)

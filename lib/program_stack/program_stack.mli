@@ -16,8 +16,12 @@ val read_then_increment : 'a program_stack -> ('a, CodeError.error) result
 
 val get : int -> 'a program_stack -> ('a, CodeError.error) result
 
+val get_err : default:'a -> int -> 'a program_stack -> 'a
+
 val set : int -> 'a -> 'a program_stack -> (unit, CodeError.error) result
 
 val alc_program_stack : int program_stack Alcotest.testable
 
 val stack_head : 'a program_stack -> ('a, CodeError.error) result
+
+val list_of_programstack : default:'a -> 'a program_stack -> 'a list

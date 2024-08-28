@@ -220,16 +220,22 @@ let make_hash lst =
 let test_hash_literals () =
   let tests =
     [ ("{}", make_hash [])
-    ; ( {|{1: 2, 2: 3, "ape": false  }|}
-      , make_hash [(Int 1, Int 2); (Int 2, Int 3); (String "ape", Bool false)]
+    ; ( {|{2: 3, "ape": false, 2:3   }|}
+      , make_hash [(Int 2, Int 3); (String "ape", Bool false); (Int 2, Int 3)]
       )
+      (* ; ( {|{"monkey":{"see":"do"}}|} *)
+      (*   , make_hash [(Int 1, Int 2); (Int 2, Int 3); (String "ape", Bool false)] *)
+      (*   ) *)
     ; ( "{1 + 1: 2 * 2, 3 + 3: 4 * 4}"
-      , make_hash [(Int 2, Int 4); (Int 6, Int 16)] ) ]
+      , make_hash [(Int 2, Int 4); (Int 6, Int 16)] )
+    ; ( {|{"monkey": {"see":10}}|}
+      , make_hash [(String "monkey", Hash (make_hash [(String "see", Int 10)]))]
+      ) ]
     |> List.map (fun (a, b) -> (a, Ok (Some (Hash b))))
   in
   List.iter run_vm_tests tests
 
-let test_hash_literals () =
+let test_hash_indexing () =
   let option_mapper (a, b) = (a, Ok (Option.map (fun d -> Int d) b)) in
   let tests =
     [ ("[1, 2, 3][1]", Some 2)
@@ -241,6 +247,7 @@ let test_hash_literals () =
     ; ("{1: 1, 2: 2}[1]", Some 1)
     ; ("{1: 1, 2: 2}[2]", Some 2)
     ; ("{1: 1}[0]", None)
+    ; ({|{"monkey": {"see":10}}["monkey"]["see"]|}, Some 10)
       (* ; ( {|[{"name": "Anna", "age": 24}, {"name": "Bob", "age": 99}][0]["age"]|} *)
       (*   , Some 24 ) *)
     ; ("{}[0]", None) ]
@@ -384,6 +391,9 @@ let test_functions_with_arguments () =
 let identity = fn(a) { a; };
         identity(4);|}, Some 4)
     ; ({|
+let identity = fn(a) { a + 20; };
+        identity(4);|}, Some 24)
+    ; ({|
         let sum = fn(a, b) { a + b; };
         sum(1, 2);|}, Some 3)
     ; ( {|
@@ -493,6 +503,9 @@ let () =
       , [Alcotest.test_case "array monkey tests" `Quick test_array_literals] )
     ; ( "hash tables"
       , [Alcotest.test_case "hash table tests" `Quick test_hash_literals] )
+    ; ( "hash index tables"
+      , [ Alcotest.test_case "hash table indexing testt" `Quick
+            test_hash_indexing ] )
     ; ( "argumentlss functions"
       , [Alcotest.test_case "functions tests" `Quick test_function_literals] )
     ; ( "argumentlss functions with explicit returns"

@@ -83,8 +83,7 @@ Open your terminal
 - STEP 2: Website with lang info as well as breif tutorial
 - STEP 3: AST visualizer
 - STEP 4: Bytecode visualizer
-
-
+- STEP 4: Print the stack during each operation of the bytecode
 * Add less than or equal to and greater than respectively
 * Make the langugage installable on Nix systems via the flake in your github
 * Add the langugae to this project [monkeys in the wild](https://github.com/mrnugget/monkeylang/?tab=readme-ov-file#adding-a-new-implementation)

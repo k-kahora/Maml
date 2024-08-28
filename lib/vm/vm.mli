@@ -29,3 +29,5 @@ val empty_globals : unit -> 'a Program_stack.program_stack
 val run : virtual_machine -> (virtual_machine, Code.CodeError.error) result
 
 val stack_size : int
+
+val string_of_vm : virtual_machine -> string

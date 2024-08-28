@@ -6,7 +6,8 @@ let ( let* ) = Result.bind
 (* let stack_size = 2048 *)
 let stack_size = 16
 
-let global_size = 65536
+(* let global_size = 65536 *)
+let global_size = 10
 
 let max_frames = 1024
 (* all operands are 2 bytes wide or 16 bits so FFFF is the max  amount of globals allowed `SetGlobal 65536*)
@@ -22,6 +23,29 @@ type virtual_machine =
   ; frames: Frame.frame array
   ; frame_index: int
   ; stack: Obj.item Program_stack.program_stack }
+
+let constant_string vm =
+  let str =
+    IntMap.fold
+      (fun idx value acc ->
+        acc ^ Format.sprintf "%d: %s\n" idx (Obj.item_to_string value) )
+      vm.constants ""
+  in
+  str
+
+let globals_string vm =
+  let str =
+    Array.fold_left
+      (fun acc item ->
+        let value = Option.value ~default:Obj.Null item in
+        acc ^ Format.sprintf "%s, " (Obj.item_to_string value) )
+      "" vm.globals.stack
+  in
+  str
+
+let string_of_vm vm =
+  Format.sprintf "\nconstants: \n%s\nglobals: %s\n\n" (constant_string vm)
+    (globals_string vm)
 
 let last_item_popped vm =
   Program_stack.head vm.stack |> Result.value ~default:(Obj.String "Null Item!!")
@@ -39,6 +63,9 @@ let push_frame frame vm =
   {vm with frame_index= vm.frame_index + 1}
 
 let current_frame vm = vm.frames.(vm.frame_index)
+
+let current_instructions vm =
+  Frame.inst ~default:'\x00' vm.frames.(vm.frame_index)
 
 let pop_frame vm =
   let old_frame = current_frame vm in
@@ -275,13 +302,17 @@ module VM_Helpers = struct
             looper (Ok hash_tbl) rest
       in
       let* hash = looper (Ok (Hashtbl.create (List.length slice))) slice in
-      Ok (Obj.Hash hash)
+      let return_item = Obj.Hash hash in
+      Ok return_item
     in
     let* b1 = Program_stack.read_then_increment (frame_instructions vm) in
     let* b2 = Program_stack.read_then_increment (frame_instructions vm) in
     let num_elements = ByteFmt.int_of_hex [b1; b2] 2 in
     let* hash = build_hash (vm.stack.ip - num_elements) vm.stack.ip vm in
-    push hash vm ; finish_run vm
+    (* NOTE this was a crucial step I forget, this could all be avoide with non imperative code *)
+    vm.stack.ip <- vm.stack.ip - num_elements ;
+    push hash vm ;
+    finish_run vm
 
   let evaluate_array vm =
     let reverse_array arr =
@@ -341,6 +372,10 @@ module VM_Helpers = struct
       Frame.new_frame comp_func ~base_pointer:(vm.stack.ip - num_args)
     in
     let vm = push_frame frame vm in
+    print_endline "func instructions" ;
+    Code.string_of_byte_list (current_instructions vm)
+    |> Result.value ~default:"Failed to generate bytecode"
+    |> print_endline ;
     vm.stack.ip <- frame.base_pointer + Frame.num_locals comp_func ;
     Ok vm
 
