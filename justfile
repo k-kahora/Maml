@@ -1,7 +1,7 @@
 set positional-arguments
 
-@freak *args='':
-  dune exec -- Freakyscript "$@"
+@graffiti *args='':
+  dune exec -- Graffiti "$@"
 
 repl:
 	dune exec Interpreter

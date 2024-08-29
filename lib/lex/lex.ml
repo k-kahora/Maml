@@ -118,6 +118,10 @@ let rec next_token (l : lexer) : Token.token * lexer =
           ( { Token.type'= Token.LTEQ
             ; Token.literal= String.make 1 l.ch ^ String.make 1 (peek_char l) }
           , read_char @@ read_char l )
+      | '-' ->
+          ( { Token.type'= Token.ASSIGN
+            ; Token.literal= String.make 1 l.ch ^ String.make 1 (peek_char l) }
+          , read_char @@ read_char l )
       | _ ->
           (newToken Token.LT l.ch, read_char l) )
     | '>' -> (

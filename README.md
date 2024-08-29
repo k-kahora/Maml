@@ -111,6 +111,11 @@ Compiler-in-go/writing_a_compiler_in_go_1.2.html#implementing-local-bindings-in-
 
 the code right before the chapter ends says minusOne() + minusOne() which is incorrect is should be minusOne() + minusTwo()
 
+home/malcolm/Documents/Books/Compiler-in-go/writing_a_compiler_in_go_1.2.html#adding-globals-to-the-vm
+
+when making a new compiler in the repl he does not pass index which leads to weird behavior with functions, just need to pass index
+
+
 
 
 #### Building for source

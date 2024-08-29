@@ -1,12 +1,12 @@
 (executable
- (public_name Freakyscript)
- (name freak) 
-  (modules freak)
+ (public_name Graffiti)
+ (name main) 
+  (modules main)
 (libraries core core_unix.command_unix core_unix.filename_unix lex parsing ast evaluater cmdliner repl)
 (preprocess (pps ppx_jane)))
 
-(executable
- (public_name Interpreter)
- (name main)
-  (modules main)
- (libraries Interpreter repl))
+; (executable
+;  (public_name Interpreter)
+;  (name main)
+;   (modules main)
+;  (libraries Interpreter repl))

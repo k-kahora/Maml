@@ -74,6 +74,9 @@
             buildInputs = [
               ocamlPackages.core
               ocamlPackages.core_unix
+              ocamlPackages.xxhash
+              ocamlPackages.cmdliner
+              ocamlPackages.alcotest
             ]; 
           };
         };
@@ -81,7 +84,7 @@
         apps = {
           myOcamlApp = {
             type = "app";
-            program = "${self.packages.${system}.myOcamlApp}/bin/Freakyscript";
+            program = "${self.packages.${system}.myOcamlApp}/bin/Graffiti";
           };
         };
       }
