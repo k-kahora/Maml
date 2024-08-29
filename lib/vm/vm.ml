@@ -3,11 +3,9 @@ open Object
 let ( let* ) = Result.bind
 
 (* FIXME set it to this once in prod *)
-(* let stack_size = 2048 *)
-let stack_size = 16
+let stack_size = 2048
 
-(* let global_size = 65536 *)
-let global_size = 10
+let global_size = 65536
 
 let max_frames = 1024
 (* all operands are 2 bytes wide or 16 bits so FFFF is the max  amount of globals allowed `SetGlobal 65536*)
