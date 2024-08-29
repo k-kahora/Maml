@@ -1,4 +1,4 @@
 (library
  (name code )
- (libraries core alcotest ast object))
+ (libraries alcotest ast object))
 

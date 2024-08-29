@@ -2,8 +2,8 @@
  (public_name Graffiti)
  (name main) 
   (modules main)
-(libraries core core_unix.command_unix core_unix.filename_unix lex parsing ast evaluater cmdliner repl)
-(preprocess (pps ppx_jane)))
+(libraries  lex parsing ast evaluater cmdliner repl)
+)
 
 ; (executable
 ;  (public_name Interpreter)

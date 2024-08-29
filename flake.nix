@@ -72,8 +72,6 @@
           myOcamlApp = buildOcamlPackage {
             name = "my-ocaml-app";
             buildInputs = [
-              ocamlPackages.core
-              ocamlPackages.core_unix
               ocamlPackages.xxhash
               ocamlPackages.cmdliner
               ocamlPackages.alcotest
