@@ -372,10 +372,6 @@ module VM_Helpers = struct
       Frame.new_frame comp_func ~base_pointer:(vm.stack.ip - num_args)
     in
     let vm = push_frame frame vm in
-    print_endline "func instructions" ;
-    Code.string_of_byte_list (current_instructions vm)
-    |> Result.value ~default:"Failed to generate bytecode"
-    |> print_endline ;
     vm.stack.ip <- frame.base_pointer + Frame.num_locals comp_func ;
     Ok vm
 

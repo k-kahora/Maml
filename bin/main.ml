@@ -15,23 +15,24 @@ open Cmdliner
 
 let graffiti repl interpret ast bytecode prompt literal =
   let run_or_comp = if interpret then `Interpret else `Compiled in
-  if literal <> "" then Repl.execute_string literal |> print_endline else () ;
-  let output_mode =
-    match (ast, bytecode) with
-    | true, true ->
-        `Both
-    | false, true ->
-        `Byte
-    | true, false ->
-        `Ast
-    | false, false ->
-        `Default
-  in
-  match repl with
-  | true ->
-      Repl.boot_into_repl ~prompt ~run_or_comp ~output_mode ()
-  | false ->
-      Format.printf "ast: %B, bytecode: %b" ast bytecode
+  if literal <> "" then Repl.execute_string literal |> print_endline
+  else
+    let output_mode =
+      match (ast, bytecode) with
+      | true, true ->
+          `Both
+      | false, true ->
+          `Byte
+      | true, false ->
+          `Ast
+      | false, false ->
+          `Default
+    in
+    match repl with
+    | true ->
+        Repl.boot_into_repl ~prompt ~run_or_comp ~output_mode ()
+    | false ->
+        Format.printf "ast: %B, bytecode: %b" ast bytecode
 
 let repl =
   let doc = "run the repl" in
