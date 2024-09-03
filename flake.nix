@@ -18,6 +18,15 @@
           filter = name: type: lib.cleanSourceFilter name type && ! (lib.hasSuffix ".git" name);
         };
 
+        myOcamlApp = buildOcamlPackage {
+          name = "my-ocaml-app";
+          buildInputs = [
+            ocamlPackages.xxhash
+            ocamlPackages.cmdliner
+            ocamlPackages.alcotest
+          ]; 
+        };
+
         buildOcamlPackage = { name, buildInputs }: legacyPackages.stdenv.mkDerivation {
           inherit name src;
           buildInputs = with ocamlPackages; [
@@ -32,6 +41,14 @@
           installPhase = ''
             dune install --prefix=$out
           '';
+        };
+        dockerImage = legacyPackages.dockerTools.buildImage {
+          name = "graffiti-image";
+          tag = "latest";
+          config = {
+            cmd = [];
+            entrypoint = ["${myOcamlApp}/bin/Graffiti"];
+          };
         };
 
       in
@@ -69,14 +86,8 @@
         };
 
         packages = {
-          myOcamlApp = buildOcamlPackage {
-            name = "my-ocaml-app";
-            buildInputs = [
-              ocamlPackages.xxhash
-              ocamlPackages.cmdliner
-              ocamlPackages.alcotest
-            ]; 
-          };
+          docker = dockerImage;
+          ocaml = myOcamlApp;
         };
 
         apps = {

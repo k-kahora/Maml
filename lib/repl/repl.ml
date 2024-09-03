@@ -106,3 +106,20 @@ and[@ocaml.warning "-27-26"] operate_machine_interpret state input output_mode =
 let boot_into_repl ?(run_or_comp = `Compiled) ?(output_mode = `Default)
     ?(prompt = "==>") () =
   repl run_or_comp output_mode prompt (index, symbol_table, constants, globals)
+
+let execute_string input =
+  let execute_string input =
+    let l = Lex.new' input in
+    let p = Parsing.new_parser l in
+    let program = Parsing.parse_program p in
+    let fresh_compiler = Compiler.new_compiler () in
+    let* compiler = Compiler.compile program.statements fresh_compiler in
+    let machine = Vm.new_virtual_machine compiler in
+    (* Vm.string_of_vm machine |> print_endline ; *)
+    let* vm = Vm.run machine in
+    Ok (Vm.last_item_popped vm)
+  in
+  Result.fold
+    ~error:(fun err -> Code.CodeError.error_string err)
+    ~ok:(fun item -> Object.Obj.item_to_string item)
+    (execute_string input)

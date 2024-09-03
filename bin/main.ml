@@ -13,8 +13,9 @@ open Cmdliner
 
 *)
 
-let graffiti repl interpret ast bytecode prompt =
+let graffiti repl interpret ast bytecode prompt literal =
   let run_or_comp = if interpret then `Interpret else `Compiled in
+  if literal <> "" then Repl.execute_string literal |> print_endline else () ;
   let output_mode =
     match (ast, bytecode) with
     | true, true ->
@@ -52,6 +53,10 @@ let bytecode =
   let doc = "Output the bytecode of each command in the repl" in
   Arg.(value & flag & info ["b"; "bytecode"] ~doc)
 
+let literal =
+  let doc = "Give some maml code literal to be run" in
+  Arg.(value & opt string "" & info ["e"; "eval"] ~doc)
+
 (* let msg = *)
 (*   let env = *)
 (*     let doc = "Overrides the default message to print." in *)
@@ -61,7 +66,7 @@ let bytecode =
 (*   Arg.(value & pos 0 string "Revolt!" & info [] ~env ~docv:"MSG" ~doc) *)
 
 let graffiti_t =
-  Term.(const graffiti $ repl $ interpret $ ast $ bytecode $ prompt)
+  Term.(const graffiti $ repl $ interpret $ ast $ bytecode $ prompt $ literal)
 
 let cmd =
   let doc = "A toy language for visualizing the AST, and the bytecode" in

@@ -149,6 +149,7 @@ MIT
    [d3-visualizer]: <https://observablehq.com/@aarebecca/ast-explorer>
    [clean-formatter]: <https://viswesh.github.io/astVisualizer/index.html>
    [sql-query]: <https://observablehq.com/@john-guerra/sql-query-visualizer>
+   [docker-tools]: <https://nixos.org/manual/nixpkgs/stable/#sec-pkgs-dockerTools>
 
    [PlDb]: <https://github.com/joemccann/dillinger/tree/master/plugins/dropbox/README.md>
    [PlGh]: <https://github.com/joemccann/dillinger/tree/master/plugins/github/README.md>
@@ -156,3 +157,4 @@ MIT
    [PlOd]: <https://github.com/joemccann/dillinger/tree/master/plugins/onedrive/README.md>
    [PlMe]: <https://github.com/joemccann/dillinger/tree/master/plugins/medium/README.md>
    [PlGa]: <https://github.com/RahulHP/dillinger/blob/master/plugins/googleanalytics/README.md>
+
