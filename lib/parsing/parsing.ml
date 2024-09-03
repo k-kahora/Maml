@@ -481,6 +481,7 @@ end
 
 (* See if a parsing function is associated with the token and call that function *)
 
+(* This program is kept to work with the legacy tests, nightmare refractoring *)
 let parse_program (p : parser) : Ast.program =
   (* Parse each token until there is a EOF token *)
   let rec looper acc p =
@@ -496,5 +497,22 @@ let parse_program (p : parser) : Ast.program =
   in
   let d_stms = looper [] p in
   {Ast.statements= List.rev d_stms}
+
+let parse_program_result p =
+  (* Parse each token until there is a EOF token *)
+  let rec looper acc p =
+    match p.curToken.type' with
+    | Token.EOF ->
+        Ok acc
+    | _ -> (
+      match parse_statement p with
+      | Error err ->
+          Error err
+      | Ok (stmt, p) ->
+          looper (stmt :: acc) (next_token p) )
+  in
+  let* d_stms = looper [] p in
+  Ok {Ast.statements= List.rev d_stms}
+
 (* FIXME reversing affects runtime  *)
 (* List must be reversed due to the way is is handled by appending to the front *)

@@ -68,7 +68,10 @@ and[@ocaml.warning "-27-26"] operate_machine_compile state input output_mode =
   let index, symbol_table, constants, globals = state in
   let l = Lex.new' input in
   let p = Parsing.new_parser l in
-  let program = Parsing.parse_program p in
+  let* program =
+    Parsing.parse_program_result p
+    |> Result.map_error (fun err -> Code.CodeError.CustomError err)
+  in
   let fresh_compiler = Compiler.new_with_state index symbol_table constants in
   let* compiler = Compiler.compile program.statements fresh_compiler in
   let _ =
@@ -111,7 +114,10 @@ let execute_string input =
   let execute_string input =
     let l = Lex.new' input in
     let p = Parsing.new_parser l in
-    let program = Parsing.parse_program p in
+    let* program =
+      Parsing.parse_program_result p
+      |> Result.map_error (fun err -> Code.CodeError.CustomError err)
+    in
     let fresh_compiler = Compiler.new_compiler () in
     let* compiler = Compiler.compile program.statements fresh_compiler in
     let machine = Vm.new_virtual_machine compiler in
