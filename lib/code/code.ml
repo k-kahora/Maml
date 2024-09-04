@@ -11,6 +11,7 @@ type opcode =
   | `SetLocal of int
   | `Array of int
   | `Hash of int
+  | `Closure of int * int (* constant index * free_variable count *)
   | `Add
   | `Sub
   | `Null
@@ -36,6 +37,7 @@ type opcode_marker =
   | `JUMP
   | `JUMPNOTTRUTHY
   | `GETGLOBAL
+  | `CLOSURE
   | `SETGLOBAL
   | `ARRAY
   | `CALL
@@ -99,6 +101,8 @@ let operand_name_not_marker = function
       "Return"
   | `ReturnValue ->
       "ReturnValue"
+  | `Closure _ ->
+      "Closure"
 
 let operand_name = function
   | `Constant _ | `CONSTANT ->
@@ -115,6 +119,8 @@ let operand_name = function
       "SetLocal"
   | `GetLocal _ | `GETLOCAL ->
       "GetLocal"
+  | `Closure _ | `CLOSURE ->
+      "Closure"
   | `Array _ | `ARRAY ->
       "Array"
   | `Hash _ | `HASH ->
@@ -280,7 +286,7 @@ let ( let* ) = Result.bind
 
 (* first argument is always length*)
 
-type definition = {def: [opcode_marker | opcode]; length: int}
+type definition = {def: [opcode_marker | opcode]; length: int list}
 
 let opcode_length = function
   | `CONSTANT
@@ -292,18 +298,23 @@ let opcode_length = function
   | `SetGlobal _
   | `GETGLOBAL
   | `GetGlobal _
-  | `SETLOCAL
-  | `SetLocal _
-  | `GETLOCAL
-  | `GetLocal _
   | `JUMPNOTTRUTHY
   | `Hash _
   | `HASH
   | `Array _
   | `ARRAY ->
-      2
-  | `Call _ | `CALL | `GetBuiltIn _ | `GETBUILTIN ->
-      1
+      [2]
+  | `Call _
+  | `CALL
+  | `GetBuiltIn _
+  | `GETBUILTIN
+  | `SETLOCAL
+  | `SetLocal _
+  | `GETLOCAL
+  | `GetLocal _ ->
+      [1]
+  | `Closure _ | `CLOSURE ->
+      [2; 1]
   | `Pop
   | `Sub
   | `Add
@@ -320,7 +331,7 @@ let opcode_length = function
   | `Return
   | `ReturnValue
   | `GreaterThan ->
-      0
+      [0]
 
 let marker_to_opcode operand = function
   | `CONSTANT ->
@@ -337,6 +348,8 @@ let marker_to_opcode operand = function
       Ok (`Call operand)
   | `GETBUILTIN ->
       Ok (`Call operand)
+  | `CLOSURE ->
+      Ok (`Closure (operand, 0))
   | a ->
       Error (CodeError.OpCodeNotImplemented a)
 
@@ -395,6 +408,8 @@ let lookup_opcode = function
       Ok `GETLOCAL
   | '\x1B' ->
       Ok `GETBUILTIN
+  | '\x1C' ->
+      Ok `CLOSURE
   | a ->
       Error (CodeError.UnrecognizedByte a)
 
@@ -453,6 +468,8 @@ let lookup_byte = function
       '\x1A'
   | `GetBuiltIn _ | `GETBUILTIN ->
       '\x1B'
+  | `Closure _ | `CLOSURE ->
+      '\x1C'
 
 let lookup byte =
   let* opcode = lookup_opcode byte in
@@ -462,45 +479,56 @@ let lookup byte =
 let make op =
   let length = opcode_length op in
   let lb = lookup_byte in
-  let convert op operand length = lb op :: hex_of_int operand length in
+  let convert opcode operand length = lb opcode :: hex_of_int operand length in
   match op with
-  | `Constant operand ->
-      convert op operand length
+  | `GetBuiltIn operand
+  | `Constant operand
+  | `Call operand
+  | `Hash operand
+  | `Jump operand
+  | `Array operand
+  | `GetLocal operand
+  | `SetLocal operand
+  | `GetGlobal operand
+  | `SetGlobal operand
   | `JumpNotTruthy operand ->
-      convert op operand length
-  | `Jump operand ->
-      convert op operand length
-  | `SetGlobal operand ->
-      convert op operand length
-  | `GetGlobal operand ->
-      convert op operand length
-  | `SetLocal operand ->
-      convert op operand length
-  | `GetLocal operand ->
-      convert op operand length
-  | `Array operand ->
-      convert op operand length
-  | `Hash operand ->
-      convert op operand length
-  | `Call operand ->
-      convert op operand length
-  | `GetBuiltIn operand ->
-      convert op operand length
+      convert op operand (List.hd length)
+  | `Closure (a, b) ->
+      let t_list = List.combine [a; b] length in
+      lb op
+      :: List.fold_left
+           (fun acc (operand, length) -> acc @ hex_of_int operand length)
+           [] t_list
   | a ->
       [lb a]
 
+(** [read_operands op instructioins]  *)
 let[@ocaml.warning "-27"] read_operands op instructions =
-  let length = opcode_length op in
-  match instructions with [] -> (0, 0) | ls -> (int_of_hex ls length, length)
+  let total_bytes = List.fold_left ( + ) 0 (opcode_length op) in
+  print_int total_bytes ;
+  print_endline "" ;
+  let lengths = opcode_length op in
+  let a, _ =
+    List.fold_left
+      (fun (acc, inst) length ->
+        let acc = acc @ [int_of_hex inst length] in
+        (acc, List.filteri (fun index item -> index >= length) inst) )
+      ([], instructions) lengths
+  in
+  match instructions with [] -> ([0], 0) | ls -> (a, total_bytes)
 
 (* NOTE I believe I have almost perfected this function  *)
 let[@ocaml.warning "-27"] string_of_byte_list byte_list =
   let format_operands acc index def operands =
     match operands with
-    | 0 ->
+    | [0] ->
         Format.sprintf "%s\n%04d %s" acc index (operand_name def)
-    | a ->
+    | [a] ->
         Format.sprintf "%s\n%04d %s %d" acc index (operand_name def) a
+    | [a; b] ->
+        Format.sprintf "%s\n%04d %s %d %d" acc index (operand_name def) a b
+    | _ ->
+        failwith "operands of more than 3 not yet supported"
   in
   let[@ocaml.tailcall] rec helper ~lst ~index acc =
     match lst with
@@ -511,6 +539,8 @@ let[@ocaml.warning "-27"] string_of_byte_list byte_list =
         let operands, bytes_read = read_operands def tail in
         let acc = format_operands acc index def operands in
         let new_list = slice bytes_read tail in
+        (* Plus one to account for the byte the opcode takes up *)
+        print_endline (Format.sprintf "index -> %d" index) ;
         helper ~lst:new_list ~index:(index + bytes_read + 1) acc
   in
   helper ~lst:byte_list ~index:0 ""

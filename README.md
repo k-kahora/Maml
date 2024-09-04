@@ -115,6 +115,8 @@ home/malcolm/Documents/Books/Compiler-in-go/writing_a_compiler_in_go_1.2.html#ad
 
 when making a new compiler in the repl he does not pass index which leads to weird behavior with functions, just need to pass index
 
+In the closure section here is the code
+
 
 
 

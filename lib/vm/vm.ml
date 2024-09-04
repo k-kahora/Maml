@@ -258,8 +258,7 @@ module VM_Helpers = struct
 
   let evaluate_get_local vm =
     let* b1 = Program_stack.read_then_increment (frame_instructions vm) in
-    let* b2 = Program_stack.read_then_increment (frame_instructions vm) in
-    let local_index = ByteFmt.int_of_hex [b1; b2] 2 in
+    let local_index = ByteFmt.int_of_hex [b1] 1 in
     let frame = current_frame vm in
     (* update_current_frame {frame with ip= frame.ip + 1} vm ; *)
     let* item = Program_stack.get (frame.base_pointer + local_index) vm.stack in
@@ -267,8 +266,7 @@ module VM_Helpers = struct
 
   let evaluate_set_local vm =
     let* b1 = Program_stack.read_then_increment (frame_instructions vm) in
-    let* b2 = Program_stack.read_then_increment (frame_instructions vm) in
-    let local_index = ByteFmt.int_of_hex [b1; b2] 2 in
+    let local_index = ByteFmt.int_of_hex [b1] 1 in
     let frame = current_frame vm in
     (* update_current_frame {frame with ip= frame.ip + 1} vm ; *)
     let* poped_item = pop vm in
@@ -495,6 +493,8 @@ let[@ocaml.tailcall] [@ocaml.warning "-9-11"] run vm =
         VM_Helpers.return vm
     | `GetBuiltIn _ | `GETBUILTIN ->
         VM_Helpers.evaluate_builtin vm
+    | `CLOSURE | `Closure _ ->
+        Error (Code.CodeError.CustomError "closure not implemented")
     (* | a -> *)
     (*     Error (Code.CodeError.OpCodeNotImplemented a) *)
   in

@@ -18,31 +18,41 @@ let hexidecimal_tests () =
 let test_make () =
   let tests =
     [ (`Constant 65534, ['\x01'; '\xFF'; '\xFE'])
-    ; (`Constant 2, ['\x01'; '\x00'; '\x02']) ]
+    ; (`Constant 2, ['\x01'; '\x00'; '\x02'])
+    ; (`Closure (65534, 255), ['\x1C'; '\xFF'; '\xFE'; '\xFF']) ]
   in
   test_iter
     (fun (opcode, expected) ->
-      Alcotest.(check (list char)) "Checking opcode make" (make opcode) expected
+      Alcotest.(check (list char)) "Checking opcode make" expected (make opcode)
       )
     tests
 
 let[@ocaml.warning "-26-27"] test_read_operands () =
-  let tests = [(`Constant 65535, 2)] in
-  let helper (operands, bytes_read) =
-    let instruction = make operands in
-    let operands_read, bytes_read = read_operands `CONSTANT instruction in
-    ()
+  let tests = [(`Constant 65535, 2); (`Closure (65535, 255), 3)] in
+  let helper (opcode, expected_bytes_read) =
+    let instruction = make opcode in
+    let operands_read, bytes_read = read_operands opcode instruction in
+    Alcotest.(check int) "read operands check" expected_bytes_read bytes_read
   in
   test_iter helper tests
 
 let test_instruction_string () =
   let instructions =
-    [make @@ `Add; make @@ `Constant 2; make @@ `Constant 65535] |> List.concat
+    [ make @@ `Add
+    ; make @@ `GetLocal 1
+    ; make @@ `Constant 2
+    ; make @@ `Constant 65535
+    ; make @@ `Closure (65535, 255) ]
+    |> List.concat
   in
-  let expected = {|
+  let expected =
+    {|
 0000 Add
-0001 Constant 2
-0004 Constant 65535|} in
+0001 GetLocal 1
+0003 Constant 2
+0006 Constant 65535
+0009 Closure 65535 255|}
+  in
   Alcotest.(check (result string Code.CodeError.alcotest_error))
     "byte list string" (Ok expected)
     (string_of_byte_list instructions)
