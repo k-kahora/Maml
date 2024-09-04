@@ -30,6 +30,7 @@ type opcode =
   | `GetBuiltIn of int
   | `Return
   | `ReturnValue
+  | `GetFree of int
   | `Pop ]
 
 val infix_operand_string : [< `Add | `Div | `Mul | `Sub] -> string
@@ -46,6 +47,7 @@ type opcode_marker =
   | `GETBUILTIN
   | `HASH
   | `SETLOCAL
+  | `GETFREE
   | `GETLOCAL ]
 
 module CodeError : sig

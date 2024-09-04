@@ -402,7 +402,7 @@ let[@ocaml.warning "-27-9-26"] rec compile nodes cmp =
             (Obj.CompFunc (inst, num_locals, List.length parameters))
             cmp
         in
-        let cmp, _ = emit (`Constant index) cmp in
+        let cmp, _ = emit (`Closure (index, 0)) cmp in
         Ok cmp
     | CallExpression {func; arguments} ->
         let* cmp = compile_expression func cmp in

@@ -30,6 +30,7 @@ type opcode =
   | `GetBuiltIn of int
   | `Return
   | `ReturnValue
+  | `GetFree of int
   | `Pop ]
 
 type opcode_marker =
@@ -44,6 +45,7 @@ type opcode_marker =
   | `GETBUILTIN
   | `HASH
   | `SETLOCAL
+  | `GETFREE
   | `GETLOCAL ]
 
 let operand_name_not_marker = function
@@ -101,6 +103,8 @@ let operand_name_not_marker = function
       "Return"
   | `ReturnValue ->
       "ReturnValue"
+  | `GetFree _ ->
+      "GetFree"
   | `Closure _ ->
       "Closure"
 
@@ -157,6 +161,8 @@ let operand_name = function
       "Call"
   | `Call _ | `CALL ->
       "Call"
+  | `GetFree _ | `GETFREE ->
+      "GetFree"
   | `Return ->
       "Return"
   | `ReturnValue ->
@@ -310,6 +316,8 @@ let opcode_length = function
   | `GETBUILTIN
   | `SETLOCAL
   | `SetLocal _
+  | `GETFREE
+  | `GetFree _
   | `GETLOCAL
   | `GetLocal _ ->
       [1]
@@ -350,6 +358,8 @@ let marker_to_opcode operand = function
       Ok (`Call operand)
   | `CLOSURE ->
       Ok (`Closure (operand, 0))
+  | `GETFREE ->
+      Ok (`GetFree operand)
   | a ->
       Error (CodeError.OpCodeNotImplemented a)
 
@@ -410,6 +420,8 @@ let lookup_opcode = function
       Ok `GETBUILTIN
   | '\x1C' ->
       Ok `CLOSURE
+  | '\x1D' ->
+      Ok `GETFREE
   | a ->
       Error (CodeError.UnrecognizedByte a)
 
@@ -470,6 +482,8 @@ let lookup_byte = function
       '\x1B'
   | `Closure _ | `CLOSURE ->
       '\x1C'
+  | `GetFree _ | `GETFREE ->
+      '\x1D'
 
 let lookup byte =
   let* opcode = lookup_opcode byte in
@@ -487,6 +501,7 @@ let make op =
   | `Hash operand
   | `Jump operand
   | `Array operand
+  | `GetFree operand
   | `GetLocal operand
   | `SetLocal operand
   | `GetGlobal operand

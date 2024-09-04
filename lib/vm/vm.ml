@@ -69,8 +69,7 @@ let current_instructions vm =
 
 let pop_frame vm =
   let old_frame = current_frame vm in
-  vm.frames.(vm.frame_index) <-
-    Frame.new_frame (Obj.CompFunc ([], 0, 0)) ~base_pointer:0 ;
+  vm.frames.(vm.frame_index) <- Frame.new_default_frame () ;
   let new_vm = {vm with frame_index= vm.frame_index - 1} in
   (new_vm, old_frame)
 
@@ -81,11 +80,9 @@ let frame_instructions vm = current_frame vm |> fun a -> a.fn
 let new_virtual_machine byte_code =
   let open Compiler in
   let main_fn = Obj.CompFunc (current_instructions byte_code, 0, 0) in
-  let main_frame = Frame.new_frame main_fn ~base_pointer:0 in
-  let frames =
-    Array.make max_frames
-    @@ Frame.new_frame (Obj.CompFunc ([], 0, 0)) ~base_pointer:0
-  in
+  let main_closure = Obj.Closure {fn= main_fn; free= []} in
+  let main_frame = Frame.new_frame main_closure ~base_pointer:0 in
+  let frames = Array.make max_frames @@ Frame.new_default_frame () in
   frames.(0) <- main_frame ;
   { constants= byte_code.constants
   ; globals= Program_stack.make_stack global_size
@@ -359,18 +356,18 @@ module VM_Helpers = struct
     let* _ = execute_vm_expression left index vm in
     finish_run vm
 
-  let call_function comp_func num_args vm =
-    let expected_args = Frame.num_parameters comp_func in
+  let call_closure closure num_args vm =
+    let expected_args = Frame.num_parameters closure in
     let* vm =
       if num_args <> expected_args then
         Error (Code.CodeError.WrongNumberOfArguments (expected_args, num_args))
       else Ok vm
     in
     let frame =
-      Frame.new_frame comp_func ~base_pointer:(vm.stack.ip - num_args)
+      Frame.new_frame closure ~base_pointer:(vm.stack.ip - num_args)
     in
     let vm = push_frame frame vm in
-    vm.stack.ip <- frame.base_pointer + Frame.num_locals comp_func ;
+    vm.stack.ip <- frame.base_pointer + Frame.num_locals closure ;
     Ok vm
 
   let call_builtin built_in num_args vm =
@@ -399,8 +396,8 @@ module VM_Helpers = struct
   let execute_call num_args vm =
     let* calle = Program_stack.get (vm.stack.ip - 1 - num_args) vm.stack in
     match calle with
-    | Obj.CompFunc _ ->
-        call_function calle num_args vm
+    | Obj.Closure _ ->
+        call_closure calle num_args vm
     | Obj.Builtin _ ->
         call_builtin calle num_args vm
     | _ ->
@@ -441,6 +438,15 @@ module VM_Helpers = struct
                  implemented" )
     in
     push def vm ; finish_run vm
+
+  let evaluate_closure vm =
+    let* b1 = Program_stack.read_then_increment (frame_instructions vm) in
+    let* b2 = Program_stack.read_then_increment (frame_instructions vm) in
+    let* _ = Program_stack.read_then_increment (frame_instructions vm) in
+    let const_index = ByteFmt.int_of_hex [b1; b2] 2 in
+    let constant = IntMap.find const_index vm.constants in
+    push (Obj.Closure {fn= constant; free= []}) vm ;
+    finish_run vm
 end
 
 (*FIXME any inperformant functions called in here is an issue *)
@@ -494,9 +500,9 @@ let[@ocaml.tailcall] [@ocaml.warning "-9-11"] run vm =
     | `GetBuiltIn _ | `GETBUILTIN ->
         VM_Helpers.evaluate_builtin vm
     | `CLOSURE | `Closure _ ->
-        Error (Code.CodeError.CustomError "closure not implemented")
-    (* | a -> *)
-    (*     Error (Code.CodeError.OpCodeNotImplemented a) *)
+        VM_Helpers.evaluate_closure vm
+    | a ->
+        Error (Code.CodeError.OpCodeNotImplemented a)
   in
   (* Perf issuse what happens here is the loop will continue even if the ip is done pointing at what it needs to  *)
   (* let x = *)
