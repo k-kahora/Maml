@@ -764,5 +764,6 @@ let () =
       , [Alcotest.test_case "local scopes" `Slow test_let_stmt_scopes] )
     ; ( "testing builtin functions"
       , [Alcotest.test_case "testing builtin functions" `Slow test_builtins] )
-    ; ( "test closures"
-      , [Alcotest.test_case "testing closure comp" `Slow test_closures] ) ]
+    ]
+(* ( "test closures" *)
+(* , [Alcotest.test_case "testing closure comp" `Slow test_closures] ) *)

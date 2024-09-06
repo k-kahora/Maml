@@ -42,10 +42,14 @@ let define_builtin index name st =
   let store = StringMap.add name symbol st.store in
   (symbol, {st with store})
 
+let free_symbols_string lst =
+  List.fold_left (fun acc next -> acc ^ string_of_symbol next) "" lst
+
 let rec symbol_table_string symb_tb =
-  Format.sprintf "{store=%s; num_definitions=%d; outer=%s}"
+  Format.sprintf "{store=%s;\nnum_definitions=%d;\nfree=[%s];\nouter=\n%s\n}"
     (string_of_store symb_tb.store)
     symb_tb.num_definitions
+    (free_symbols_string symb_tb.free_symbols)
     (Option.fold ~none:"None" ~some:symbol_table_string symb_tb.outer)
 
 let symbol_table_pp fmt symb_tb =
@@ -54,6 +58,15 @@ let symbol_table_pp fmt symb_tb =
 let symbol_table_eq st1 st2 = StringMap.equal ( = ) st1.store st2.store
 
 let alc_symbol_table = Alcotest.testable symbol_table_pp symbol_table_eq
+
+let both_eq (st1, symb1) (st2, symb2) =
+  symbol_table_eq st1 st2 && symbol_eq symb1 symb2
+
+let both_pp fmt (st, symb) =
+  Format.fprintf fmt "symbol -> %s\ntable -> %s" (string_of_symbol symb)
+    (symbol_table_string st)
+
+let alc_symbol_table_and_symbol = Alcotest.testable both_pp both_eq
 
 let new_symbol_table () =
   {store= StringMap.empty; num_definitions= 0; outer= None; free_symbols= []}
@@ -81,16 +94,11 @@ let define_free original st =
   let new_store = StringMap.add original.name symbol st.store in
   ({st with store= new_store; free_symbols= new_free_symbols}, symbol)
 
-let rec resolve name st =
-  let error = Code.CodeError.SymbolNotFound ("Global symbol not found", name) in
-  let obj = StringMap.find_opt name st.store in
-  Option.fold
-    ~some:(fun obj -> Ok obj)
-    ~none:
-      (let* outer_scope = st.outer |> Option.to_result ~none:error in
-       let* (* _updated_st,  *) found_symbol = resolve name outer_scope in
-       Ok found_symbol )
-    obj
+(* Hard to follow wrote it out for myself *)
+(* Check if the symbol is in the local scope *)
+(* If not check that the outerscope is not null if it ever is error because
+   that would mean it was not in previous scope and theres no more scopes to look *)
+(* If "ere is an outerscope simply resolve with this outer scope recursively" *)
 
 (* let rec resolve name st = *)
 (*   let error = Code.CodeError.SymbolNotFound ("Global symbol not found", name) in *)
@@ -102,3 +110,22 @@ let rec resolve name st =
 (*        let* updated_st, found_symbol = resolve name outer_scope in *)
 (*        Ok (updated_st, found_symbol) ) *)
 (*     obj *)
+
+let resolve name st =
+  let error = Code.CodeError.SymbolNotFound ("Global symbol not found", name) in
+  let rec resolve_helper current_scope =
+    (* First if the outerscope is Null return an error *)
+    let* outerscope = Option.to_result ~none:error current_scope.outer in
+    let obj = StringMap.find_opt name outerscope.store in
+    Option.fold
+      ~some:(fun a ->
+        if a.scope = GLOBAL || a.scope == BUILTIN then Ok (st, a)
+        else Ok (define_free a st) )
+      ~none:(resolve_helper outerscope)
+      obj
+  in
+  (* First we find if it is in the current scope if not we try to resolve it by moving up the scope *)
+  StringMap.find_opt name st.store
+  |> Option.fold ~none:(resolve_helper st) ~some:(fun a -> Ok (st, a))
+(* |> Option.to_result *)
+(*      ~none:(Code.CodeError.SymbolNotFound ("Global symbol not found", name)) *)

@@ -314,7 +314,8 @@ let[@ocaml.warning "-27-9-26"] rec compile nodes cmp =
         Ok cmp
     | Identifier {value} ->
         (* NOTE Compilet time error *)
-        let* symbol = Symbol_table.resolve value cmp.symbol_table in
+        let* new_st, symbol = Symbol_table.resolve value cmp.symbol_table in
+        let cmp = {cmp with symbol_table= new_st} in
         let cmp, _ = load_symbol symbol cmp in
         Ok cmp
     | StringLiteral {value} ->
