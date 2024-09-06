@@ -1,6 +1,6 @@
 let ( let* ) = Result.bind
 
-type symbol_scope = GLOBAL | LOCAL | BUILTIN
+type symbol_scope = GLOBAL | LOCAL | BUILTIN | FREE
 
 let scope_to_string = function
   | GLOBAL ->
@@ -9,6 +9,8 @@ let scope_to_string = function
       "LOCAL"
   | BUILTIN ->
       "BUILTIN"
+  | FREE ->
+      "FREE"
 
 type symbol = {name: string; scope: symbol_scope; index: int}
 
@@ -30,7 +32,10 @@ let n_symbol name scope index = {name; scope; index}
 module StringMap = Map.Make (String)
 
 type symbol_table =
-  {store: symbol StringMap.t; num_definitions: int; outer: symbol_table option}
+  { store: symbol StringMap.t
+  ; num_definitions: int
+  ; outer: symbol_table option
+  ; free_symbols: symbol list }
 
 let define_builtin index name st =
   let symbol = {name; index; scope= BUILTIN} in
@@ -51,10 +56,13 @@ let symbol_table_eq st1 st2 = StringMap.equal ( = ) st1.store st2.store
 let alc_symbol_table = Alcotest.testable symbol_table_pp symbol_table_eq
 
 let new_symbol_table () =
-  {store= StringMap.empty; num_definitions= 0; outer= None}
+  {store= StringMap.empty; num_definitions= 0; outer= None; free_symbols= []}
 
 let new_enclosed_symbol_table symbol_table =
-  {store= StringMap.empty; num_definitions= 0; outer= Some symbol_table}
+  { store= StringMap.empty
+  ; num_definitions= 0
+  ; outer= Some symbol_table
+  ; free_symbols= symbol_table.free_symbols }
 
 let define name st =
   let scope = Option.fold ~none:GLOBAL ~some:(fun _ -> LOCAL) st.outer in
@@ -65,18 +73,32 @@ let define name st =
   in
   symbol
 
-let resolve name st =
-  let error = Code.CodeError.SymbolNotFound ("Global symbol not found", name) in
-  let rec resolve_helper outer_st =
-    (* First if the outerscope is Null return an error *)
-    let* current_st = Option.to_result ~none:error outer_st in
-    let found = StringMap.find_opt name current_st.store in
-    (* If there is another outer scope and we did not find the object *)
-    if Option.is_none found then resolve_helper current_st.outer
-    else Ok (Option.get found)
+let define_free original st =
+  let new_free_symbols = st.free_symbols @ [original] in
+  let symbol =
+    n_symbol original.name FREE @@ (List.length new_free_symbols - 1)
   in
-  (* First we find if it is in the current scope if not we try to resolve it by moving up the scope *)
-  StringMap.find_opt name st.store
-  |> Option.fold ~none:(resolve_helper st.outer) ~some:(fun a -> Ok a)
-(* |> Option.to_result *)
-(*      ~none:(Code.CodeError.SymbolNotFound ("Global symbol not found", name)) *)
+  let new_store = StringMap.add original.name symbol st.store in
+  ({st with store= new_store; free_symbols= new_free_symbols}, symbol)
+
+let rec resolve name st =
+  let error = Code.CodeError.SymbolNotFound ("Global symbol not found", name) in
+  let obj = StringMap.find_opt name st.store in
+  Option.fold
+    ~some:(fun obj -> Ok obj)
+    ~none:
+      (let* outer_scope = st.outer |> Option.to_result ~none:error in
+       let* (* _updated_st,  *) found_symbol = resolve name outer_scope in
+       Ok found_symbol )
+    obj
+
+(* let rec resolve name st = *)
+(*   let error = Code.CodeError.SymbolNotFound ("Global symbol not found", name) in *)
+(*   let obj = StringMap.find_opt name st.store in *)
+(*   Option.fold *)
+(*     ~some:(fun obj -> Ok (st, obj)) *)
+(*     ~none: *)
+(*       (let* outer_scope = st.outer |> Option.to_result ~none:error in *)
+(*        let* updated_st, found_symbol = resolve name outer_scope in *)
+(*        Ok (updated_st, found_symbol) ) *)
+(*     obj *)

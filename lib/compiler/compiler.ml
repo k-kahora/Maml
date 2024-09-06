@@ -166,6 +166,8 @@ let load_symbol symbol cmp =
       emit (`GetLocal symbol.index) cmp
   | BUILTIN ->
       emit (`GetBuiltIn symbol.index) cmp
+  | FREE ->
+      failwith "free not implemented"
 
 let replace_instruction pos new_instruction cmp =
   let f pos l1 l2 =
@@ -438,7 +440,7 @@ let[@ocaml.warning "-27-9-26"] rec compile nodes cmp =
               emit (`SetGlobal symbol.index) cmp
           | LOCAL ->
               emit (`SetLocal symbol.index) cmp
-          | BUILTIN ->
+          | BUILTIN | FREE ->
               failwith "not implemented"
         in
         Ok {cmp with symbol_table= st}

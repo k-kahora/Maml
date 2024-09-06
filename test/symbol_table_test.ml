@@ -136,6 +136,46 @@ let[@ocaml.warning "-26"] test_define_resolve_builtin () =
   in
   ()
 
+let test_resolve_free () =
+  let global = new_symbol_table () in
+  let global, _ = define "a" global in
+  let global, _ = define "b" global in
+  (*First local*)
+  let first_local = new_enclosed_symbol_table global in
+  let first_local, _ = define "c" first_local in
+  let first_local, _ = define "d" first_local in
+  (*Second local*)
+  let second_local = new_enclosed_symbol_table first_local in
+  let second_local, _ = define "e" second_local in
+  let second_local, _ = define "f" second_local in
+  let tests =
+    let n = n_symbol in
+    [ ( first_local
+      , [n "a" GLOBAL 0; n "b" GLOBAL 1; n "c" LOCAL 0; n "d" LOCAL 1]
+      , [] )
+    ; ( second_local
+      , [ n "a" GLOBAL 0
+        ; n "b" GLOBAL 1
+        ; n "c" FREE 0
+        ; n "d" FREE 1
+        ; n "e" LOCAL 0
+        ; n "f" LOCAL 1 ]
+      , [n "c" LOCAL 0; n "d" LOCAL 1] ) ]
+  in
+  List.iter
+    (fun (table, expected_symbols, _expected_free_symbols) ->
+      let _new_symbol_table =
+        List.fold_left
+          (fun acc_symbol_table next_expected_symbol ->
+            let resolved = resolve next_expected_symbol.name acc_symbol_table in
+            Alcotest.(check (result alc_symbol Code.CodeError.alcotest_error))
+              "symbol check" (Ok next_expected_symbol) resolved ;
+            acc_symbol_table (*FIXME*) )
+          table expected_symbols
+      in
+      () )
+    tests
+
 let () =
   Alcotest.run "Symbol Table Tests"
     [ ("Symbol init", [Alcotest.test_case "define" `Quick test_define])
@@ -145,4 +185,6 @@ let () =
     ; ( "reslove local nested"
       , [Alcotest.test_case "nested" `Quick test_resolve_local_nested] )
     ; ( "resolve and define builtins"
-      , [Alcotest.test_case "builtin" `Quick test_define_resolve_builtin] ) ]
+      , [Alcotest.test_case "builtin" `Quick test_define_resolve_builtin] )
+    ; ("test_resolve_free", [Alcotest.test_case "free" `Quick test_resolve_free])
+    ]
