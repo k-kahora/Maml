@@ -520,8 +520,6 @@ let make op =
 (** [read_operands op instructioins]  *)
 let[@ocaml.warning "-27"] read_operands op instructions =
   let total_bytes = List.fold_left ( + ) 0 (opcode_length op) in
-  print_int total_bytes ;
-  print_endline "" ;
   let lengths = opcode_length op in
   let a, _ =
     List.fold_left
@@ -555,7 +553,6 @@ let[@ocaml.warning "-27"] string_of_byte_list byte_list =
         let acc = format_operands acc index def operands in
         let new_list = slice bytes_read tail in
         (* Plus one to account for the byte the opcode takes up *)
-        print_endline (Format.sprintf "index -> %d" index) ;
         helper ~lst:new_list ~index:(index + bytes_read + 1) acc
   in
   helper ~lst:byte_list ~index:0 ""

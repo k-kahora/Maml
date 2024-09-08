@@ -28,11 +28,11 @@ type compilation_scope =
   ; last_instruction: emitted_instruction
   ; previous_instruction: emitted_instruction }
 
-let null_scope =
-  let null_emitted = {opcode= `Null; position= 0} in
+let null_scope () =
+  let null_emitted () = {opcode= `Null; position= 0} in
   { instructions= []
-  ; last_instruction= null_emitted
-  ; previous_instruction= null_emitted }
+  ; last_instruction= null_emitted ()
+  ; previous_instruction= null_emitted () }
 
 type compiler =
   { index: int
@@ -59,7 +59,7 @@ let leave_scope cmp =
   let symbol_table =
     cmp.symbol_table.outer |> Option.value ~default:cmp.symbol_table
   in
-  cmp.scopes.(cmp.scope_index) <- null_scope ;
+  cmp.scopes.(cmp.scope_index) <- null_scope () ;
   ({cmp with scope_index= cmp.scope_index - 1; symbol_table}, cur_inst)
 
 let set_last_instruction opcode position cmp =
@@ -78,13 +78,13 @@ let pp_compiler fmt cmp =
       (fun key value acc ->
         let string =
           match value with
-          (* | Obj.CompFunc (ls, _, _) -> *)
-          (*     let item = *)
-          (*       Code.string_of_byte_list ls *)
-          (*       |> function *)
-          (*       | Ok str -> str | Error err -> Code.CodeError.error_string err *)
-          (*     in *)
-          (*     item *)
+          | Obj.CompFunc (ls, _, _) ->
+              let item =
+                Code.string_of_byte_list ls
+                |> function
+                | Ok str -> str | Error err -> Code.CodeError.error_string err
+              in
+              item
           | a ->
               Obj.item_to_string a
         in
@@ -115,7 +115,7 @@ let equal_compiler c1 c2 =
 let alcotest_compiler = Alcotest.testable pp_compiler equal_compiler
 
 let new_compiler () =
-  let empty_array = Array.init 65535 (fun _ -> null_scope) in
+  let empty_array = Array.init 65535 (fun _ -> null_scope ()) in
   let _, symbol_table =
     List.fold_left
       (fun (idx, symbol_table) (name, _fn) ->
@@ -167,7 +167,7 @@ let load_symbol symbol cmp =
   | BUILTIN ->
       emit (`GetBuiltIn symbol.index) cmp
   | FREE ->
-      failwith "free not implemented"
+      emit (`GetFree symbol.index) cmp
 
 let replace_instruction pos new_instruction cmp =
   let f pos l1 l2 =
@@ -371,23 +371,27 @@ let[@ocaml.warning "-27-9-26"] rec compile nodes cmp =
             {new_scope with last_instruction= cur_last_inst_updated}
             cmp
         in
+        let arg_error = Code.CodeError.CustomError "not an identified" in
+        let argument_parser cmp argument =
+          let* cmp = cmp in
+          let* symbol_name =
+            Ast.get_ident argument |> Option.to_result ~none:arg_error
+          in
+          let symbol_table, symbol =
+            Symbol_table.define symbol_name cmp.symbol_table
+          in
+          (* print_endline *)
+          (*   (Format.sprintf "symbol_table -> %s" *)
+          (*      (Symbol_table.symbol_table_string symbol_table) ) ; *)
+          (* print_endline "\n" ; *)
+          {cmp with symbol_table} |> Result.ok
+        in
+        (* NOTE this is where the compiling begins *)
         let cmp = enter_scope cmp in
-        let* cmp =
-          List.fold_left
-            (fun cmp argument ->
-              let* cmp = cmp in
-              let* value =
-                Ast.get_ident argument
-                |> Option.to_result
-                     ~none:
-                       (Code.CodeError.CustomError
-                          "argument is not a identifier" )
-              in
-              let symbol_table, sym =
-                Symbol_table.define value cmp.symbol_table
-              in
-              Ok {cmp with symbol_table} )
-            (Ok cmp) parameters
+        let* cmp = List.fold_left argument_parser (Ok cmp) parameters in
+        let () = print_endline "befor body comp" in
+        let _ =
+          Symbol_table.symbol_table_string cmp.symbol_table |> print_endline
         in
         let* cmp = compile_node body cmp in
         (* Implicit returns *)
@@ -398,14 +402,29 @@ let[@ocaml.warning "-27-9-26"] rec compile nodes cmp =
             emit `Return cmp |> fst
           else cmp
         in
+        let free_symbols = cmp.symbol_table.free_symbols in
         let num_locals = cmp.symbol_table.num_definitions in
+        let () = print_endline "after body comp" in
+        let _ =
+          Symbol_table.symbol_table_string cmp.symbol_table |> print_endline
+        in
         let cmp, inst = leave_scope cmp in
+        let cmp = ref cmp in
+        for i = 0 to List.length free_symbols - 1 do
+          cmp := load_symbol (List.nth free_symbols i) !cmp |> fst
+        done ;
+        let cmp = !cmp in
+        (* let cmp = *)
+        (*   List.fold_left *)
+        (*     (fun acc_cmp nxt_symb -> load_symbol nxt_symb acc_cmp |> fst) *)
+        (*     cmp free_symbols *)
+        (* in *)
         let cmp, index =
           add_constants
             (Obj.CompFunc (inst, num_locals, List.length parameters))
             cmp
         in
-        let cmp, _ = emit (`Closure (index, 0)) cmp in
+        let cmp, _ = emit (`Closure (index, List.length free_symbols)) cmp in
         Ok cmp
     | CallExpression {func; arguments} ->
         let* cmp = compile_expression func cmp in

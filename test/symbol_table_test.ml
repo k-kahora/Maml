@@ -188,6 +188,48 @@ let test_resolve_free () =
         expected_free_symbols )
     tests
 
+(* fn(a) *)
+(*   fn() *)
+(*     fn() *)
+
+let test_resolve_free_part2 () =
+  let global = new_symbol_table () in
+  (*First local*)
+  let first_local = new_enclosed_symbol_table global in
+  let first_local, _ = define "a" first_local in
+  (*Second local*)
+  let second_local = new_enclosed_symbol_table first_local in
+  let third_local = new_enclosed_symbol_table second_local in
+  let tests =
+    let n = n_symbol in
+    [ (first_local, [n "a" LOCAL 0], [])
+    ; (second_local, [n "a" FREE 0], [n "a" LOCAL 0])
+    ; (third_local, [n "a" FREE 0], [n "a" LOCAL 0]) ]
+  in
+  List.iter
+    (fun (table, expected_symbols, expected_free_symbols) ->
+      let new_symbol_table =
+        List.fold_left
+          (fun acc_symbol_table next_expected_symbol ->
+            let resolved = resolve next_expected_symbol.name acc_symbol_table in
+            Alcotest.(check (result alc_symbol Code.CodeError.alcotest_error))
+              "symbol check" (Ok next_expected_symbol) (resolved |> remove_table) ;
+            (* Result.get_ok will never error as the tests will fail if an error happens and the program will stop *)
+            resolved |> Result.get_ok |> fst )
+          table expected_symbols
+      in
+      Alcotest.(check int)
+        "free length"
+        (List.length new_symbol_table.free_symbols)
+        (List.length expected_free_symbols) ;
+      List.iteri
+        (fun i expected_free_symbol ->
+          Alcotest.(check (result alc_symbol Code.CodeError.alcotest_error))
+            "symbol check" (Ok expected_free_symbol)
+            (List.nth new_symbol_table.free_symbols i |> Result.ok) )
+        expected_free_symbols )
+    tests
+
 let test_resolve_unresolvable () =
   let global = new_symbol_table () in
   let global, _ = define "a" global in
@@ -233,4 +275,6 @@ let () =
       , [Alcotest.test_case "builtin" `Quick test_define_resolve_builtin] )
     ; ("test_resolve_free", [Alcotest.test_case "free" `Quick test_resolve_free])
     ; ( "test resolve free unresolvable"
-      , [Alcotest.test_case "unresolvabl" `Quick test_resolve_unresolvable] ) ]
+      , [Alcotest.test_case "unresolvabl" `Quick test_resolve_unresolvable] )
+    ; ( "test resolve free part 2"
+      , [Alcotest.test_case "part 2" `Quick test_resolve_free_part2] ) ]

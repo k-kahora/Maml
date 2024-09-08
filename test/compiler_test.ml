@@ -21,6 +21,7 @@ let[@ocaml.warning "-27"] run_compiler_tests tests =
   let craft_compiler input =
     let program = parse input in
     let compiler = new_compiler () in
+    print_endline (Format.sprintf "input -> %s" input) ;
     compile program.statements compiler
     (* FIXME figure out why I need a bytecode DS *)
     (* let bytecode = bytecode compiler in *)
@@ -522,28 +523,106 @@ let test_function_call () =
 let test_closures () =
   let open Object.Obj in
   let tests =
-    [ ( {|
-         fn(a) {
-           fn(b) {
-             a + b
-           }
-         }
-|}
+    [ (* ( {| *)
+         (* fn(a,b,c) { *)
+         (*   fn() { *)
+         (*       fn() { *)
+         (*         a + b + c *)
+         (*       } *)
+         (*   } *)
+         (* } *)
+
+         (*       |} *)
+      (*    , map_test_helper *)
+      (*        [ CompFunc *)
+      (*            ( [ make (`GetFree 0) *)
+      (*              ; make (`GetFree 1) *)
+      (*              ; make `Add *)
+      (*              ; make (`GetFree 2) *)
+      (*              ; make `Add *)
+      (*              ; make `ReturnValue ] *)
+      (*              |> List.concat *)
+      (*            , 0 *)
+      (*            , 0 ) *)
+      (*        ; CompFunc *)
+      (*            ( [ make (`GetFree 0) *)
+      (*              ; make (`GetFree 1) *)
+      (*              ; make (`GetFree 2) *)
+      (*              ; make `Return ] *)
+      (*              |> List.concat *)
+      (*            , 0 *)
+      (*            , 0 ) *)
+      (*        ; CompFunc *)
+      (*            ( [ make (`GetLocal 0) *)
+      (*              ; make (`GetLocal 1) *)
+      (*              ; make (`GetLocal 2) *)
+      (*              ; make (`Closure (1, 3)) *)
+      (*              ; make `ReturnValue ] *)
+      (*              |> List.concat *)
+      (*            , 0 *)
+      (*            , 0 ) ] *)
+      (*    , make_test_helper [`Closure (2, 0); `Pop] ) *)
+      (* ( {| *)
+         (*             fn(a) { *)
+         (*               fn() { *)
+         (*                 fn() { *)
+         (*                    a *)
+         (*                  } *)
+         (*               } *)
+         (*             } *)
+         (*    |} *)
+      (* , map_test_helper *)
+      (*     [ CompFunc *)
+      (*         ([make (`GetFree 0); make `ReturnValue] |> List.concat, 0, 0) *)
+      (*     ; CompFunc *)
+      (*         ( [make (`GetFree 0); make (`Closure (0, 1)); make `ReturnValue] *)
+      (*           |> List.concat *)
+      (*         , 0 *)
+      (*         , 0 ) *)
+      (*     ; CompFunc *)
+      (*         ( [make (`GetLocal 0); make (`Closure (1, 1)); make `ReturnValue] *)
+      (*           |> List.concat *)
+      (*         , 0 *)
+      (*         , 0 ) ] *)
+      (* , make_test_helper [`Closure (2, 0); `Pop] ) *)
+      ( {|
+                  fn(a) {
+                    fn() {
+                      a
+                    }
+                  }
+         |}
       , map_test_helper
           [ CompFunc
-              ( [ make (`GetFree 0)
-                ; make (`GetLocal 0)
-                ; make `Add
-                ; make `ReturnValue ]
-                |> List.concat
-              , 0
-              , 0 )
+              ([make (`GetFree 0); make `ReturnValue] |> List.concat, 0, 0)
           ; CompFunc
               ( [make (`GetLocal 0); make (`Closure (0, 1)); make `ReturnValue]
                 |> List.concat
               , 0
               , 0 ) ]
       , make_test_helper [`Closure (1, 0); `Pop] )
+      (* ; ( {| *)
+         (*          fn(a) { *)
+         (*            fn(b) { *)
+         (*              a + b *)
+         (*            } *)
+         (*          } *)
+         (* |} *)
+      (*       , map_test_helper *)
+      (*           [ CompFunc *)
+      (*               ( [ make (`GetFree 0) *)
+      (*                 ; make (`GetLocal 0) *)
+      (*                 ; make `Add *)
+      (*                 ; make `ReturnValue ] *)
+      (*                 |> List.concat *)
+      (*               , 0 *)
+      (*               , 0 ) *)
+      (*           ; CompFunc *)
+      (*               ( [make (`GetLocal 0); make (`Closure (0, 1)); make `ReturnValue] *)
+      (*                 |> List.concat *)
+      (*               , 0 *)
+      (*               , 0 ) ] *)
+      (*       , make_test_helper [`Closure (1, 0); `Pop] ) *)
     ; ( {|
             fn(a) {
                 fn(b) {
@@ -568,7 +647,6 @@ let test_closures () =
               ( [ make (`GetFree 0)
                 ; make (`GetLocal 0)
                 ; make (`Closure (0, 2))
-                ; make `Add
                 ; make `ReturnValue ]
                 |> List.concat
               , 0
@@ -764,6 +842,5 @@ let () =
       , [Alcotest.test_case "local scopes" `Slow test_let_stmt_scopes] )
     ; ( "testing builtin functions"
       , [Alcotest.test_case "testing builtin functions" `Slow test_builtins] )
-    ]
-(* ( "test closures" *)
-(* , [Alcotest.test_case "testing closure comp" `Slow test_closures] ) *)
+    ; ( "test closures"
+      , [Alcotest.test_case "testing closure comp" `Slow test_closures] ) ]

@@ -21,8 +21,6 @@ let string_of_symbol symb =
     (scope_to_string symb.scope)
     symb.index
 
-let string_of_store _symb = Format.sprintf "store string not yet implemented"
-
 let symbol_pp fmt symb = Format.fprintf fmt "%s" (string_of_symbol symb)
 
 let alc_symbol = Alcotest.testable symbol_pp symbol_eq
@@ -30,6 +28,12 @@ let alc_symbol = Alcotest.testable symbol_pp symbol_eq
 let n_symbol name scope index = {name; scope; index}
 
 module StringMap = Map.Make (String)
+
+let string_of_store store =
+  StringMap.fold
+    (fun key value acc ->
+      acc ^ Format.sprintf "%s: %s; " key (string_of_symbol value) )
+    store ""
 
 type symbol_table =
   { store: symbol StringMap.t
@@ -46,7 +50,7 @@ let free_symbols_string lst =
   List.fold_left (fun acc next -> acc ^ string_of_symbol next) "" lst
 
 let rec symbol_table_string symb_tb =
-  Format.sprintf "{store=%s;\nnum_definitions=%d;\nfree=[%s];\nouter=\n%s\n}"
+  Format.sprintf "{store=[%s];\nnum_definitions=%d;\nfree=[%s];\nouter=\n%s\n}"
     (string_of_store symb_tb.store)
     symb_tb.num_definitions
     (free_symbols_string symb_tb.free_symbols)
@@ -72,19 +76,14 @@ let new_symbol_table () =
   {store= StringMap.empty; num_definitions= 0; outer= None; free_symbols= []}
 
 let new_enclosed_symbol_table symbol_table =
-  { store= StringMap.empty
-  ; num_definitions= 0
-  ; outer= Some symbol_table
-  ; free_symbols= symbol_table.free_symbols }
+  let st = new_symbol_table () in
+  {st with outer= Some symbol_table}
 
 let define name st =
   let scope = Option.fold ~none:GLOBAL ~some:(fun _ -> LOCAL) st.outer in
   let symbol = n_symbol name scope st.num_definitions in
   let store = StringMap.add name symbol st.store in
-  let symbol =
-    ({st with num_definitions= st.num_definitions + 1; store}, symbol)
-  in
-  symbol
+  ({st with num_definitions= st.num_definitions + 1; store}, symbol)
 
 let define_free original st =
   let new_free_symbols = st.free_symbols @ [original] in
@@ -129,3 +128,18 @@ let resolve name st =
   |> Option.fold ~none:(resolve_helper st) ~some:(fun a -> Ok (st, a))
 (* |> Option.to_result *)
 (*      ~none:(Code.CodeError.SymbolNotFound ("Global symbol not found", name)) *)
+
+(* let rec resolve name st = *)
+(*   let error = Code.CodeError.SymbolNotFound ("Global symbol not found", name) in *)
+(*   let obj = *)
+(*     StringMap.find_opt name st.store *)
+(*     |> Option.fold *)
+(*          ~none: *)
+(*            (let* outer_scope = Option.to_result ~none:error st.outer in *)
+(*             let* new_st, new_obj = resolve name outer_scope in *)
+(*             if new_obj.scope = GLOBAL || new_obj.scope = BUILTIN then *)
+(*               Ok (new_st, new_obj) *)
+(*             else define_free new_obj new_st |> Result.ok ) *)
+(*          ~some:(fun a -> Ok (st, a)) *)
+(*   in *)
+(*   obj *)
