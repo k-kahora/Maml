@@ -36,10 +36,10 @@ let string_of_store store =
     store ""
 
 type symbol_table =
-  { store: symbol StringMap.t
+  { mutable store: symbol StringMap.t
   ; num_definitions: int
   ; outer: symbol_table option
-  ; free_symbols: symbol list }
+  ; mutable free_symbols: symbol list }
 
 let define_builtin index name st =
   let symbol = {name; index; scope= BUILTIN} in
@@ -85,47 +85,57 @@ let define name st =
   let store = StringMap.add name symbol st.store in
   ({st with num_definitions= st.num_definitions + 1; store}, symbol)
 
+(** [define_free original st] takes the originally local variable and defines a new free variable withint the context of the current scope *)
 let define_free original st =
   let new_free_symbols = st.free_symbols @ [original] in
   let symbol =
     n_symbol original.name FREE @@ (List.length new_free_symbols - 1)
   in
   let new_store = StringMap.add original.name symbol st.store in
-  ({st with store= new_store; free_symbols= new_free_symbols}, symbol)
-
-(* Hard to follow wrote it out for myself *)
-(* Check if the symbol is in the local scope *)
-(* If not check that the outerscope is not null if it ever is error because
-   that would mean it was not in previous scope and theres no more scopes to look *)
-(* If "ere is an outerscope simply resolve with this outer scope recursively" *)
-
-(* let rec resolve name st = *)
-(*   let error = Code.CodeError.SymbolNotFound ("Global symbol not found", name) in *)
-(*   let obj = StringMap.find_opt name st.store in *)
-(*   Option.fold *)
-(*     ~some:(fun obj -> Ok (st, obj)) *)
-(*     ~none: *)
-(*       (let* outer_scope = st.outer |> Option.to_result ~none:error in *)
-(*        let* updated_st, found_symbol = resolve name outer_scope in *)
-(*        Ok (updated_st, found_symbol) ) *)
-(*     obj *)
+  st.store <- new_store ;
+  st.free_symbols <- new_free_symbols ;
+  symbol
 
 let resolve name st =
   let error = Code.CodeError.SymbolNotFound ("Global symbol not found", name) in
-  let rec resolve_helper current_scope =
-    (* First if the outerscope is Null return an error *)
-    let* outerscope = Option.to_result ~none:error current_scope.outer in
-    let obj = StringMap.find_opt name outerscope.store in
-    Option.fold
-      ~some:(fun a ->
-        if a.scope = GLOBAL || a.scope == BUILTIN then Ok (st, a)
-        else Ok (define_free a st) )
-      ~none:(resolve_helper outerscope)
-      obj
+  let rec resolve_helper symbol_table =
+    let* current_symbol_table = Option.to_result ~none:error symbol_table in
+    (* The current scope so this would be local *)
+    let obj =
+      StringMap.find_opt name current_symbol_table.store
+      |> Option.fold
+           ~none:
+             ( match resolve_helper current_symbol_table.outer with
+             | Ok (_, symbol) ->
+                 if symbol.scope = GLOBAL || symbol.scope = BUILTIN then
+                   Ok (st, symbol)
+                 else Ok (st, define_free symbol current_symbol_table)
+             | Error _ as err ->
+                 err )
+           ~some:(fun a -> Ok (st, a))
+    in
+    obj
+    (* let* obj = StringMap.find_opt name outerscope.store |> resolve_helper outerscope in *)
+    (* Option.fold *)
+    (*   ~some:(fun a -> *)
+    (*     if a.scope = GLOBAL || a.scope == BUILTIN then Ok (st, a) *)
+    (*     else Ok (st, define_free a current_scope) ) *)
+    (*   ~none:(resolve_helper outerscope) *)
+    (*   obj *)
   in
-  (* First we find if it is in the current scope if not we try to resolve it by moving up the scope *)
-  StringMap.find_opt name st.store
-  |> Option.fold ~none:(resolve_helper st) ~some:(fun a -> Ok (st, a))
+  resolve_helper (Some st)
+
+(* First we find if it is in the current scope if not we try to resolve it by moving up the scope *)
+
+(* let resolve name st =  *)
+(*   let rec resolve_helper current_scope =  *)
+
+(*     let* outerscope = Option.to_result ~none:error current_scope.outer in *)
+(*     let obj = StringMap.find_opt *)
+
+(*   StringMap.find_opt name st.store *)
+(*   |> Option.fold ~none:(resolve_helper st) ~some:(fun a -> Ok (st, a)) *)
+
 (* |> Option.to_result *)
 (*      ~none:(Code.CodeError.SymbolNotFound ("Global symbol not found", name)) *)
 

@@ -57,7 +57,11 @@ let enter_scope cmp =
 let leave_scope cmp =
   let cur_inst = current_instructions cmp in
   let symbol_table =
-    cmp.symbol_table.outer |> Option.value ~default:cmp.symbol_table
+    match cmp.symbol_table.outer with
+    | None ->
+        failwith "Outer table nil, SHOULD never trigger"
+    | Some e ->
+        e
   in
   cmp.scopes.(cmp.scope_index) <- null_scope () ;
   ({cmp with scope_index= cmp.scope_index - 1; symbol_table}, cur_inst)
@@ -411,6 +415,9 @@ let[@ocaml.warning "-27-9-26"] rec compile nodes cmp =
         let cmp, inst = leave_scope cmp in
         let cmp = ref cmp in
         for i = 0 to List.length free_symbols - 1 do
+          print_endline "symbol below" ;
+          Symbol_table.string_of_symbol (List.nth free_symbols i)
+          |> print_endline ;
           cmp := load_symbol (List.nth free_symbols i) !cmp |> fst
         done ;
         let cmp = !cmp in

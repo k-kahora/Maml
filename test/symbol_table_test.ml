@@ -194,17 +194,42 @@ let test_resolve_free () =
 
 let test_resolve_free_part2 () =
   let global = new_symbol_table () in
+  let global, _ = define "a" global in
+  let global, _ = define "b" global in
   (*First local*)
   let first_local = new_enclosed_symbol_table global in
-  let first_local, _ = define "a" first_local in
+  let first_local, _ = define "c" first_local in
+  let first_local, _ = define "d" first_local in
   (*Second local*)
   let second_local = new_enclosed_symbol_table first_local in
+  let second_local, _ = define "e" second_local in
+  let second_local, _ = define "f" second_local in
   let third_local = new_enclosed_symbol_table second_local in
+  let third_local, _ = define "g" third_local in
+  let third_local, _ = define "h" third_local in
   let tests =
     let n = n_symbol in
-    [ (first_local, [n "a" LOCAL 0], [])
-    ; (second_local, [n "a" FREE 0], [n "a" LOCAL 0])
-    ; (third_local, [n "a" FREE 0], [n "a" LOCAL 0]) ]
+    [ ( first_local
+      , [n "a" GLOBAL 0; n "b" GLOBAL 1; n "c" LOCAL 0; n "d" LOCAL 1]
+      , [] )
+    ; ( second_local
+      , [ n "a" GLOBAL 0
+        ; n "b" GLOBAL 1
+        ; n "c" FREE 0
+        ; n "d" FREE 1
+        ; n "e" LOCAL 0
+        ; n "f" LOCAL 1 ]
+      , [n "c" LOCAL 0; n "d" LOCAL 1] )
+    ; ( third_local
+      , [ n "a" GLOBAL 0
+        ; n "b" GLOBAL 1
+        ; n "c" FREE 0
+        ; n "d" FREE 1
+        ; n "e" FREE 2
+        ; n "f" FREE 3
+        ; n "g" LOCAL 0
+        ; n "h" LOCAL 1 ]
+      , [n "c" FREE 0; n "d" FREE 1; n "e" LOCAL 0; n "f" LOCAL 1] ) ]
   in
   List.iter
     (fun (table, expected_symbols, expected_free_symbols) ->
