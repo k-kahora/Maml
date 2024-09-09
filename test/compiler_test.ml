@@ -795,6 +795,69 @@ let test_compiler_scopes () =
   instruction_check `Last `Add cmp ;
   instruction_check `Previous `Mul cmp
 
+let test_recursive_function () =
+  let open Object.Obj in
+  let tests =
+    [ ( {|
+            let countDown = fn(x) { countDown(x - 1); };
+            countDown(1);
+|}
+      , map_test_helper
+          [ Int 1
+          ; CompFunc
+              ( [ make `CurrentClosure
+                ; make (`GetLocal 0)
+                ; make (`Constant 0)
+                ; make `Sub
+                ; make (`Call 1)
+                ; make `ReturnValue ]
+                |> List.concat
+              , 0
+              , 0 )
+          ; Int 1 ]
+      , make_test_helper
+          [ `Closure (1, 0)
+          ; `SetGlobal 0
+          ; `GetGlobal 0
+          ; `Constant 1
+          ; `Call 1
+          ; `Pop ] )
+    ; ( {|
+            let wrapper = fn() {
+                let countDown = fn(x) { countDown(x - 1); };
+                countDown(1);
+            };
+            wrapper();|}
+      , map_test_helper
+          [ Int 1
+          ; CompFunc
+              ( [ make `CurrentClosure
+                ; make (`GetLocal 0)
+                ; make (`Constant 0)
+                ; make `Sub
+                ; make (`Call 1)
+                ; make `ReturnValue ]
+                |> List.concat
+              , 0
+              , 0 )
+          ; Int 1
+          ; CompFunc
+              ( [ make `CurrentClosure
+                ; make (`Closure (1, 0))
+                ; make (`SetLocal 0)
+                ; make (`GetLocal 0)
+                ; make (`Constant 2)
+                ; make (`Call 1)
+                ; make `ReturnValue ]
+                |> List.concat
+              , 0
+              , 0 )
+          ; Int 1 ]
+      , make_test_helper
+          [`Closure (3, 0); `SetGlobal 0; `GetGlobal 0; `Call 0; `Pop] ) ]
+  in
+  run_compiler_tests tests
+
 let () =
   Alcotest.run "OpConstant arithmetic checking"
     [ ( "testing compiler"
@@ -823,4 +886,7 @@ let () =
     ; ( "testing builtin functions"
       , [Alcotest.test_case "testing builtin functions" `Slow test_builtins] )
     ; ( "test closures"
-      , [Alcotest.test_case "testing closure comp" `Slow test_closures] ) ]
+      , [Alcotest.test_case "testing closure comp" `Slow test_closures] )
+    ; ( "test recursion"
+      , [ Alcotest.test_case "testing recursive calls comp" `Slow
+            test_recursive_function ] ) ]

@@ -453,7 +453,6 @@ let[@ocaml.warning "-27-9-26"] rec compile nodes cmp =
         let* stmts = compile_statements blck.statements cmp in
         Ok stmts
     | Letstatement {name; value} ->
-        let* cmp = compile_expression value cmp in
         let* id =
           Ast.get_ident name
           |> Option.to_result
@@ -461,6 +460,8 @@ let[@ocaml.warning "-27-9-26"] rec compile nodes cmp =
                  (Code.CodeError.CustomError "expression is not an identifier ")
         in
         let st, symbol = Symbol_table.define id cmp.symbol_table in
+        let cmp = {cmp with symbol_table= st} in
+        let* cmp = compile_expression value cmp in
         let cmp, _ =
           match symbol.scope with
           | GLOBAL ->
@@ -470,7 +471,7 @@ let[@ocaml.warning "-27-9-26"] rec compile nodes cmp =
           | BUILTIN | FREE ->
               failwith "not implemented"
         in
-        Ok {cmp with symbol_table= st}
+        Ok cmp
     | Returnstatement {return_value} ->
         let* cmp = compile_expression return_value cmp in
         let cmp, _ = emit `ReturnValue cmp in

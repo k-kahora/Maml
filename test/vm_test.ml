@@ -91,13 +91,10 @@ let setup_vm_test input =
   let program = parse input in
   let comp = Compiler.new_compiler () in
   let* comp = Compiler.compile program.statements comp in
-  Code.ByteFmt.pp_byte_list (Compiler.current_instructions comp)
-  |> print_endline ;
   let _ =
     Code.string_of_byte_list (Compiler.current_instructions comp)
     |> Result.fold ~error:Code.CodeError.print_error ~ok:print_endline
   in
-  let _ = print_endline (Ast.program_str program) in
   let vm = Vm.new_virtual_machine comp in
   let* res = Vm.run vm in
   (* let stack_elem = res.last_item_poped in *)
@@ -576,6 +573,34 @@ let test_recursive_function () =
             }
         };
         countDown(1);|}
+      , Int 0 )
+    ; ( {|
+        let countDown = fn(x) {
+            if (x == 0) {
+                return 0;
+            } else {
+                countDown(x - 1);
+            }
+        };
+        let wrapper = fn() {
+            countDown(1);
+        };
+        wrapper();      
+|}
+      , Int 0 )
+    ; ( {|
+        let wrapper = fn() {
+            let countDown = fn(x) {
+                if (x == 0) {
+                    return 0;
+                } else {
+                    countDown(x - 1);
+                }
+            };
+            countDown(1);
+        };
+        wrapper();
+|}
       , Int 0 ) ]
     |> List.map option_wrapper
   in

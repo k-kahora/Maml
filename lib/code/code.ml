@@ -30,6 +30,7 @@ type opcode =
   | `GetBuiltIn of int
   | `Return
   | `ReturnValue
+  | `CurrentClosure
   | `GetFree of int
   | `Pop ]
 
@@ -105,6 +106,8 @@ let operand_name_not_marker = function
       "ReturnValue"
   | `GetFree _ ->
       "GetFree"
+  | `CurrentClosure ->
+      "CurrentClosure"
   | `Closure _ ->
       "Closure"
 
@@ -139,6 +142,8 @@ let operand_name = function
       "Mul"
   | `Div ->
       "Div"
+  | `CurrentClosure ->
+      "CurrentClosure"
   | `True ->
       "True"
   | `False ->
@@ -338,6 +343,7 @@ let opcode_length = function
   | `Index
   | `Return
   | `ReturnValue
+  | `CurrentClosure
   | `GreaterThan ->
       [0]
 
@@ -422,6 +428,8 @@ let lookup_opcode = function
       Ok `CLOSURE
   | '\x1D' ->
       Ok `GETFREE
+  | '\x1E' ->
+      Ok `CurrentClosure
   | a ->
       Error (CodeError.UnrecognizedByte a)
 
@@ -484,6 +492,8 @@ let lookup_byte = function
       '\x1C'
   | `GetFree _ | `GETFREE ->
       '\x1D'
+  | `CurrentClosure ->
+      '\x1E'
 
 let lookup byte =
   let* opcode = lookup_opcode byte in

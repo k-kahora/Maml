@@ -222,6 +222,15 @@ and parse_let_statement (p : parser) : (Ast.statement * parser, string) result =
     Ok last_token >>= fun nt -> expect_peek nt Token.ASSIGN |> check_error
   in
   let* value, n_p = parse_expression LOWEST (next_token last_token) in
+  let value =
+    match value with
+    | Ast.FunctionLiteral func ->
+        (* NOTE this will never error *)
+        let name = Ast.get_ident ident |> Option.get in
+        Ast.FunctionLiteral {func with name}
+    | _ ->
+        value
+  in
   let n_p = if peek_token_is n_p Token.SEMICOLON then next_token n_p else n_p in
   Ok (Ast.Letstatement {name= ident; token= p.curToken; value}, n_p)
 
@@ -347,7 +356,10 @@ let parse_function_literal p =
   let* body_block, n_p = parse_block n_p in
   Ok
     ( Ast.FunctionLiteral
-        {token= p.curToken; body= Ast.BlockStatement body_block; parameters}
+        { name= "blank"
+        ; token= p.curToken
+        ; body= Ast.BlockStatement body_block
+        ; parameters }
     , n_p )
 
 let parse_expression_list (token_end : Token.token_name) (p : parser) =

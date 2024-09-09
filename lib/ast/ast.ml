@@ -22,7 +22,10 @@ type expression =
       ; consquence: statement
       ; altenative: statement option }
   | FunctionLiteral of
-      {token: Token.token; parameters: expression list; body: statement}
+      { name: string
+      ; token: Token.token
+      ; parameters: expression list
+      ; body: statement }
   | CallExpression of
       {token: Token.token; func: expression; arguments: expression list}
 (* TODO IS there a way t restrict the type to a blockstatement *)
@@ -99,7 +102,7 @@ let[@ocaml.warning "-27"] rec expression_ast_string (e : expression) : string =
       strh "BooleanExpression\n -> %s" (string_of_bool value)
   | IfExpression {condition; consquence; altenative; _} ->
       strh "IfExpression\n -> not implemented"
-  | FunctionLiteral {token; parameters; body} ->
+  | FunctionLiteral {name; token; parameters; body} ->
       strh "FunctionLiteral -> %s \n %s"
         (List.fold_left
            (fun acc next -> strh "%s, %s" acc (expression_ast_string next))
@@ -160,7 +163,7 @@ let rec expression_str (e : expression) : string =
           " else { " ^ statement_str_helper alt ^ " } "
       | None ->
           "" )
-  | FunctionLiteral {token; parameters; body} ->
+  | FunctionLiteral {name= _; token; parameters; body} ->
       token.literal ^ "("
       ^ String.concat ", " (List.map (fun exp -> expression_str exp) parameters)
       ^ ")" ^ statement_str_helper body

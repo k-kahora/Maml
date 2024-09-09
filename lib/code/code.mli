@@ -30,6 +30,7 @@ type opcode =
   | `GetBuiltIn of int
   | `Return
   | `ReturnValue
+  | `CurrentClosure
   | `GetFree of int
   | `Pop ]
 
