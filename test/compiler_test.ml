@@ -819,7 +819,7 @@ let test_recursive_function () =
           [ `Closure (1, 0)
           ; `SetGlobal 0
           ; `GetGlobal 0
-          ; `Constant 1
+          ; `Constant 2
           ; `Call 1
           ; `Pop ] )
     ; ( {|
@@ -842,8 +842,7 @@ let test_recursive_function () =
               , 0 )
           ; Int 1
           ; CompFunc
-              ( [ make `CurrentClosure
-                ; make (`Closure (1, 0))
+              ( [ make (`Closure (1, 0))
                 ; make (`SetLocal 0)
                 ; make (`GetLocal 0)
                 ; make (`Constant 2)
@@ -851,8 +850,7 @@ let test_recursive_function () =
                 ; make `ReturnValue ]
                 |> List.concat
               , 0
-              , 0 )
-          ; Int 1 ]
+              , 0 ) ]
       , make_test_helper
           [`Closure (3, 0); `SetGlobal 0; `GetGlobal 0; `Call 0; `Pop] ) ]
   in

@@ -4,10 +4,10 @@ let ( let* ) = Result.bind
 
 (* FIXME set it to this once in prod *)
 (* let stack_size = 2048 *)
-let stack_size = 16
+let stack_size = 2048
 
 (* let global_size = 65536 *)
-let global_size = 10
+let global_size = 65536
 
 let max_frames = 1024
 (* all operands are 2 bytes wide or 16 bits so FFFF is the max  amount of globals allowed `SetGlobal 65536*)
@@ -123,12 +123,12 @@ module VM_Helpers = struct
     let* b1 = Program_stack.read_then_increment (frame_instructions vm) in
     let* b2 = Program_stack.read_then_increment (frame_instructions vm) in
     let constIndex = ByteFmt.int_of_hex [b1; b2] 2 in
-    print_endline "const" ;
-    print_int constIndex ;
-    print_endline "here" ;
-    frame_instructions vm
-    |> Program_stack.list_of_programstack ~default:'\x00'
-    |> Code.ByteFmt.pp_byte_list |> print_endline ;
+    (* print_endline "const" ; *)
+    (* print_int constIndex ; *)
+    (* print_endline "here" ; *)
+    (* frame_instructions vm *)
+    (* |> Program_stack.list_of_programstack ~default:'\x00' *)
+    (* |> Code.ByteFmt.pp_byte_list |> print_endline ; *)
     let constant_opt = IntMap.find_opt constIndex vm.constants in
     let* constant =
       Option.to_result ~none:(Code.CodeError.ConstantNotFound constIndex)
@@ -475,6 +475,10 @@ module VM_Helpers = struct
         finish_run vm
     | _ ->
         Error (Code.CodeError.CustomError "should be a closure")
+
+  let eval_current_closure vm =
+    let current_closure = (current_frame vm).cl in
+    push current_closure vm ; finish_run vm
 end
 
 (*FIXME any inperformant functions called in here is an issue *)
@@ -533,6 +537,8 @@ let[@ocaml.tailcall] [@ocaml.warning "-9-11"] run vm =
         VM_Helpers.evaluate_closure vm
     | `GETFREE | `GetFree _ ->
         VM_Helpers.evaluate_free vm
+    | `CurrentClosure ->
+        VM_Helpers.eval_current_closure vm
     | a ->
         Error (Code.CodeError.OpCodeNotImplemented a)
   in

@@ -1,6 +1,6 @@
 let ( let* ) = Result.bind
 
-type symbol_scope = GLOBAL | LOCAL | BUILTIN | FREE
+type symbol_scope = GLOBAL | LOCAL | BUILTIN | FREE | FUNCTION
 
 let scope_to_string = function
   | GLOBAL ->
@@ -11,6 +11,8 @@ let scope_to_string = function
       "BUILTIN"
   | FREE ->
       "FREE"
+  | FUNCTION ->
+      "FUNCTION"
 
 type symbol = {name: string; scope: symbol_scope; index: int}
 
@@ -40,6 +42,12 @@ type symbol_table =
   ; num_definitions: int
   ; outer: symbol_table option
   ; mutable free_symbols: symbol list }
+
+let define_function_name name st =
+  let symbol = {name; index= 0; scope= FUNCTION} in
+  let store = StringMap.add name symbol st.store in
+  st.store <- store ;
+  (st, symbol)
 
 let define_builtin index name st =
   let symbol = {name; index; scope= BUILTIN} in
@@ -96,60 +104,22 @@ let define_free original st =
   st.free_symbols <- new_free_symbols ;
   symbol
 
+(* NOTE this originally used a Option.fold with recursive calls and unded up having unsighly errors *)
 let resolve name st =
+  (* let _ = symbol_table_string st |> print_endline in *)
   let error = Code.CodeError.SymbolNotFound ("Global symbol not found", name) in
   let rec resolve_helper symbol_table =
     let* current_symbol_table = Option.to_result ~none:error symbol_table in
     (* The current scope so this would be local *)
-    let obj =
-      StringMap.find_opt name current_symbol_table.store
-      |> Option.fold
-           ~none:
-             ( match resolve_helper current_symbol_table.outer with
-             | Ok (_, symbol) ->
-                 if symbol.scope = GLOBAL || symbol.scope = BUILTIN then
-                   Ok (st, symbol)
-                 else Ok (st, define_free symbol current_symbol_table)
-             | Error _ as err ->
-                 err )
-           ~some:(fun a -> Ok (st, a))
-    in
-    obj
-    (* let* obj = StringMap.find_opt name outerscope.store |> resolve_helper outerscope in *)
-    (* Option.fold *)
-    (*   ~some:(fun a -> *)
-    (*     if a.scope = GLOBAL || a.scope == BUILTIN then Ok (st, a) *)
-    (*     else Ok (st, define_free a current_scope) ) *)
-    (*   ~none:(resolve_helper outerscope) *)
-    (*   obj *)
+    match StringMap.find_opt name current_symbol_table.store with
+    | None -> (
+      match resolve_helper current_symbol_table.outer with
+      | Ok (_, symbol) ->
+          if symbol.scope = GLOBAL || symbol.scope = BUILTIN then Ok (st, symbol)
+          else Ok (st, define_free symbol current_symbol_table)
+      | Error _ as err ->
+          err )
+    | Some a ->
+        Ok (st, a)
   in
   resolve_helper (Some st)
-
-(* First we find if it is in the current scope if not we try to resolve it by moving up the scope *)
-
-(* let resolve name st =  *)
-(*   let rec resolve_helper current_scope =  *)
-
-(*     let* outerscope = Option.to_result ~none:error current_scope.outer in *)
-(*     let obj = StringMap.find_opt *)
-
-(*   StringMap.find_opt name st.store *)
-(*   |> Option.fold ~none:(resolve_helper st) ~some:(fun a -> Ok (st, a)) *)
-
-(* |> Option.to_result *)
-(*      ~none:(Code.CodeError.SymbolNotFound ("Global symbol not found", name)) *)
-
-(* let rec resolve name st = *)
-(*   let error = Code.CodeError.SymbolNotFound ("Global symbol not found", name) in *)
-(*   let obj = *)
-(*     StringMap.find_opt name st.store *)
-(*     |> Option.fold *)
-(*          ~none: *)
-(*            (let* outer_scope = Option.to_result ~none:error st.outer in *)
-(*             let* new_st, new_obj = resolve name outer_scope in *)
-(*             if new_obj.scope = GLOBAL || new_obj.scope = BUILTIN then *)
-(*               Ok (new_st, new_obj) *)
-(*             else define_free new_obj new_st |> Result.ok ) *)
-(*          ~some:(fun a -> Ok (st, a)) *)
-(*   in *)
-(*   obj *)

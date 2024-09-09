@@ -88,13 +88,13 @@ let test_expected_object actual =
 
 (* FIXME incorrect use of let* *)
 let setup_vm_test input =
+  print_endline input ;
   let program = parse input in
   let comp = Compiler.new_compiler () in
   let* comp = Compiler.compile program.statements comp in
-  let _ =
-    Code.string_of_byte_list (Compiler.current_instructions comp)
-    |> Result.fold ~error:Code.CodeError.print_error ~ok:print_endline
-  in
+  (* Code.string_of_byte_list (Compiler.current_instructions comp) *)
+  (* |> Result.fold ~error:Code.CodeError.print_error ~ok:print_endline *)
+  let _ = Compiler.compiler_string comp |> print_endline in
   let vm = Vm.new_virtual_machine comp in
   let* res = Vm.run vm in
   (* let stack_elem = res.last_item_poped in *)
@@ -606,6 +606,31 @@ let test_recursive_function () =
   in
   List.iter run_vm_tests tests
 
+let test_fib_seq () =
+  let option_wrapper (a, b) =
+    match b with Null -> (a, Ok None) | b -> (a, Ok (Some b))
+  in
+  let tests =
+    [ ( {|
+        // emulates the fibanacci sequence
+        let fibonacci = fn(x) {
+            if (x == 0) {
+                return 0;
+            } else {
+                if (x == 1) {
+                    return 1;
+                } else {
+                    fibonacci(x - 1) + fibonacci(x - 2);
+                }
+            }
+        };
+        fibonacci(15);
+|}
+      , Int 610 ) ]
+    |> List.map option_wrapper
+  in
+  List.iter run_vm_tests tests
+
 let () =
   Alcotest.run "Virtual Machine Tests"
     [ ( "Arithmatic"
@@ -653,4 +678,6 @@ let () =
       , [Alcotest.test_case "testing built in closures" `Quick test_closures] )
     ; ( "test recursive functions"
       , [ Alcotest.test_case "testing built in recursive functions" `Quick
-            test_recursive_function ] ) ]
+            test_recursive_function ] )
+    ; ( "test fibonacci sequence"
+      , [Alcotest.test_case "testing the fib seq" `Quick test_fib_seq] ) ]

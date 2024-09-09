@@ -288,6 +288,35 @@ let test_resolve_unresolvable () =
         result )
     expected_unresolveable
 
+let test_define_and_resolve_function_name () =
+  let global = new_symbol_table () in
+  let global, _ = define_function_name "a" global in
+  let expected =
+    let n = n_symbol in
+    n "a" FUNCTION 0
+  in
+  let result = resolve expected.name global in
+  Alcotest.(check (result alc_symbol Code.CodeError.alcotest_error))
+    "checking function name symbol" (Ok expected) (result |> remove_table)
+
+(* let foobar = fn() { *)
+(*   let foobar = 1; *)
+(*   foobar; *)
+(* }; *)
+(* Ensure shadowing works *)
+
+let test_define_and_resolve_function_shadowing () =
+  let global = new_symbol_table () in
+  let global, _ = define_function_name "a" global in
+  let global, _ = define "a" global in
+  let expected =
+    let n = n_symbol in
+    n "a" GLOBAL 0
+  in
+  let result = resolve expected.name global in
+  Alcotest.(check (result alc_symbol Code.CodeError.alcotest_error))
+    "checking function name symbol" (Ok expected) (result |> remove_table)
+
 let () =
   Alcotest.run "Symbol Table Tests"
     [ ("Symbol init", [Alcotest.test_case "define" `Quick test_define])
@@ -302,4 +331,10 @@ let () =
     ; ( "test resolve free unresolvable"
       , [Alcotest.test_case "unresolvabl" `Quick test_resolve_unresolvable] )
     ; ( "test resolve free part 2"
-      , [Alcotest.test_case "part 2" `Quick test_resolve_free_part2] ) ]
+      , [Alcotest.test_case "part 2" `Quick test_resolve_free_part2] )
+    ; ( "test and resolve function name"
+      , [ Alcotest.test_case "function name in symbol table" `Quick
+            test_define_and_resolve_function_name ] )
+    ; ( "test and resolve shadowing functions"
+      , [ Alcotest.test_case "function name shadowing functions" `Quick
+            test_define_and_resolve_function_shadowing ] ) ]
