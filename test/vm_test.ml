@@ -485,6 +485,23 @@ let test_built_in_functions () =
   in
   List.iter run_vm_tests tests
 
+let test_closures () =
+  let option_wrapper (a, b) =
+    match b with Null -> (a, Ok None) | b -> (a, Ok (Some b))
+  in
+  let tests =
+    [ ( {|
+        let newClosure = fn(a) {
+          fn() { a; }
+        }
+        let closure = newClosure(99);
+        closure()
+|}
+      , Int 99 ) ]
+    |> List.map option_wrapper
+  in
+  List.iter run_vm_tests tests
+
 let () =
   Alcotest.run "Virtual Machine Tests"
     [ ( "Arithmatic"
@@ -527,4 +544,7 @@ let () =
             test_calling_function_with_wrong_arguments ] )
     ; ( "test built in functions"
       , [Alcotest.test_case "built in functions" `Quick test_built_in_functions]
-      ) ]
+      )
+    ; ( "test closures"
+      , [Alcotest.test_case "testing built in closures" `Quick test_closures] )
+    ]

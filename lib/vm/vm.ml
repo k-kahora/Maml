@@ -75,7 +75,7 @@ let pop_frame vm =
 
 let update_current_frame frame vm = vm.frames.(vm.frame_index) <- frame
 
-let frame_instructions vm = current_frame vm |> fun a -> a.fn
+let frame_instructions vm = current_frame vm |> fun a -> a.internal_stack
 
 let new_virtual_machine byte_code =
   let open Compiler in
@@ -99,6 +99,13 @@ let new_with_global_store compiler globals =
 
 (* Program_stack.pop *)
 
+let pop_err vm =
+  let item =
+    Program_stack.pop vm.stack
+    |> function Ok item -> item | Error _ -> failwith "out of bounds"
+  in
+  item |> function Some item -> item | None -> failwith "out of bounds"
+
 let pop vm =
   let* item = Program_stack.pop vm.stack in
   Option.fold ~none:(Error (Code.CodeError.CustomError "Poped a None Value"))
@@ -116,6 +123,12 @@ module VM_Helpers = struct
     let* b1 = Program_stack.read_then_increment (frame_instructions vm) in
     let* b2 = Program_stack.read_then_increment (frame_instructions vm) in
     let constIndex = ByteFmt.int_of_hex [b1; b2] 2 in
+    print_endline "const" ;
+    print_int constIndex ;
+    print_endline "here" ;
+    frame_instructions vm
+    |> Program_stack.list_of_programstack ~default:'\x00'
+    |> Code.ByteFmt.pp_byte_list |> print_endline ;
     let constant_opt = IntMap.find_opt constIndex vm.constants in
     let* constant =
       Option.to_result ~none:(Code.CodeError.ConstantNotFound constIndex)
@@ -440,13 +453,28 @@ module VM_Helpers = struct
     push def vm ; finish_run vm
 
   let evaluate_closure vm =
+    let empty _ = () in
     let* b1 = Program_stack.read_then_increment (frame_instructions vm) in
     let* b2 = Program_stack.read_then_increment (frame_instructions vm) in
-    let* _ = Program_stack.read_then_increment (frame_instructions vm) in
+    let* b3 = Program_stack.read_then_increment (frame_instructions vm) in
     let const_index = ByteFmt.int_of_hex [b1; b2] 2 in
+    let num_free = ByteFmt.int_of_hex [b3] 1 in
     let constant = IntMap.find const_index vm.constants in
-    push (Obj.Closure {fn= constant; free= []}) vm ;
+    let free_vars = List.init num_free empty in
+    let free_vars = List.map (fun _ -> pop_err vm) free_vars |> List.rev in
+    push (Obj.Closure {fn= constant; free= free_vars}) vm ;
     finish_run vm
+
+  let evaluate_free vm =
+    let* b1 = Program_stack.read_then_increment (frame_instructions vm) in
+    let free_index = ByteFmt.int_of_hex [b1] 1 in
+    let curret_closure = (current_frame vm).cl in
+    match curret_closure with
+    | Obj.Closure {fn= _; free} ->
+        push (List.nth free free_index) vm ;
+        finish_run vm
+    | _ ->
+        Error (Code.CodeError.CustomError "should be a closure")
 end
 
 (*FIXME any inperformant functions called in here is an issue *)
@@ -499,8 +527,12 @@ let[@ocaml.tailcall] [@ocaml.warning "-9-11"] run vm =
         VM_Helpers.return vm
     | `GetBuiltIn _ | `GETBUILTIN ->
         VM_Helpers.evaluate_builtin vm
+    (* | `GetFree _ | `GETFREE ->  *)
+    (*    VM_Helpers.evalute_free vm *)
     | `CLOSURE | `Closure _ ->
         VM_Helpers.evaluate_closure vm
+    | `GETFREE | `GetFree _ ->
+        VM_Helpers.evaluate_free vm
     | a ->
         Error (Code.CodeError.OpCodeNotImplemented a)
   in
