@@ -497,7 +497,86 @@ let test_closures () =
         let closure = newClosure(99);
         closure()
 |}
+      , Int 99 )
+    ; ( {|
+        let newAdder = fn(a, b) {
+            fn(c) { a + b + c };
+        };
+        let adder = newAdder(1, 2);
+        adder(8);|}
+      , Int 11 )
+    ; ( {|
+        let newAdder = fn(a, b) {
+            let c = a + b;
+            fn(d) { c + d };
+        };
+        let adder = newAdder(1, 2);
+        adder(8);|}
+      , Int 11 )
+    ; ( {|
+   let newAdder = fn(a,b) {
+     let c = a + b
+     let global = 30;
+     fn(d) {
+       fn(e) {
+          global + e + d + a + b
+       }
+     }
+   }
+   newAdder(10,20)(30)(40)
+|}
+      , Int 130 )
+    ; ( {|
+        let newAdderOuter = fn(a, b) {
+            let c = a + b;
+            fn(d) {
+                let e = d + c;
+                fn(f) { e + f; };
+            };
+        };
+        let newAdderInner = newAdderOuter(1, 2)
+        let adder = newAdderInner(3);
+        adder(8);|}
+      , Int 14 )
+    ; ( {|
+        let a = 1;
+        let newAdderOuter = fn(b) {
+            fn(c) {
+                fn(d) { a + b + c + d };
+            };
+        };
+        let newAdderInner = newAdderOuter(2)
+        let adder = newAdderInner(3);
+        adder(8);|}
+      , Int 14 )
+    ; ( {|
+        let newClosure = fn(a, b) {
+            let one = fn() { a; };
+            let two = fn() { b; };
+            fn() { one() + two(); };
+        };
+        let closure = newClosure(9, 90);
+        closure();|}
       , Int 99 ) ]
+    |> List.map option_wrapper
+  in
+  List.iter run_vm_tests tests
+
+let test_recursive_function () =
+  let option_wrapper (a, b) =
+    match b with Null -> (a, Ok None) | b -> (a, Ok (Some b))
+  in
+  let tests =
+    [ ( {|
+        let countDown = fn(x) {
+            if (x == 0) {
+                return 0;
+            } else {
+                countDown(x - 1);
+            }
+        };
+        countDown(1);|}
+      , Int 0 ) ]
     |> List.map option_wrapper
   in
   List.iter run_vm_tests tests
@@ -547,4 +626,6 @@ let () =
       )
     ; ( "test closures"
       , [Alcotest.test_case "testing built in closures" `Quick test_closures] )
-    ]
+    ; ( "test recursive functions"
+      , [ Alcotest.test_case "testing built in recursive functions" `Quick
+            test_recursive_function ] ) ]
