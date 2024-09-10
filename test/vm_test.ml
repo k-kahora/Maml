@@ -624,7 +624,7 @@ let test_fib_seq () =
                 }
             }
         };
-        fibonacci(15);
+        puts(fibonacci(15));
 |}
       , Int 610 ) ]
     |> List.map option_wrapper
