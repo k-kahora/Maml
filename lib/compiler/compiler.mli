@@ -34,6 +34,8 @@ val emit : Code.opcode -> compiler -> compiler * int
 
 val alcotest_compiler : compiler Alcotest.testable
 
+val compiler_string : compiler -> string
+
 val enter_scope : compiler -> compiler
 
 val leave_scope : compiler -> compiler * byte list

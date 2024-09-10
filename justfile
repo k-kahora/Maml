@@ -11,3 +11,6 @@ utop:
 	utop -init ./bin/inti_script.ml
 test:
 	dune runtest 
+	
+docker_run:
+	docker run -it graffiti-image:latest

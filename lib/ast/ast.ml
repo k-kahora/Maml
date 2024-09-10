@@ -22,7 +22,10 @@ type expression =
       ; consquence: statement
       ; altenative: statement option }
   | FunctionLiteral of
-      {token: Token.token; parameters: expression list; body: statement}
+      { name: string
+      ; token: Token.token
+      ; parameters: expression list
+      ; body: statement }
   | CallExpression of
       {token: Token.token; func: expression; arguments: expression list}
 (* TODO IS there a way t restrict the type to a blockstatement *)
@@ -76,6 +79,63 @@ let expression_str_debug e =
   | ArrayLiteral _ ->
       "ArrayLiteral"
 
+let[@ocaml.warning "-27"] rec expression_ast_string (e : expression) : string =
+  let strh = Format.sprintf in
+  match e with
+  | Identifier {token= _; value} ->
+      strh "Identifier ->%s\n" value
+  | StringLiteral {token= _; value} ->
+      strh "StringLiteral\n -> %s" value
+  | IntegerLiteral {token= _; value} ->
+      strh "IntegerLiteral\n -> %d\n" value
+  | PrefixExpression {operator; right; _} ->
+      strh "PrefixExpression\n -> %s(%s)" operator (expression_ast_string right)
+  | IndexExpression {token= _; left; index} ->
+      strh "IndexExpression\n -> %s[%s]"
+        (expression_ast_string left)
+        (expression_ast_string index)
+  | InfixExpression {left; operator; right; _} ->
+      strh "InfixExpression -> %s %s\n"
+        (expression_ast_string left)
+        (expression_ast_string right)
+  | BooleanExpression {token= _; value} ->
+      strh "BooleanExpression\n -> %s" (string_of_bool value)
+  | IfExpression {condition; consquence; altenative; _} ->
+      strh "IfExpression\n -> not implemented"
+  | FunctionLiteral {name; token; parameters; body} ->
+      strh "FunctionLiteral -> %s \n %s"
+        (List.fold_left
+           (fun acc next -> strh "%s, %s" acc (expression_ast_string next))
+           "" parameters )
+        (statement_ast_string body)
+  | CallExpression {arguments; func; _} ->
+      "CallExpression -> not implemented\n"
+  | ArrayLiteral {token= _; elements} ->
+      "ArrayLiteral -> not implemented\n"
+  | HashLiteral {pairs; token= _} ->
+      "HashLiteral -> not implemented\n"
+
+and[@ocaml.warning "-27"] statement_ast_string stmt =
+  let strh = Format.sprintf in
+  match stmt with
+  | Letstatement {token; name; value} ->
+      let name =
+        match name with
+        | Identifier {value= name_value; _} ->
+            name_value
+        | _ ->
+            failwith "Needs to be an identifier"
+      in
+      strh "Letstatement-> %s=%s\n" name (expression_ast_string value)
+  | Returnstatement {token; return_value} ->
+      strh "Returnstatement-> %s\n" (expression_ast_string return_value)
+  | Expressionstatement stmt ->
+      strh "Expressionstatement-> %s\n" (expression_ast_string stmt.expression)
+  | BlockStatement block ->
+      strh "BlockStatement-> %s\n"
+        ( String.concat "\n"
+        @@ List.map (fun acc -> statement_ast_string acc) block.statements )
+
 let rec expression_str (e : expression) : string =
   match e with
   | Identifier {token= _; value} ->
@@ -103,7 +163,7 @@ let rec expression_str (e : expression) : string =
           " else { " ^ statement_str_helper alt ^ " } "
       | None ->
           "" )
-  | FunctionLiteral {token; parameters; body} ->
+  | FunctionLiteral {name= _; token; parameters; body} ->
       token.literal ^ "("
       ^ String.concat ", " (List.map (fun exp -> expression_str exp) parameters)
       ^ ")" ^ statement_str_helper body
@@ -166,6 +226,16 @@ let program_str (pgm : program) : string =
         acc
   in
   program_str_helper "" pgm.statements
+
+let program_ast_str (pgm : program) : string =
+  let rec program_ast_helper (acc : string) (list : statement list) : string =
+    match list with
+    | h :: t ->
+        program_ast_helper (acc ^ statement_ast_string h) t
+    | [] ->
+        acc
+  in
+  program_ast_helper "" pgm.statements
 
 (* let token_literal_of_program p = *)
 (*   match p with *)

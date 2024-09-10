@@ -6,6 +6,8 @@ let ( let* ) = Result.bind
 
 module StringMap = Map.Make (String)
 
+let remove_table = Result.map (fun (_, sym) -> sym)
+
 let test_resolve_global () =
   let global = new_symbol_table () in
   let global, _ = define "a" global in
@@ -14,7 +16,7 @@ let test_resolve_global () =
   let helper expected =
     Alcotest.(check (result alc_symbol Code.CodeError.alcotest_error))
       "Checking resolve a and b" (Ok expected)
-      (resolve expected.name global)
+      (resolve expected.name global |> remove_table)
   in
   List.iter helper expected
 
@@ -79,7 +81,7 @@ let[@ocaml.warning "-26"] test_resolve_local () =
   let helper expected =
     Alcotest.(check (result alc_symbol Code.CodeError.alcotest_error))
       "Checking resolve a and b" (Ok expected)
-      (resolve expected.name local)
+      (resolve expected.name local |> remove_table)
   in
   List.iter helper expected
 
@@ -110,7 +112,7 @@ let[@ocaml.warning "-26"] test_resolve_local_nested () =
       (fun symbol ->
         Alcotest.(check (result alc_symbol Code.CodeError.alcotest_error))
           "Checking resolve a and b" (Ok symbol)
-          (resolve symbol.name table) )
+          (resolve symbol.name table |> remove_table) )
       expected_symbols
   in
   List.iter helper expected
@@ -136,6 +138,185 @@ let[@ocaml.warning "-26"] test_define_resolve_builtin () =
   in
   ()
 
+let test_resolve_free () =
+  let global = new_symbol_table () in
+  let global, _ = define "a" global in
+  let global, _ = define "b" global in
+  (*First local*)
+  let first_local = new_enclosed_symbol_table global in
+  let first_local, _ = define "c" first_local in
+  let first_local, _ = define "d" first_local in
+  (*Second local*)
+  let second_local = new_enclosed_symbol_table first_local in
+  let second_local, _ = define "e" second_local in
+  let second_local, _ = define "f" second_local in
+  let tests =
+    let n = n_symbol in
+    [ ( first_local
+      , [n "a" GLOBAL 0; n "b" GLOBAL 1; n "c" LOCAL 0; n "d" LOCAL 1]
+      , [] )
+    ; ( second_local
+      , [ n "a" GLOBAL 0
+        ; n "b" GLOBAL 1
+        ; n "c" FREE 0
+        ; n "d" FREE 1
+        ; n "e" LOCAL 0
+        ; n "f" LOCAL 1 ]
+      , [n "c" LOCAL 0; n "d" LOCAL 1] ) ]
+  in
+  List.iter
+    (fun (table, expected_symbols, expected_free_symbols) ->
+      let new_symbol_table =
+        List.fold_left
+          (fun acc_symbol_table next_expected_symbol ->
+            let resolved = resolve next_expected_symbol.name acc_symbol_table in
+            Alcotest.(check (result alc_symbol Code.CodeError.alcotest_error))
+              "symbol check" (Ok next_expected_symbol) (resolved |> remove_table) ;
+            (* Result.get_ok will never error as the tests will fail if an error happens and the program will stop *)
+            resolved |> Result.get_ok |> fst )
+          table expected_symbols
+      in
+      Alcotest.(check int)
+        "free length"
+        (List.length new_symbol_table.free_symbols)
+        (List.length expected_free_symbols) ;
+      List.iteri
+        (fun i expected_free_symbol ->
+          Alcotest.(check (result alc_symbol Code.CodeError.alcotest_error))
+            "symbol check" (Ok expected_free_symbol)
+            (List.nth new_symbol_table.free_symbols i |> Result.ok) )
+        expected_free_symbols )
+    tests
+
+(* fn(a) *)
+(*   fn() *)
+(*     fn() *)
+
+let test_resolve_free_part2 () =
+  let global = new_symbol_table () in
+  let global, _ = define "a" global in
+  let global, _ = define "b" global in
+  (*First local*)
+  let first_local = new_enclosed_symbol_table global in
+  let first_local, _ = define "c" first_local in
+  let first_local, _ = define "d" first_local in
+  (*Second local*)
+  let second_local = new_enclosed_symbol_table first_local in
+  let second_local, _ = define "e" second_local in
+  let second_local, _ = define "f" second_local in
+  let third_local = new_enclosed_symbol_table second_local in
+  let third_local, _ = define "g" third_local in
+  let third_local, _ = define "h" third_local in
+  let tests =
+    let n = n_symbol in
+    [ ( first_local
+      , [n "a" GLOBAL 0; n "b" GLOBAL 1; n "c" LOCAL 0; n "d" LOCAL 1]
+      , [] )
+    ; ( second_local
+      , [ n "a" GLOBAL 0
+        ; n "b" GLOBAL 1
+        ; n "c" FREE 0
+        ; n "d" FREE 1
+        ; n "e" LOCAL 0
+        ; n "f" LOCAL 1 ]
+      , [n "c" LOCAL 0; n "d" LOCAL 1] )
+    ; ( third_local
+      , [ n "a" GLOBAL 0
+        ; n "b" GLOBAL 1
+        ; n "c" FREE 0
+        ; n "d" FREE 1
+        ; n "e" FREE 2
+        ; n "f" FREE 3
+        ; n "g" LOCAL 0
+        ; n "h" LOCAL 1 ]
+      , [n "c" FREE 0; n "d" FREE 1; n "e" LOCAL 0; n "f" LOCAL 1] ) ]
+  in
+  List.iter
+    (fun (table, expected_symbols, expected_free_symbols) ->
+      let new_symbol_table =
+        List.fold_left
+          (fun acc_symbol_table next_expected_symbol ->
+            let resolved = resolve next_expected_symbol.name acc_symbol_table in
+            Alcotest.(check (result alc_symbol Code.CodeError.alcotest_error))
+              "symbol check" (Ok next_expected_symbol) (resolved |> remove_table) ;
+            (* Result.get_ok will never error as the tests will fail if an error happens and the program will stop *)
+            resolved |> Result.get_ok |> fst )
+          table expected_symbols
+      in
+      Alcotest.(check int)
+        "free length"
+        (List.length new_symbol_table.free_symbols)
+        (List.length expected_free_symbols) ;
+      List.iteri
+        (fun i expected_free_symbol ->
+          Alcotest.(check (result alc_symbol Code.CodeError.alcotest_error))
+            "symbol check" (Ok expected_free_symbol)
+            (List.nth new_symbol_table.free_symbols i |> Result.ok) )
+        expected_free_symbols )
+    tests
+
+let test_resolve_unresolvable () =
+  let global = new_symbol_table () in
+  let global, _ = define "a" global in
+  let first_local = new_enclosed_symbol_table global in
+  let first_local, _ = define "c" first_local in
+  let second_local = new_enclosed_symbol_table first_local in
+  let second_local, _ = define "e" second_local in
+  let second_local, _ = define "f" second_local in
+  let expected =
+    let n = n_symbol in
+    [n "a" GLOBAL 0; n "c" FREE 0; n "e" LOCAL 0; n "f" LOCAL 1]
+  in
+  let n_symbol_table =
+    List.fold_left
+      (fun acc_table symbol ->
+        let result = resolve symbol.name acc_table in
+        Alcotest.(check (result alc_symbol Code.CodeError.alcotest_error))
+          "name resolvable check" (Ok symbol) (result |> remove_table) ;
+        result |> Result.get_ok |> fst )
+      second_local expected
+  in
+  let expected_unresolveable = ["b"; "d"] in
+  List.iter
+    (fun unresolvable ->
+      let result = resolve unresolvable n_symbol_table |> remove_table in
+      Alcotest.(check (result alc_symbol Code.CodeError.alcotest_error))
+        "Error check"
+        (Error
+           (Code.CodeError.SymbolNotFound
+              ("Global symbol not found", unresolvable) ) )
+        result )
+    expected_unresolveable
+
+let test_define_and_resolve_function_name () =
+  let global = new_symbol_table () in
+  let global, _ = define_function_name "a" global in
+  let expected =
+    let n = n_symbol in
+    n "a" FUNCTION 0
+  in
+  let result = resolve expected.name global in
+  Alcotest.(check (result alc_symbol Code.CodeError.alcotest_error))
+    "checking function name symbol" (Ok expected) (result |> remove_table)
+
+(* let foobar = fn() { *)
+(*   let foobar = 1; *)
+(*   foobar; *)
+(* }; *)
+(* Ensure shadowing works *)
+
+let test_define_and_resolve_function_shadowing () =
+  let global = new_symbol_table () in
+  let global, _ = define_function_name "a" global in
+  let global, _ = define "a" global in
+  let expected =
+    let n = n_symbol in
+    n "a" GLOBAL 0
+  in
+  let result = resolve expected.name global in
+  Alcotest.(check (result alc_symbol Code.CodeError.alcotest_error))
+    "checking function name symbol" (Ok expected) (result |> remove_table)
+
 let () =
   Alcotest.run "Symbol Table Tests"
     [ ("Symbol init", [Alcotest.test_case "define" `Quick test_define])
@@ -145,4 +326,15 @@ let () =
     ; ( "reslove local nested"
       , [Alcotest.test_case "nested" `Quick test_resolve_local_nested] )
     ; ( "resolve and define builtins"
-      , [Alcotest.test_case "builtin" `Quick test_define_resolve_builtin] ) ]
+      , [Alcotest.test_case "builtin" `Quick test_define_resolve_builtin] )
+    ; ("test_resolve_free", [Alcotest.test_case "free" `Quick test_resolve_free])
+    ; ( "test resolve free unresolvable"
+      , [Alcotest.test_case "unresolvabl" `Quick test_resolve_unresolvable] )
+    ; ( "test resolve free part 2"
+      , [Alcotest.test_case "part 2" `Quick test_resolve_free_part2] )
+    ; ( "test and resolve function name"
+      , [ Alcotest.test_case "function name in symbol table" `Quick
+            test_define_and_resolve_function_name ] )
+    ; ( "test and resolve shadowing functions"
+      , [ Alcotest.test_case "function name shadowing functions" `Quick
+            test_define_and_resolve_function_shadowing ] ) ]

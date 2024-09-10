@@ -11,6 +11,7 @@ type opcode =
   | `SetLocal of int
   | `Array of int
   | `Hash of int
+  | `Closure of int * int (* constant index * free_variable count *)
   | `Add
   | `Sub
   | `Null
@@ -29,6 +30,8 @@ type opcode =
   | `GetBuiltIn of int
   | `Return
   | `ReturnValue
+  | `CurrentClosure
+  | `GetFree of int
   | `Pop ]
 
 val infix_operand_string : [< `Add | `Div | `Mul | `Sub] -> string
@@ -38,12 +41,14 @@ type opcode_marker =
   | `JUMP
   | `JUMPNOTTRUTHY
   | `GETGLOBAL
+  | `CLOSURE
   | `SETGLOBAL
   | `ARRAY
   | `CALL
   | `GETBUILTIN
   | `HASH
   | `SETLOCAL
+  | `GETFREE
   | `GETLOCAL ]
 
 module CodeError : sig
@@ -74,7 +79,7 @@ module CodeError : sig
   val alcotest_error : error Alcotest.testable
 end
 
-type definition = {def: [opcode_marker | opcode]; length: int}
+type definition = {def: [opcode_marker | opcode]; length: int list}
 
 val make : opcode -> byte list
 (** [make opcode] FIXME This function is prone to silent bugs, when a new opcode with operands is added there is no compiler warning to add it to this function  *)
@@ -86,7 +91,7 @@ val lookup : byte -> (definition, CodeError.error) result
 
 val string_of_byte_list : byte list -> (string, CodeError.error) result
 
-val read_operands : [< opcode | opcode_marker] -> byte list -> int * int
+val read_operands : [< opcode | opcode_marker] -> byte list -> int list * int
 
 module ByteFmt : sig
   val slice : int -> 'a list -> 'a list

@@ -21,6 +21,8 @@ let[@ocaml.warning "-27"] run_compiler_tests tests =
   let craft_compiler input =
     let program = parse input in
     let compiler = new_compiler () in
+    print_endline (Format.sprintf "input -> %s" input) ;
+    print_endline (Ast.program_ast_str program) ;
     compile program.statements compiler
     (* FIXME figure out why I need a bytecode DS *)
     (* let bytecode = bytecode compiler in *)
@@ -318,7 +320,7 @@ let test_function_expressions () =
                 |> List.concat
               , 0
               , 0 ) ]
-      , make_test_helper [`Constant 2; `Pop] )
+      , make_test_helper [`Closure (2, 0); `Pop] )
     ; ( "fn () { 10 * 2}"
       , map_test_helper
           [ Int 10
@@ -331,7 +333,7 @@ let test_function_expressions () =
                 |> List.concat
               , 0
               , 0 ) ]
-      , make_test_helper [`Constant 2; `Pop] )
+      , make_test_helper [`Closure (2, 0); `Pop] )
     ; ( "fn () {1; 2}"
       , map_test_helper
           [ Int 1
@@ -344,10 +346,10 @@ let test_function_expressions () =
                 |> List.concat
               , 0
               , 0 ) ]
-      , make_test_helper [`Constant 2; `Pop] )
+      , make_test_helper [`Closure (2, 0); `Pop] )
     ; ( "fn () {}"
       , map_test_helper [CompFunc ([make `Return] |> List.concat, 0, 0)]
-      , make_test_helper [`Constant 0; `Pop] ) ]
+      , make_test_helper [`Closure (0, 0); `Pop] ) ]
   in
   run_compiler_tests tests
 
@@ -376,7 +378,7 @@ let test_builtins () =
                 |> List.concat
               , 0
               , 0 ) ]
-      , make_test_helper [`Constant 0; `Pop] ) ]
+      , make_test_helper [`Closure (0, 0); `Pop] ) ]
   in
   run_compiler_tests tests
 
@@ -388,14 +390,14 @@ let test_function_call () =
           [ Int 25
           ; CompFunc
               ([make (`Constant 0); make `ReturnValue] |> List.concat, 0, 0) ]
-      , make_test_helper [`Constant 1; `Call 0; `Pop] )
+      , make_test_helper [`Closure (1, 0); `Call 0; `Pop] )
     ; ( "let no_arg = fn() { 25 }; no_arg();"
       , map_test_helper
           [ Int 25
           ; CompFunc
               ([make (`Constant 0); make `ReturnValue] |> List.concat, 0, 0) ]
-      , make_test_helper [`Constant 1; `SetGlobal 0; `GetGlobal 0; `Call 0; `Pop]
-      )
+      , make_test_helper
+          [`Closure (1, 0); `SetGlobal 0; `GetGlobal 0; `Call 0; `Pop] )
     ; ( {|
          let fivePlusTen = fn() { 5 + 10 };
          fivePlusTen();
@@ -424,12 +426,12 @@ let test_function_call () =
               , 0
               , 0 ) ]
       , make_test_helper
-          [ `Constant 2
+          [ `Closure (2, 0)
           ; `SetGlobal 0
           ; `GetGlobal 0
           ; `Call 0
           ; `Pop
-          ; `Constant 5
+          ; `Closure (5, 0)
           ; `SetGlobal 1
           ; `GetGlobal 1
           ; `Call 0
@@ -452,13 +454,17 @@ let test_function_call () =
                 |> List.concat
               , 0
               , 0 ) ]
-      , make_test_helper [`Constant 4; `SetGlobal 0; `GetGlobal 0; `Call 0; `Pop]
-      )
+      , make_test_helper
+          [`Closure (4, 0); `SetGlobal 0; `GetGlobal 0; `Call 0; `Pop] )
     ; ( "let oneArg = fn(a) { };\noneArg(24);"
       , map_test_helper [CompFunc ([make `Return] |> List.concat, 0, 1); Int 24]
       , make_test_helper
-          [`Constant 0; `SetGlobal 0; `GetGlobal 0; `Constant 1; `Call 1; `Pop]
-      )
+          [ `Closure (0, 0)
+          ; `SetGlobal 0
+          ; `GetGlobal 0
+          ; `Constant 1
+          ; `Call 1
+          ; `Pop ] )
     ; ( "            let manyArg = fn(a, b, c) { };\n\
         \            manyArg(24, 25, 26);"
       , map_test_helper
@@ -467,7 +473,7 @@ let test_function_call () =
           ; Int 25
           ; Int 26 ]
       , make_test_helper
-          [ `Constant 0
+          [ `Closure (0, 0)
           ; `SetGlobal 0
           ; `GetGlobal 0
           ; `Constant 1
@@ -481,8 +487,12 @@ let test_function_call () =
               ([make (`GetLocal 0); make `ReturnValue] |> List.concat, 0, 1)
           ; Int 24 ]
       , make_test_helper
-          [`Constant 0; `SetGlobal 0; `GetGlobal 0; `Constant 1; `Call 1; `Pop]
-      )
+          [ `Closure (0, 0)
+          ; `SetGlobal 0
+          ; `GetGlobal 0
+          ; `Constant 1
+          ; `Call 1
+          ; `Pop ] )
     ; ( "let manyArg = fn(a, b, c) {a; b; c}\nmanyArg(24,25,26)"
       , map_test_helper
           [ CompFunc
@@ -499,7 +509,7 @@ let test_function_call () =
           ; Int 25
           ; Int 26 ]
       , make_test_helper
-          [ `Constant 0
+          [ `Closure (0, 0)
           ; `SetGlobal 0
           ; `GetGlobal 0
           ; `Constant 1
@@ -507,6 +517,181 @@ let test_function_call () =
           ; `Constant 3
           ; `Call 3
           ; `Pop ] ) ]
+  in
+  run_compiler_tests tests
+
+(*  We treat every non-local, non-global, non-built-in binding as a free variable.*)
+let test_closures () =
+  let open Object.Obj in
+  let tests =
+    [ ( {|
+         fn(a,b,c) {
+           fn() {
+               fn() {
+                 a + b + c
+               }
+           }
+         }
+
+               |}
+      , map_test_helper
+          [ CompFunc
+              ( [ make (`GetFree 0)
+                ; make (`GetFree 1)
+                ; make `Add
+                ; make (`GetFree 2)
+                ; make `Add
+                ; make `ReturnValue ]
+                |> List.concat
+              , 0
+              , 0 )
+          ; CompFunc
+              ( [ make (`GetFree 0)
+                ; make (`GetFree 1)
+                ; make (`GetFree 2)
+                ; make (`Closure (0, 3))
+                ; make `ReturnValue ]
+                |> List.concat
+              , 0
+              , 0 )
+          ; CompFunc
+              ( [ make (`GetLocal 0)
+                ; make (`GetLocal 1)
+                ; make (`GetLocal 2)
+                ; make (`Closure (1, 3))
+                ; make `ReturnValue ]
+                |> List.concat
+              , 0
+              , 0 ) ]
+      , make_test_helper [`Closure (2, 0); `Pop] )
+    ; ( {|
+                     fn(a) {
+                       fn() {
+                         fn() {
+                            a
+                          }
+                       }
+                     }
+            |}
+      , map_test_helper
+          [ CompFunc
+              ([make (`GetFree 0); make `ReturnValue] |> List.concat, 0, 0)
+          ; CompFunc
+              ( [make (`GetFree 0); make (`Closure (0, 1)); make `ReturnValue]
+                |> List.concat
+              , 0
+              , 0 )
+          ; CompFunc
+              ( [make (`GetLocal 0); make (`Closure (1, 1)); make `ReturnValue]
+                |> List.concat
+              , 0
+              , 0 ) ]
+      , make_test_helper [`Closure (2, 0); `Pop] )
+    ; ( {|
+            fn(a) {
+                fn(b) {
+                    fn(c) {
+                        a + b + c
+                    }
+                }
+            };
+|}
+      , map_test_helper
+          [ CompFunc
+              ( [ make (`GetFree 0)
+                ; make (`GetFree 1)
+                ; make `Add
+                ; make (`GetLocal 0)
+                ; make `Add
+                ; make `ReturnValue ]
+                |> List.concat
+              , 0
+              , 0 )
+          ; CompFunc
+              ( [ make (`GetFree 0)
+                ; make (`GetLocal 0)
+                ; make (`Closure (0, 2))
+                ; make `ReturnValue ]
+                |> List.concat
+              , 0
+              , 0 )
+          ; CompFunc
+              ( [make (`GetLocal 0); make (`Closure (1, 1)); make `ReturnValue]
+                |> List.concat
+              , 0
+              , 0 ) ]
+      , make_test_helper [`Closure (2, 0); `Pop] )
+    ; ( {|
+                  fn(a) {
+                    fn() {
+                      a
+                    }
+                  }
+         |}
+      , map_test_helper
+          [ CompFunc
+              ([make (`GetFree 0); make `ReturnValue] |> List.concat, 0, 0)
+          ; CompFunc
+              ( [make (`GetLocal 0); make (`Closure (0, 1)); make `ReturnValue]
+                |> List.concat
+              , 0
+              , 0 ) ]
+      , make_test_helper [`Closure (1, 0); `Pop] )
+    ; ( {|
+            let global = 55;
+
+            fn() {
+                let a = 66;
+
+                fn() {
+                    let b = 77;
+
+                    fn() {
+                        let c = 88;
+
+                        global + a + b + c;
+                    }
+                }
+            }|}
+      , map_test_helper
+          [ Int 55
+          ; Int 66
+          ; Int 77
+          ; Int 88
+          ; CompFunc
+              ( [ make (`Constant 3)
+                ; make (`SetLocal 0)
+                ; make (`GetGlobal 0)
+                ; make (`GetFree 0)
+                ; make `Add
+                ; make (`GetFree 1)
+                ; make `Add
+                ; make (`GetLocal 0)
+                ; make `Add
+                ; make `ReturnValue ]
+                |> List.concat
+              , 0
+              , 0 )
+          ; CompFunc
+              ( [ make (`Constant 2)
+                ; make (`SetLocal 0)
+                ; make (`GetFree 0)
+                ; make (`GetLocal 0)
+                ; make (`Closure (4, 2))
+                ; make `ReturnValue ]
+                |> List.concat
+              , 0
+              , 0 )
+          ; CompFunc
+              ( [ make (`Constant 1)
+                ; make (`SetLocal 0)
+                ; make (`GetLocal 0)
+                ; make (`Closure (5, 1))
+                ; make `ReturnValue ]
+                |> List.concat
+              , 0
+              , 0 ) ]
+      , make_test_helper [`Constant 0; `SetGlobal 0; `Closure (6, 0); `Pop] ) ]
   in
   run_compiler_tests tests
 
@@ -519,7 +704,7 @@ let test_let_stmt_scopes () =
           [ Int 55
           ; CompFunc
               ([make (`GetGlobal 0); make `ReturnValue] |> List.concat, 0, 0) ]
-      , make_test_helper [`Constant 0; `SetGlobal 0; `Constant 1; `Pop] )
+      , make_test_helper [`Constant 0; `SetGlobal 0; `Closure (1, 0); `Pop] )
     ; ( {|fn() {
            let num = 55;
            num
@@ -535,7 +720,7 @@ let test_let_stmt_scopes () =
                 |> List.concat
               , 0
               , 0 ) ]
-      , make_test_helper [`Constant 1; `Pop] )
+      , make_test_helper [`Closure (1, 0); `Pop] )
     ; ( {|
          fn() {
            let a = 55;
@@ -558,7 +743,7 @@ let test_let_stmt_scopes () =
                 |> List.concat
               , 0
               , 0 ) ]
-      , make_test_helper [`Constant 2; `Pop] ) ]
+      , make_test_helper [`Closure (2, 0); `Pop] ) ]
   in
   run_compiler_tests tests
 
@@ -610,6 +795,67 @@ let test_compiler_scopes () =
   instruction_check `Last `Add cmp ;
   instruction_check `Previous `Mul cmp
 
+let test_recursive_function () =
+  let open Object.Obj in
+  let tests =
+    [ ( {|
+            let countDown = fn(x) { countDown(x - 1); };
+            countDown(1);
+|}
+      , map_test_helper
+          [ Int 1
+          ; CompFunc
+              ( [ make `CurrentClosure
+                ; make (`GetLocal 0)
+                ; make (`Constant 0)
+                ; make `Sub
+                ; make (`Call 1)
+                ; make `ReturnValue ]
+                |> List.concat
+              , 0
+              , 0 )
+          ; Int 1 ]
+      , make_test_helper
+          [ `Closure (1, 0)
+          ; `SetGlobal 0
+          ; `GetGlobal 0
+          ; `Constant 2
+          ; `Call 1
+          ; `Pop ] )
+    ; ( {|
+            let wrapper = fn() {
+                let countDown = fn(x) { countDown(x - 1); };
+                countDown(1);
+            };
+            wrapper();|}
+      , map_test_helper
+          [ Int 1
+          ; CompFunc
+              ( [ make `CurrentClosure
+                ; make (`GetLocal 0)
+                ; make (`Constant 0)
+                ; make `Sub
+                ; make (`Call 1)
+                ; make `ReturnValue ]
+                |> List.concat
+              , 0
+              , 0 )
+          ; Int 1
+          ; CompFunc
+              ( [ make (`Closure (1, 0))
+                ; make (`SetLocal 0)
+                ; make (`GetLocal 0)
+                ; make (`Constant 2)
+                ; make (`Call 1)
+                ; make `ReturnValue ]
+                |> List.concat
+              , 0
+              , 0 ) ]
+      , make_test_helper
+          [`Closure (3, 0); `SetGlobal 0; `GetGlobal 0; `Call 0; `Pop] ) ]
+  in
+  run_compiler_tests tests
+
 let () =
   Alcotest.run "OpConstant arithmetic checking"
     [ ( "testing compiler"
@@ -637,4 +883,8 @@ let () =
       , [Alcotest.test_case "local scopes" `Slow test_let_stmt_scopes] )
     ; ( "testing builtin functions"
       , [Alcotest.test_case "testing builtin functions" `Slow test_builtins] )
-    ]
+    ; ( "test closures"
+      , [Alcotest.test_case "testing closure comp" `Slow test_closures] )
+    ; ( "test recursion"
+      , [ Alcotest.test_case "testing recursive calls comp" `Slow
+            test_recursive_function ] ) ]

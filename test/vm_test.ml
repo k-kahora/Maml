@@ -88,16 +88,13 @@ let test_expected_object actual =
 
 (* FIXME incorrect use of let* *)
 let setup_vm_test input =
+  print_endline input ;
   let program = parse input in
   let comp = Compiler.new_compiler () in
   let* comp = Compiler.compile program.statements comp in
-  Code.ByteFmt.pp_byte_list (Compiler.current_instructions comp)
-  |> print_endline ;
-  let _ =
-    Code.string_of_byte_list (Compiler.current_instructions comp)
-    |> Result.fold ~error:Code.CodeError.print_error ~ok:print_endline
-  in
-  let _ = print_endline (Ast.program_str program) in
+  (* Code.string_of_byte_list (Compiler.current_instructions comp) *)
+  (* |> Result.fold ~error:Code.CodeError.print_error ~ok:print_endline *)
+  let _ = Compiler.compiler_string comp |> print_endline in
   let vm = Vm.new_virtual_machine comp in
   let* res = Vm.run vm in
   (* let stack_elem = res.last_item_poped in *)
@@ -485,6 +482,155 @@ let test_built_in_functions () =
   in
   List.iter run_vm_tests tests
 
+let test_closures () =
+  let option_wrapper (a, b) =
+    match b with Null -> (a, Ok None) | b -> (a, Ok (Some b))
+  in
+  let tests =
+    [ ( {|
+        let newClosure = fn(a) {
+          fn() { a; }
+        }
+        let closure = newClosure(99);
+        closure()
+|}
+      , Int 99 )
+    ; ( {|
+        let newAdder = fn(a, b) {
+            fn(c) { a + b + c };
+        };
+        let adder = newAdder(1, 2);
+        adder(8);|}
+      , Int 11 )
+    ; ( {|
+        let newAdder = fn(a, b) {
+            let c = a + b;
+            fn(d) { c + d };
+        };
+        let adder = newAdder(1, 2);
+        adder(8);|}
+      , Int 11 )
+    ; ( {|
+   let newAdder = fn(a,b) {
+     let c = a + b
+     let global = 30;
+     fn(d) {
+       fn(e) {
+          global + e + d + a + b
+       }
+     }
+   }
+   newAdder(10,20)(30)(40)
+|}
+      , Int 130 )
+    ; ( {|
+        let newAdderOuter = fn(a, b) {
+            let c = a + b;
+            fn(d) {
+                let e = d + c;
+                fn(f) { e + f; };
+            };
+        };
+        let newAdderInner = newAdderOuter(1, 2)
+        let adder = newAdderInner(3);
+        adder(8);|}
+      , Int 14 )
+    ; ( {|
+        let a = 1;
+        let newAdderOuter = fn(b) {
+            fn(c) {
+                fn(d) { a + b + c + d };
+            };
+        };
+        let newAdderInner = newAdderOuter(2)
+        let adder = newAdderInner(3);
+        adder(8);|}
+      , Int 14 )
+    ; ( {|
+        let newClosure = fn(a, b) {
+            let one = fn() { a; };
+            let two = fn() { b; };
+            fn() { one() + two(); };
+        };
+        let closure = newClosure(9, 90);
+        closure();|}
+      , Int 99 ) ]
+    |> List.map option_wrapper
+  in
+  List.iter run_vm_tests tests
+
+let test_recursive_function () =
+  let option_wrapper (a, b) =
+    match b with Null -> (a, Ok None) | b -> (a, Ok (Some b))
+  in
+  let tests =
+    [ ( {|
+        let countDown = fn(x) {
+            if (x == 0) {
+                return 0;
+            } else {
+                countDown(x - 1);
+            }
+        };
+        countDown(1);|}
+      , Int 0 )
+    ; ( {|
+        let countDown = fn(x) {
+            if (x == 0) {
+                return 0;
+            } else {
+                countDown(x - 1);
+            }
+        };
+        let wrapper = fn() {
+            countDown(1);
+        };
+        wrapper();      
+|}
+      , Int 0 )
+    ; ( {|
+        let wrapper = fn() {
+            let countDown = fn(x) {
+                if (x == 0) {
+                    return 0;
+                } else {
+                    countDown(x - 1);
+                }
+            };
+            countDown(1);
+        };
+        wrapper();
+|}
+      , Int 0 ) ]
+    |> List.map option_wrapper
+  in
+  List.iter run_vm_tests tests
+
+let test_fib_seq () =
+  let option_wrapper (a, b) =
+    match b with Null -> (a, Ok None) | b -> (a, Ok (Some b))
+  in
+  let tests =
+    [ ( {|
+        // emulates the fibanacci sequence
+        let fibonacci = fn(x) {
+            if (x == 0) {
+                return 0;
+            } else {
+                if (x == 1) {
+                    return 1;
+                } else {
+                    fibonacci(x - 1) + fibonacci(x - 2);
+                }
+            }
+        };
+        puts(fibonacci(15));
+|}
+      , Int 610 ) ]
+    |> List.map option_wrapper
+  in
+  List.iter run_vm_tests tests
+
 let () =
   Alcotest.run "Virtual Machine Tests"
     [ ( "Arithmatic"
@@ -527,4 +673,11 @@ let () =
             test_calling_function_with_wrong_arguments ] )
     ; ( "test built in functions"
       , [Alcotest.test_case "built in functions" `Quick test_built_in_functions]
-      ) ]
+      )
+    ; ( "test closures"
+      , [Alcotest.test_case "testing built in closures" `Quick test_closures] )
+    ; ( "test recursive functions"
+      , [ Alcotest.test_case "testing built in recursive functions" `Quick
+            test_recursive_function ] )
+    ; ( "test fibonacci sequence"
+      , [Alcotest.test_case "testing the fib seq" `Quick test_fib_seq] ) ]

@@ -219,6 +219,8 @@ let nested_square = fn() { fn(y) {  y * y } }
 puts(nested_square()(10))
 ```
 
+In the closure section here is the code
+
 
 
 

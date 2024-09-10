@@ -532,7 +532,7 @@ let test_func_literal_parsing () =
     match st with
     | Expressionstatement exp -> (
       match exp.expression with
-      | FunctionLiteral {parameters; body; token= _token} -> (
+      | FunctionLiteral {name= _; parameters; body; token= _token} -> (
           Alcotest.(check int)
             "Checking parameter list" 2 (List.length parameters) ;
           Alcotest.(check bool) "Testing parameter one" true
@@ -556,6 +556,31 @@ let test_func_literal_parsing () =
               test_infix_expressions exp.expression (String "x") "+" (String "y")
           | _ ->
               failwith "block body is not an expression statement" )
+      | _ ->
+          failwith "not a function literal" )
+    | _ ->
+        failwith "not an expression statement" )
+  | None ->
+      failwith "not statements found"
+
+let test_func_literal_parsing_with_name () =
+  let open Ast in
+  let input = "let myFunction = fn() { };" in
+  let statements =
+    Lex.new' input |> Parsing.new_parser |> Parsing.parse_program
+    |> fun a -> a.statements
+  in
+  if List.length statements <> 1 then
+    Fmt.failwith "program statements does not contain %d statement got %d\n" 1
+    @@ List.length statements ;
+  let stmt = List.nth_opt statements 0 in
+  match stmt with
+  | Some st -> (
+    match st with
+    | Letstatement {name= _; value; token= _} -> (
+      match value with
+      | FunctionLiteral {name; parameters= _; body= _; token= _token} ->
+          Alcotest.(check string) "Checking named function" "myFunction" name
       | _ ->
           failwith "not a function literal" )
     | _ ->
@@ -744,6 +769,9 @@ let () =
       , [test_case "if else expression" `Quick test_if_else_expression] )
     ; ( "Function literals"
       , [test_case "functions" `Quick test_func_literal_parsing] )
+    ; ( "Function literals with names"
+      , [ test_case "functions with name" `Quick
+            test_func_literal_parsing_with_name ] )
     ; ( "call expressions"
       , [test_case "call expressions" `Quick test_call_expression_parsing] )
     ; ( "string hello world test"

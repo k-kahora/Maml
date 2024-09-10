@@ -15,6 +15,7 @@ module rec Obj : sig
     | Builtin'
     | HashKey'
     | Hash'
+    | Closure'
 
   and hash_item = {key: item; value: item}
 
@@ -34,6 +35,8 @@ module rec Obj : sig
     | Builtin of built_in_func
     | HashKey of item_type * int64
     | Hash of (Obj.item, hash_item) Hashtbl.t
+    (* Fn object should always be a CompFunc *)
+    | Closure of {fn: Obj.item; free: Obj.item list}
 
   and built_in_func = Obj.item list -> Obj.item
 
@@ -70,6 +73,7 @@ end = struct
     | Builtin'
     | HashKey'
     | Hash'
+    | Closure'
 
   and hash_item = {key: item; value: item}
 
@@ -86,6 +90,7 @@ end = struct
     | Builtin of built_in_func
     | HashKey of item_type * int64
     | Hash of (Obj.item, hash_item) Hashtbl.t
+    | Closure of {fn: Obj.item; free: Obj.item list}
 
   and built_in_func = Obj.item list -> Obj.item
 
@@ -112,11 +117,14 @@ end = struct
         Builtin'
     | HashKey _ ->
         HashKey'
+    | Closure _ ->
+        Closure'
     | Hash _ ->
         Hash'
 
   let make_hash item_type hash = HashKey (item_of_item_type item_type, hash)
 
+  (* Make this return a result *)
   let hash_key = function
     | Int a as item_t ->
         make_hash item_t @@ Int64.of_int a
@@ -142,6 +150,8 @@ end = struct
         failwith "Hash not yet implemented"
     | CompFunc _ ->
         failwith "CompFunc not yet implemented"
+    | Closure _ ->
+        failwith "Clojure not yet implemented"
 
   let hashable = function
     | Int _ ->
@@ -167,6 +177,8 @@ end = struct
     | CompFunc _ ->
         false
     | Hash _ ->
+        false
+    | Closure _ ->
         false
 
   let unwrap_error = function
@@ -206,6 +218,8 @@ end = struct
         "HASHKEY"
     | Hash _ ->
         "HASH"
+    | Closure _ ->
+        "Closure"
 
   let rec item_to_string = function
     | Int i ->
@@ -250,6 +264,8 @@ end = struct
                 (item_to_string value) )
           table "{"
         ^ "}"
+    | Closure _ ->
+        "Closure string not yet implemented"
 
   let is_return a = match a with Return _ -> true | _ -> false
 
