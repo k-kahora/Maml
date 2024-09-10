@@ -1,9 +1,9 @@
 set positional-arguments
 
-@graffiti *args='':
-  dune exec -- Graffiti "$@"
+@maml *args='':
+  dune exec -- Maml "$@"
 @eval *args='':
-  dune exec -- Graffiti --repl --eval="$@"
+  dune exec -- Maml --repl --eval="$@"
 
 repl:
 	dune exec Interpreter

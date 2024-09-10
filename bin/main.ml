@@ -1,6 +1,6 @@
 open Cmdliner
 
-(** [graffiti] features of graffiti will be as follows
+(** [maml] features of graffiti will be as follows
     
 --ast will always print out the ast in the repl
 --bytecode will always print out the byte code in the repl
@@ -13,7 +13,7 @@ open Cmdliner
 
 *)
 
-let graffiti repl interpret ast bytecode prompt literal =
+let maml repl interpret ast bytecode prompt literal =
   let run_or_comp = if interpret then `Interpret else `Compiled in
   if literal <> "" then Repl.execute_string literal |> print_endline
   else
@@ -67,14 +67,14 @@ let literal =
 (*   Arg.(value & pos 0 string "Revolt!" & info [] ~env ~docv:"MSG" ~doc) *)
 
 let graffiti_t =
-  Term.(const graffiti $ repl $ interpret $ ast $ bytecode $ prompt $ literal)
+  Term.(const maml $ repl $ interpret $ ast $ bytecode $ prompt $ literal)
 
 let cmd =
   let doc = "A toy language for visualizing the AST, and the bytecode" in
   let man =
     [`S Manpage.s_bugs; `P "Email bug reports to <bugs@example.org>."]
   in
-  let info = Cmd.info "graffiti" ~version:"%‌%VERSION%%" ~doc ~man in
+  let info = Cmd.info "maml" ~version:"%‌%VERSION%%" ~doc ~man in
   Cmd.v info graffiti_t
 
 let main () = exit (Cmd.eval cmd)

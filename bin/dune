@@ -1,5 +1,5 @@
 (executable
- (public_name Graffiti)
+ (public_name Maml)
  (name main) 
   (modules main)
 (libraries  lex parsing ast evaluater cmdliner repl)
