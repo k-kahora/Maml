@@ -405,7 +405,6 @@ let[@ocaml.warning "-27-9-26"] rec compile nodes cmp =
           else cmp
         in
         let* cmp = List.fold_left argument_parser (Ok cmp) parameters in
-        print_endline "before body comp" ;
         (* let _ = *)
         (*   Symbol_table.symbol_table_string cmp.symbol_table |> print_endline *)
         (* in *)
@@ -420,7 +419,6 @@ let[@ocaml.warning "-27-9-26"] rec compile nodes cmp =
         in
         let free_symbols = cmp.symbol_table.free_symbols in
         let num_locals = cmp.symbol_table.num_definitions in
-        let () = print_endline "after body comp" in
         (* let _ = *)
         (*   Symbol_table.symbol_table_string cmp.symbol_table |> print_endline *)
         (* in *)

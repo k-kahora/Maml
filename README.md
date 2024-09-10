@@ -33,19 +33,19 @@
     <img src="images/maml.png" alt="Logo" width="1007" height="300">
   </a>
 
-  <h3 align="center">Best-README-Template</h3>
+  <h3 align="center">Maml Programming Language</h3>
 
   <p align="center">
-    An awesome README template to jumpstart your projects!
+    An awesome scripting language implemented in Ocaml 
     <br />
-    <a href="https://github.com/k-kahora/Graffiti"><strong>Explore the docs »</strong></a>
+    <a href="https://github.com/k-kahora/Maml"><strong>Explore the docs »</strong></a>
     <br />
     <br />
-    <a href="https://github.com/k-kahora/Graffiti">View Demo</a>
+    <a href="https://github.com/k-kahora/Maml">View Demo</a>
     ·
-    <a href="https://github.com/k-kahora/Graffiti/issues/new?labels=bug&template=bug-report---.md">Report Bug</a>
+    <a href="https://github.com/k-kahora/Maml/issues/new?labels=bug&template=bug-report---.md">Report Bug</a>
     ·
-    <a href="https://github.com/k-kahora/Graffiti/issues/new?labels=enhancement&template=feature-request---.md">Request Feature</a>
+    <a href="https://github.com/k-kahora/Maml/issues/new?labels=enhancement&template=feature-request---.md">Request Feature</a>
   </p>
 </div>
 
@@ -85,7 +85,7 @@
 
 [![Product Name Screen Shot][product-screenshot]](https://example.com)
 
-A toy scripting language called graffiti based of the Monkey Programming Language -- Written in Ocaml
+A toy scripting language called Maml based of the Monkey Programming Language -- Written in Ocaml
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -106,16 +106,16 @@ Right now the easiest way to use this language is to use the nix package manager
 
 ### Prerequisites
 
-To test drive Graffiti and jump straight into the repl
+To test drive Maml and jump straight into the repl
 * npm
   ```sh
-  nix run github:k-kahora/writing-an-interpreter-in-ocaml/#myOcamlApp -- -r
+  nix run github:k-kahora/maml/#maml -- -r
   ```
   
   
-* To see what graffiti can do
+* To see what Maml can do
   ```sh
-  nix run github:k-kahora/writing-an-interpreter-in-ocaml/#myOcamlApp -- --help
+  nix run github:k-kahora/maml/#maml -- --help
   ```
   
 
@@ -131,9 +131,11 @@ When ready refrence [this](https://unix.stackexchange.com/questions/717168/how-t
    ```
 3. Install opam packages 
    ```sh
+   # Make sure opam is installed before running these commands
    opam install xxhash
    opam install cmdliner
    opam install alcotest
+   opam install dune
    ```
 4. build the language
    ```sh
@@ -141,7 +143,7 @@ When ready refrence [this](https://unix.stackexchange.com/questions/717168/how-t
    ```
 5. Run the language
    ```sh
-   dune exec -- Graffiti --help
+   dune exec -- Maml --help
    ```
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
@@ -152,31 +154,34 @@ When ready refrence [this](https://unix.stackexchange.com/questions/717168/how-t
 ## Usage
 ### feautures
 
-| Feature               | Interpreter | Compiler |
-|-----------------------|-------------|----------|
-| Local Bindings        | ✅          | ✅       |
-| Gloabl Bindings       | ✅          | ✅       |
-| conditionals          | ✅          | ✅       |
-| Strings               | ✅          | ✅       |
-| Integers                  | ✅          | ✅       |
-| Floats                | ❌          | ❌       |
-| arithmatic +,-,/,*    | ✅          | ✅       |
-| Arrays                | ✅          | ✅       |
-| Indexing              | ✅          | ✅       |
-| Dictionarys           | ✅          | ✅       |
-| functions             | ✅          | ✅       |
-| first class functions | ✅          | ✅       |
-| Closures              | ✅          | ❌       |
-| Recursion             | ✅          | ❌       |
-| BuiltInFunctions      | ✅          | ✅       |
-| Loops                 | ❌          | ❌       |
+| Feature                | Interpreter | Compiler |
+|------------------------|-------------|----------|
+| Bindings               | ✅          | ✅       |
+| Conditionals           | ✅          | ✅       |
+| Strings                | ✅          | ✅       |
+| Integers               | ✅          | ✅       |
+| arithmetic +-/*        | ✅          | ✅       |
+| Arrays                 | ✅          | ✅       |
+| Indexing               | ✅          | ✅       |
+| Dictionarys            | ✅          | ✅       |
+| Functions              | ✅          | ✅       |
+| First class functions  | ✅          | ✅       |
+| Higher order functions | ✅          | ✅       |
+| Closures               | ✅          | ✅       |
+| Recursion              | ✅          | ✅       |
+| BuiltInFunctions       | ✅          | ✅       |
+| Loops                  | ❌          | ❌       |
+| Floats                 | ❌          | ❌       |
+| Macros                 | ❌          | ❌       |
 ### small examples
 
-These are small impractical examples curated to showcase the syntax of the language more comprehensive exapmles can be found in the documantation
+These are small impractical examples curated to showcase the syntax of the language.
 
 Bindings
 ```js
+# You can use = or <- to bind
 let x <- 30
+let x = 30
 ```
 
 
@@ -219,7 +224,70 @@ let nested_square = fn() { fn(y) {  y * y } }
 puts(nested_square()(10))
 ```
 
-In the closure section here is the code
+Fibonacci sequence (Closures, and recursion)
+
+```
+let fibonacci = fn(x) {
+	if (x == 0) {
+		return 0;
+	} else {
+		if (x == 1) {
+			return 1;
+		} else {
+			fibonacci(x - 1) + fibonacci(x - 2);
+		}
+	}
+};
+puts(fibonacci(15));
+
+# 610
+
+```
+
+Map
+
+```
+
+let map = fn(arr, f) {
+  let iter = fn(arr, accumulated) {
+    if (len(arr) == 0) {
+      accumulated
+    } else {
+      iter(rest(arr), push(accumulated, f(first(arr))));
+    }
+  };
+
+  iter(arr, []);
+};
+
+
+"let map = fn(list,f) {
+  let iter = fn(list, acc) {
+    if (len(list) == 0) {
+	  return acc 
+	}
+	else {
+	  let head = first(list)
+	  let tail = rest(list)
+	  let accumulated = push(acc, f(head))
+	  iter(tail, accumulated)
+	}
+  }
+  iter(list,[])
+}
+let add_one = fn(x) { x + 1 };
+// [2,3,4]
+"
+
+```
+
+## Known bugs
+
+``` js
+let array = []
+let array = push(array,10)
+// Error empty item
+```
 
 
 
@@ -236,19 +304,18 @@ _For more examples, please refer to the [Documentation](https://example.com)_
 
 - [x] Allow cli to either interpret or compile
 - [x] Implement clojures from the last chapter of the compiler book
-- [ ] Create a logo for website 
+- [x] Create a logo for website 
 - [ ] Implement Macros in the Interpreter and Compiler
 - [ ] Refreactor the lexer to no longer throw exceptions and insted output Errors
 - [ ] Add documentation to be generated with ocamldoc
-- [ ] File extensions for the compiler to recognize .grf
+- [ ] File extensions for the compiler to recognize .maml
 - [ ] Syntax sugar
-    - [ ] <- instead of =
+    - [x] <- instead of = (completely remove = so equality is not ==)
     - [ ] % modulo
     - [ ] ?? !! ternary conditionals
     - [ ] support <= and >= conditionals
-    - [ ] ** expunation
+    - [ ] ** powers
     - [ ] ( +=/-=/%=/*= ) infix -:- and ( ++ and -- ) postfix
-- [ ] Create a website similar to gleams that matches the documentation as well as examples and a way to run the code in a tutorial format
 
 See the [open issues](https://github.com/k-kahora/writing-an-interpreter-in-ocaml/issues?q=is%3Aopen) for a full list of proposed features (and known issues).
 
@@ -307,14 +374,14 @@ Use this space to list resources you find helpful and would like to give credit 
 
 <!-- MARKDOWN LINKS & IMAGES -->
 <!-- https://www.markdownguide.org/basic-syntax/#reference-style-links -->
-[forks-shield]: https://img.shields.io/github/forks/k-kahora/Graffiti.svg?style=for-the-badge
-[forks-url]: https://github.com/k-kahora/Graffiti/network/members
+[forks-shield]: https://img.shields.io/github/forks/k-kahora/Maml.svg?style=for-the-badge
+[forks-url]: https://github.com/k-kahora/Maml/network/members
 [stars-shield]: https://img.shields.io/github/stars/k-kahora/Best-README-Template.svg?style=for-the-badge
 [stars-url]: https://github.com/k-kahora/writing-an-interpreter-in-ocaml/stargazers
 [issues-shield]: https://img.shields.io/github/issues/k-kahora/Best-README-Template.svg?style=for-the-badge
-[issues-url]: https://github.com/k-kahora/Graffiti/issues
+[issues-url]: https://github.com/k-kahora/Maml/issues
 [license-shield]: https://img.shields.io/github/license/k-kahora/Best-README-Template.svg?style=for-the-badge
-[license-url]: https://github.com/k-kahora/Graffiti/blob/master/LICENSE.txt
+[license-url]: https://github.com/k-kahora/Maml/blob/master/LICENSE.txt
 [linkedin-shield]: https://img.shields.io/badge/-LinkedIn-black.svg?style=for-the-badge&logo=linkedin&colorB=555
 [linkedin-url]: https://linkedin.com/in/othneildrew
 [product-screenshot]: images/screenshot.png

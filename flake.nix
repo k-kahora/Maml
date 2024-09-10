@@ -18,7 +18,7 @@
           filter = name: type: lib.cleanSourceFilter name type && ! (lib.hasSuffix ".git" name);
         };
 
-        myOcamlApp = buildOcamlPackage {
+        maml = buildOcamlPackage {
           name = "my-ocaml-app";
           buildInputs = [
             ocamlPackages.xxhash
@@ -47,7 +47,7 @@
           tag = "latest";
           config = {
             cmd = [];
-            entrypoint = ["${myOcamlApp}/bin/Graffiti"];
+            entrypoint = ["${maml}/bin/Graffiti"];
           };
         };
 
@@ -87,13 +87,13 @@
 
         packages = {
           docker = dockerImage;
-          ocaml = myOcamlApp;
+          ocaml = maml;
         };
 
         apps = {
           myOcamlApp = {
             type = "app";
-            program = "${self.packages.${system}.myOcamlApp}/bin/Graffiti";
+            program = "${self.packages.${system}.maml}/bin/Graffiti";
           };
         };
       }
