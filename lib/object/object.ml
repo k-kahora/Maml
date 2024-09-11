@@ -265,7 +265,7 @@ end = struct
           table "{"
         ^ "}"
     | Closure _ ->
-        "Closure string not yet implemented"
+        "function"
 
   let is_return a = match a with Return _ -> true | _ -> false
 

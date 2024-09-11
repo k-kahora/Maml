@@ -36,13 +36,8 @@
   <h3 align="center">Maml Programming Language</h3>
 
   <p align="center">
-    An awesome scripting language implemented in Ocaml 
+    An Awesome scripting language implemented in Ocaml 
     <br />
-    <a href="https://github.com/k-kahora/Maml"><strong>Explore the docs »</strong></a>
-    <br />
-    <br />
-    <a href="https://github.com/k-kahora/Maml">View Demo</a>
-    ·
     <a href="https://github.com/k-kahora/Maml/issues/new?labels=bug&template=bug-report---.md">Report Bug</a>
     ·
     <a href="https://github.com/k-kahora/Maml/issues/new?labels=enhancement&template=feature-request---.md">Request Feature</a>
@@ -83,9 +78,17 @@
 <!-- ABOUT THE PROJECT -->
 ## About The Project
 
-[![Product Name Screen Shot][product-screenshot]](https://example.com)
+This project is an interpreter and a compiler for the Monkey Programming Language. The interpreter features its own Lexer, Parser, and Evaluator. The compiler features its own 32-bit opcodes, a bytecode compiler to convert the AST into bytecode, and a virtual machine to execute the bytecode.
 
-A toy scripting language called Maml based of the Monkey Programming Language -- Written in Ocaml
+The books I followed, "Writing an Interpreter in Go" and "Writing a Compiler in Go," were very enjoyable and easy to follow due to the simple patterns the author created as well as the simplicity of Golang.
+
+The goal of the projects was sevenfold and covered a lot of ground for things I have been wanting to learn. First and foremost, writing a compiled and interpreted language from the ground up. In addition, this is my first time writing OCaml, as well as using a functional language, so it was incredibly helpful in getting me really comfortable with the language. Additionally, unit testing was something I tended to avoid; however, having to convert all the Golang tests to OCaml tests was a whole project in and of itself. I do not regret implementing the tests as they give additional confidence in the robustness of the language.
+
+Translating the Go code into OCaml code was never straightforward. Things such as loops, mutability, arrays, and early returns are not the best way to go about things in OCaml and are avoided. This involed using recursion, lists, and result monads to achieve the above.
+
+Areas I have missed or lacked: I did not use the Jane Street Core library as I wanted to first learn the standard OCaml library. Also, print debugging was a nightmare in OCaml, having to write too many custom string functions for OCaml objects. In the future, I plan to look into PPX as I believe it is a solid solution to my printing nightmares.
+
+As this is my first time writing OCaml code and a compiler/interpreter, please let me know of areas I may have missed the ball on or areas [I could have done better on](https://github.com/k-kahora/Maml/issues/new?labels=bug&template=bug-report---.md).
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -107,7 +110,7 @@ Right now the easiest way to use this language is to use the nix package manager
 ### Prerequisites
 
 To test drive Maml and jump straight into the repl
-* npm
+* Nix
   ```sh
   nix run github:k-kahora/maml/#maml -- -r
   ```
@@ -121,10 +124,6 @@ To test drive Maml and jump straight into the repl
 
 ### Installation from source
 
-When ready refrence [this](https://unix.stackexchange.com/questions/717168/how-to-package-my-software-in-nix-or-write-my-own-package-derivation-for-nixpkgs) to add my package to nixpkgs 
-
-
-
 1. Clone the repo
    ```sh
    git clone https://github.com/k-kahora/writing-an-interpreter-in-ocaml
@@ -137,6 +136,12 @@ When ready refrence [this](https://unix.stackexchange.com/questions/717168/how-t
    opam install alcotest
    opam install dune
    ```
+5. Run tests 
+
+	``` sh
+	dune runtest
+	```
+
 4. build the language
    ```sh
    dune build
@@ -173,13 +178,24 @@ When ready refrence [this](https://unix.stackexchange.com/questions/717168/how-t
 | Loops                  | ❌          | ❌       |
 | Floats                 | ❌          | ❌       |
 | Macros                 | ❌          | ❌       |
+### Builtin functions
+
+| Name         | Description                                               |
+|--------------|-----------------------------------------------------------|
+| len(x)       | Returns length of string,array,dictionary                 |
+| first(x)     | Returns the first item of the array                       |
+| last(x)      | Returns the last item of the array                        |
+| rest(x)      | Returns every item but the first in an array              |
+| push(x,item) | Appends item to the end of an array returning a new array |
+| puts(x)      | Print x                                                   |
+
 ### small examples
 
 These are small impractical examples curated to showcase the syntax of the language.
 
 Bindings
 ```js
-# You can use = or <- to bind
+// You can use = or <- to bind
 let x <- 30
 let x = 30
 ```
@@ -190,13 +206,16 @@ Arithmatic
 let x <- 30
 let y <- 20
 x + y
+// 50
 ```
 
 
 Conditionals
 ```js
 let value <- 50
-let result <- if (true) {value / 5} else {value / 2} 
+let result <- if (value < 60) {value / 5} else {value / 2} 
+// 10
+
 ```
 
 Arrays
@@ -204,6 +223,8 @@ Arrays
 let value <- [1,"hello",3,"world",5,[2,4,6],7,5,9]
 let result_one <- value[1]
 let result_two <- value[1 + 4][0]
+// "hello"
+// 2
 ```
 
 Dictionarys
@@ -211,6 +232,7 @@ Dictionarys
 let value <- {"monkey":{"see":{"monkey":{"do":"!"}}}}
 let result = value["monkey"]["see"]["monkey"]["do"]
 puts("monkey" + result)
+// "monkey!"
 ```
 
 
@@ -218,15 +240,16 @@ puts("monkey" + result)
 Functions
 ```js
 let sum <- fn(x,y) {x + y}
-let result = sum(10,20)
+let result = sum(10,50)
 let subtract_thirty = fn(item) {let thirty = 30; return item - 30}
 let nested_square = fn() { fn(y) {  y * y } }
-puts(nested_square()(10))
+puts(nested_square()(subtract_thirty(result)))
+// 900
 ```
 
 Fibonacci sequence (Closures, and recursion)
 
-```
+```js
 let fibonacci = fn(x) {
 	if (x == 0) {
 		return 0;
@@ -239,29 +262,14 @@ let fibonacci = fn(x) {
 	}
 };
 puts(fibonacci(15));
-
-# 610
+// 610
 
 ```
 
 Map
 
-```
-
-let map = fn(arr, f) {
-  let iter = fn(arr, accumulated) {
-    if (len(arr) == 0) {
-      accumulated
-    } else {
-      iter(rest(arr), push(accumulated, f(first(arr))));
-    }
-  };
-
-  iter(arr, []);
-};
-
-
-"let map = fn(list,f) {
+```js
+let map = fn(list,f) {
   let iter = fn(list, acc) {
     if (len(list) == 0) {
 	  return acc 
@@ -276,35 +284,32 @@ let map = fn(arr, f) {
   iter(list,[])
 }
 let add_one = fn(x) { x + 1 };
+puts(map([1,2,3],add_one))
 // [2,3,4]
-"
 
 ```
 
 ## Known bugs
 
-``` js
+```js
 let array = []
 let array = push(array,10)
 // Error empty item
+// Should be [10]
 ```
 
 
+See the [open issues](https://github.com/k-kahora/writing-an-interpreter-in-ocaml/issues?q=is%3Aopen) for a full list of proposed features (and known issues).
 
-
-
-_For more examples, please refer to the [Documentation](https://example.com)_
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
-
-
 <!-- ROADMAP -->
-## Roadmap
+## TODO
 
-- [x] Allow cli to either interpret or compile
-- [x] Implement clojures from the last chapter of the compiler book
-- [x] Create a logo for website 
+- [x] Allow CLI to either interpret or compile
+- [x] Implement closures from the last chapter of the compiler book
+- [x] Create a logo 
 - [ ] Implement Macros in the Interpreter and Compiler
 - [ ] Refreactor the lexer to no longer throw exceptions and insted output Errors
 - [ ] Add documentation to be generated with ocamldoc
@@ -316,8 +321,13 @@ _For more examples, please refer to the [Documentation](https://example.com)_
     - [ ] support <= and >= conditionals
     - [ ] ** powers
     - [ ] ( +=/-=/%=/*= ) infix -:- and ( ++ and -- ) postfix
-
-See the [open issues](https://github.com/k-kahora/writing-an-interpreter-in-ocaml/issues?q=is%3Aopen) for a full list of proposed features (and known issues).
+- [ ] Lexer should store token location to have errors point to the right spot
+- [ ] Built in functions
+    - [ ] dump() take a string and output the bytecode
+	- [ ] map(list,f)  
+	- [ ] fold(f(a,b),acc,list)  fold function on arrays and dictionarys
+	- [ ] iter(list) iterative over lists and arrays
+- [ ] Publish the website to run Maml in the browser
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -357,8 +367,6 @@ Project Link: [https://github.com/k-kahora/writing-an-interpreter-in-ocaml](http
 
 <!-- ACKNOWLEDGMENTS -->
 ## Acknowledgments
-
-Use this space to list resources you find helpful and would like to give credit to. I've included a few of my favorites to kick things off!
 
 * [Choose an Open Source License](https://choosealicense.com)
 * [GitHub Emoji Cheat Sheet](https://www.webpagefx.com/tools/emoji-cheat-sheet)
