@@ -91,7 +91,7 @@
         };
 
         apps = {
-          myOcamlApp = {
+          maml = {
             type = "app";
             program = "${self.packages.${system}.maml}/bin/Maml";
           };
