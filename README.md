@@ -116,10 +116,17 @@ To test drive Maml and jump straight into the repl
   ```
   
   
-* To see what Maml can do
+* To see what the Maml CLI can do
   ```sh
   nix run github:k-kahora/maml/#maml -- --help
   ```
+  
+* Evaluate maml code outside the repl pass the code as a string to the eval argument
+
+``` sh
+nix run github:k-kahora/maml/#maml -- --eval="puts(\"Hello World!!\")"
+# Hello World!!
+```
   
 
 ### Installation from source
@@ -298,6 +305,8 @@ let array = push(array,10)
 // Should be [10]
 ```
 
+The CLI is not fully implemented right now, I would advise just sticking to -r and -e. 
+
 
 See the [open issues](https://github.com/k-kahora/writing-an-interpreter-in-ocaml/issues?q=is%3Aopen) for a full list of proposed features (and known issues).
 
@@ -328,6 +337,7 @@ See the [open issues](https://github.com/k-kahora/writing-an-interpreter-in-ocam
 	- [ ] fold(f(a,b),acc,list)  fold function on arrays and dictionarys
 	- [ ] iter(list) iterative over lists and arrays
 - [ ] Publish the website to run Maml in the browser
+- [ ] Let the CLI read a file
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
