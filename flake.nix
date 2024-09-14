@@ -19,7 +19,7 @@
         };
 
         maml = buildOcamlPackage {
-          name = "my-ocaml-app";
+          name = "maml-bin";
           buildInputs = [
             ocamlPackages.xxhash
             ocamlPackages.cmdliner
@@ -43,11 +43,11 @@
           '';
         };
         dockerImage = legacyPackages.dockerTools.buildImage {
-          name = "graffiti-image";
+          name = "maml-image";
           tag = "latest";
           config = {
             cmd = [];
-            entrypoint = ["${maml}/bin/Graffiti"];
+            entrypoint = ["${maml}/bin/Maml"];
           };
         };
 
@@ -87,13 +87,13 @@
 
         packages = {
           docker = dockerImage;
-          ocaml = maml;
+          inherit maml;
         };
 
         apps = {
           myOcamlApp = {
             type = "app";
-            program = "${self.packages.${system}.maml}/bin/Graffiti";
+            program = "${self.packages.${system}.maml}/bin/Maml";
           };
         };
       }
