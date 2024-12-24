@@ -126,8 +126,9 @@ let execute_string input =
     Ok (Vm.last_item_popped vm)
   in
   Result.fold
-    ~error:(fun err -> Code.CodeError.error_string err )
-      (* ~ok:(fun item -> Object.Obj.item_to_string item) (\* NOTE I do not print the last item poped for purpose with the webapp *\) *)
-    ~ok:(fun _ -> "" )
-      (* NOTE I do not print the last item poped for purpose with the webapp *)
+    ~error:(fun err -> Code.CodeError.error_string err)
+    ~ok:(fun item -> Object.Obj.item_to_string item)
+    (* NOTE I do not print the last item poped for purpose with the webapp *)
+    (* ~ok:(fun _ -> "" ) *)
+    (* NOTE I do not print the last item poped for purpose with the webapp *)
     (execute_string input)

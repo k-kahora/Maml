@@ -24,6 +24,8 @@
             ocamlPackages.xxhash
             ocamlPackages.cmdliner
             ocamlPackages.alcotest
+            ocamlPackages.cohttp-lwt-unix
+            ocamlPackages.cohttp-async
           ]; 
         };
 
@@ -101,3 +103,7 @@
       }
     );
 }
+# NOTE To run the docker image
+  # docker run -d -p 8080:8080 maml-image:latest
+  # to interact run 
+  # curl -X POST http://localhost:8080/ -d "let str = \"maml is the best language\"; str"

@@ -1,5 +1,6 @@
 open Cmdliner
 open Lwt
+
 (* open Cohttp *)
 open Cohttp_lwt_unix
 
@@ -81,16 +82,17 @@ let cmd =
   Cmd.v info graffiti_t
 
 (* let main () = exit (Cmd.eval cmd) *)
-let process_input input = 
-  Printf.sprintf "Processed: %s" input
+let process_input input =
+  Printf.sprintf "Output: %s" @@ Repl.execute_string input
 
 let callback _conn _req body =
-  body |> Cohttp_lwt.Body.to_string >|= process_input >>= fun response ->
-  Server.respond_string ~status:`OK ~body:response ()
+  body |> Cohttp_lwt.Body.to_string >|= process_input
+  >>= fun response -> Server.respond_string ~status:`OK ~body:response ()
 
-let server =
-  Server.create ~mode:(`TCP (`Port 8080)) (Server.make ~callback ())
-
+let server = Server.create ~mode:(`TCP (`Port 8080)) (Server.make ~callback ())
 
 (* let () = main () *)
 let () = Lwt_main.run server
+
+(* You can run the compiler with *)
+(* curl -X POST http://localhost:8080/ -d "let str = \"monkey man\"; puts(str)" *)
