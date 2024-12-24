@@ -2,7 +2,7 @@
  (public_name Maml)
  (name main) 
   (modules main)
-(libraries  lex parsing ast evaluater cmdliner repl)
+(libraries  lex parsing ast evaluater cmdliner repl lwt cohttp cohttp-lwt-unix)
 )
 
 ; (executable

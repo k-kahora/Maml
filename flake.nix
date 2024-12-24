@@ -75,6 +75,8 @@
             ocamlPackages.xxhash # Brought this in to quickly hash a string
             ocamlPackages.utop
             ocamlPackages.core
+            ocamlPackages.cohttp-lwt-unix
+            ocamlPackages.cohttp-async
             ocamlPackages.base
             ocamlPackages.core_unix
             ocamlPackages.fmt

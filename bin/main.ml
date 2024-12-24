@@ -1,4 +1,7 @@
 open Cmdliner
+open Lwt
+(* open Cohttp *)
+open Cohttp_lwt_unix
 
 (** [maml] features of graffiti will be as follows
     
@@ -77,6 +80,17 @@ let cmd =
   let info = Cmd.info "maml" ~version:"%‌%VERSION%%" ~doc ~man in
   Cmd.v info graffiti_t
 
-let main () = exit (Cmd.eval cmd)
+(* let main () = exit (Cmd.eval cmd) *)
+let process_input input = 
+  Printf.sprintf "Processed: %s" input
 
-let () = main ()
+let callback _conn _req body =
+  body |> Cohttp_lwt.Body.to_string >|= process_input >>= fun response ->
+  Server.respond_string ~status:`OK ~body:response ()
+
+let server =
+  Server.create ~mode:(`TCP (`Port 8080)) (Server.make ~callback ())
+
+
+(* let () = main () *)
+let () = Lwt_main.run server
