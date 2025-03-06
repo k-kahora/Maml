@@ -36,8 +36,8 @@
   <h3 align="center">Maml Programming Language</h3>
 
   <p align="center">
-    An Awesome scripting language implemented in Ocaml 
-    <br />
+An awesome scripting language implemented in OCaml
+<br />
     <a href="https://github.com/k-kahora/Maml/issues/new?labels=bug&template=bug-report---.md">Report Bug</a>
     ·
     <a href="https://github.com/k-kahora/Maml/issues/new?labels=enhancement&template=feature-request---.md">Request Feature</a>
@@ -82,9 +82,9 @@ This project is an interpreter and a compiler for the Monkey Programming Languag
 
 The books I followed, "Writing an Interpreter in Go" and "Writing a Compiler in Go," were very enjoyable and easy to follow due to the simple patterns the author created as well as the simplicity of Golang.
 
-The goal of the projects was sevenfold and covered a lot of ground for things I have been wanting to learn. First and foremost, writing a compiled and interpreted language from the ground up. In addition, this is my first time writing OCaml, as well as using a functional language, so it was incredibly helpful in getting me really comfortable with the language. Additionally, unit testing was something I tended to avoid; however, having to convert all the Golang tests to OCaml tests was a whole project in and of itself. I do not regret implementing the tests as they give additional confidence in the robustness of the language.
+The goal of this project was sevenfold and covered a lot of ground in areas I have been wanting to learn.. First and foremost, writing a compiled and interpreted language from the ground up. In addition, this is my first time writing OCaml, as well as using a functional language, so it was incredibly helpful in getting me really comfortable with the language. Additionally, unit testing was something I tended to avoid; however, having to convert all the Golang tests to OCaml tests was a whole project in and of itself. I do not regret implementing the tests as they give additional confidence in the robustness of the language.
 
-Translating the Go code into OCaml code was never straightforward. Things such as loops, mutability, arrays, and early returns are not the best way to go about things in OCaml and are avoided. This involed using recursion, lists, and result monads to achieve the above.
+Translating Go code into OCaml was never straightforward. Things such as loops, mutability, arrays, and early returns are not the best way to go about things in OCaml and are avoided. This involved using recursion, lists, and result monads to achieve the above.
 
 Areas I have missed or lacked: I did not use the Jane Street Core library as I wanted to first learn the standard OCaml library. Also, print debugging was a nightmare in OCaml, having to write too many custom string functions for OCaml objects. In the future, I plan to look into PPX as I believe it is a solid solution to my printing nightmares.
 
@@ -172,12 +172,12 @@ nix run github:k-kahora/maml/#maml -- --eval="puts(\"Hello World!!\")"
 | Conditionals           | ✅          | ✅       |
 | Strings                | ✅          | ✅       |
 | Integers               | ✅          | ✅       |
-| arithmetic +-/*        | ✅          | ✅       |
+| arithmetic (+-/*)        | ✅          | ✅       |
 | Arrays                 | ✅          | ✅       |
 | Indexing               | ✅          | ✅       |
-| Dictionarys            | ✅          | ✅       |
+| Dictionaries            | ✅          | ✅       |
 | Functions              | ✅          | ✅       |
-| First class functions  | ✅          | ✅       |
+| First-class functions  | ✅          | ✅       |
 | Higher order functions | ✅          | ✅       |
 | Closures               | ✅          | ✅       |
 | Recursion              | ✅          | ✅       |
@@ -189,7 +189,7 @@ nix run github:k-kahora/maml/#maml -- --eval="puts(\"Hello World!!\")"
 
 | Name         | Description                                               |
 |--------------|-----------------------------------------------------------|
-| len(x)       | Returns length of string,array,dictionary                 |
+| len(x)       | Returns length of string,array,dictionaries                 |
 | first(x)     | Returns the first item of the array                       |
 | last(x)      | Returns the last item of the array                        |
 | rest(x)      | Returns every item but the first in an array              |
@@ -234,7 +234,7 @@ let result_two <- value[1 + 4][0]
 // 2
 ```
 
-Dictionarys
+Dictionaries
 ```js
 let value <- {"monkey":{"see":{"monkey":{"do":"!"}}}}
 let result = value["monkey"]["see"]["monkey"]["do"]
@@ -254,7 +254,7 @@ puts(nested_square()(subtract_thirty(result)))
 // 900
 ```
 
-Fibonacci sequence (Closures, and recursion)
+Fibonacci sequence (Closures and recursion)
 
 ```js
 let fibonacci = fn(x) {
@@ -305,8 +305,7 @@ let array = push(array,10)
 // Should be [10]
 ```
 
-The CLI is not fully implemented right now, I would advise just sticking to -r and -e. 
-
+The CLI is not fully implemented right now; I would advise sticking to -r and -e.
 
 See the [open issues](https://github.com/k-kahora/writing-an-interpreter-in-ocaml/issues?q=is%3Aopen) for a full list of proposed features (and known issues).
 
@@ -320,7 +319,7 @@ See the [open issues](https://github.com/k-kahora/writing-an-interpreter-in-ocam
 - [x] Implement closures from the last chapter of the compiler book
 - [x] Create a logo 
 - [ ] Implement Macros in the Interpreter and Compiler
-- [ ] Refreactor the lexer to no longer throw exceptions and insted output Errors
+- [ ] Refactor the lexer to no longer throw exceptions and instead output errors.
 - [ ] Add documentation to be generated with ocamldoc
 - [ ] File extensions for the compiler to recognize .maml
 - [ ] Syntax sugar
